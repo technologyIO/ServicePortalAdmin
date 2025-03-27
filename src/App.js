@@ -6,7 +6,7 @@ import Breadcrumbs from '@mui/joy/Breadcrumbs';
 import Link from '@mui/joy/Link';
 import Typography from '@mui/joy/Typography';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-
+import { Toaster } from "react-hot-toast";
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import Sidebar from './Components/Sidebar/Sidebar';
@@ -60,34 +60,36 @@ const PrivateRoute = ({ children }) => {
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-        {/* Redirect root to login if not logged in */}
-        <Route path="/" element={<Navigate to="/login" />} />
+      <Router>
+      <Toaster position="top-right" reverseOrder={false} />
+        <Routes>
 
-        {/* Login route */}
-        <Route
-          path="/login"
-          element={
-            JSON.parse(localStorage.getItem('user'))?.token ? (
-              <Navigate to="/user" /> // Redirect to dashboard if logged in
-            ) : (
-              <Login />
-            )
-          }
-        />
+          {/* Redirect root to login if not logged in */}
+          <Route path="/" element={<Navigate to="/login" />} />
 
-        {/* Protected routes */}
-        <Route
-          path="/*"
-          element={
-            <PrivateRoute>
-              <AppContent />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
-    </Router>
+          {/* Login route */}
+          <Route
+            path="/login"
+            element={
+              JSON.parse(localStorage.getItem('user'))?.token ? (
+                <Navigate to="/user" /> // Redirect to dashboard if logged in
+              ) : (
+                <Login />
+              )
+            }
+          />
+
+          {/* Protected routes */}
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <AppContent />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </Router>
   );
 };
 
@@ -104,6 +106,7 @@ const AppContent = () => {
 
   return (
     <CssVarsProvider disableTransitionOnChange>
+
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100dvh' }}>
         <Header />
