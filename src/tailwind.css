@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Customize scrollbar */
+::-webkit-scrollbar {
+    width: 3px;  /* Vertical scrollbar width */
+    border-radius: 0px;
+  }
+    
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; /* Color of the scrollbar track */
+  }
+  
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #aaa9a9; /* Color of the scrollbar handle */
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a3a1a1; /* Color of the scrollbar handle on hover */
+  }
+  
+  /* Horizontal scrollbar */
+  ::-webkit-scrollbar-thumb:horizontal {
+    height: 6px; /* Set the height of the horizontal scrollbar handle */
+  }
+  
+  /* Horizontal scrollbar on hover */
+  ::-webkit-scrollbar-thumb:hover:horizontal {
+    background: #a1a0a0; /* Color of the horizontal scrollbar handle on hover */
+  }
+
+  .CustomLoader {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+    border: 3px solid;
+    border-color: blue blue transparent transparent;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+  }
+  .CustomLoader::after,
+  .CustomLoader::before {
+    content: '';  
+    box-sizing: border-box;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    border: 3px solid;
+    border-color: transparent transparent #FF3D00 #FF3D00;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    animation: rotationBack 0.5s linear infinite;
+    transform-origin: center center;
+  }
+  .CustomLoader::before {
+    width: 60px;
+    height: 60px;
+    border-color: blue blue transparent transparent;
+    animation: rotation 1.5s linear infinite;
+  }
+      
+  @keyframes rotation {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  } 
+  @keyframes rotationBack {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(-360deg);
+    }
+  }
+      
