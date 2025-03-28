@@ -399,9 +399,9 @@ const UserData = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Department
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Password
-                  </th>
+                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Created Date
                   </th>
@@ -414,9 +414,9 @@ const UserData = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Skills
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Profile Image
-                  </th>
+                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Device ID
                   </th>
@@ -497,9 +497,9 @@ const UserData = () => {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.department}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.password}
-                    </td>
+                    </td> */}
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
@@ -512,9 +512,9 @@ const UserData = () => {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.skills}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.profileimage}
-                    </td>
+                    </td> */}
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.deviceid}
                     </td>

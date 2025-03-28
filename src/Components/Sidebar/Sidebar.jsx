@@ -287,6 +287,17 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/spare");
+                    handleItemClick("/spare");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/spare"}>
+                    Spare Master
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/admin-checklist");
                     handleItemClick("/admin-checklist");
                   }}

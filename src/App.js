@@ -49,6 +49,7 @@ import Profile from './Components/Profile/Profile';
 import PreventiveMaintenance from './Components/DataComponents/Upload_Management/PreventiveMaintenance/PreventiveMaintenance';
 import CheckListType from './Components/DataComponents/Admin/CheckListType';
 import CheckPointType from './Components/DataComponents/Admin/CheckPointType';
+import Spare from './Components/DataComponents/Master_Managemnet/SparePart/Spare';
 
 
 const PrivateRoute = ({ children }) => {
@@ -154,6 +155,7 @@ const AppContent = () => {
             <Route path="/admin-product-group" element={<AdminProductGroup />} />
             <Route path="/admin-checklist" element={<AdminChecklist />} />
             <Route path="/admin-pm-master" element={<AdminPM_Master />} />
+            <Route path="/spare" element={<Spare />} />
             <Route path="/new-customer" element={<NewCustomer />} />
             <Route path="/amc-contract" element={<AmcContract />} />
             <Route path="/customer" element={<Customer />} />
