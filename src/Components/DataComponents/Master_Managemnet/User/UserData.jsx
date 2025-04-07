@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-
 import SearchIcon from "@mui/icons-material/Search";
-
 import {
   Autocomplete,
   Modal,
@@ -17,8 +13,18 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
-import SelectBoxWithSearch from "../../../SelectBoxWithSearch";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+
+// Role mapping: roleName to roleId
+const roleMapping = {
+  "Super Admin": "1",
+  admin: "2",
+  cic: "3",
+  Support: "4",
+  Manager: "5",
+  "Service Engineer": "6",
+};
+
 const UserData = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -31,15 +37,13 @@ const UserData = () => {
   const [loader, setLoader] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
   const limit = 10;
   const [state, setstate] = useState([]);
   const [cityList, setCityList] = useState([]);
   const [country, setCountry] = useState([]);
+  const [dealerList, setDealerList] = useState([]);
 
-  // Get All City
+  // Fetch all cities
   useEffect(() => {
     const getCities = async () => {
       try {
@@ -57,11 +61,10 @@ const UserData = () => {
         console.error(err);
       }
     };
-
     getCities();
   }, []);
 
-  // Get All State/Region
+  // Fetch all states/regions
   useEffect(() => {
     const getState = async () => {
       try {
@@ -79,100 +82,115 @@ const UserData = () => {
         console.error(err);
       }
     };
-
     getState();
   }, []);
 
-  //Get All country
+  // Fetch all countries
   useEffect(() => {
     const getCountry = async () => {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allCountries`
         );
-
-        // Map the API response to match Autocomplete's expected format
         const Country = res.data.map((country) => ({
           label: country.name,
           id: country._id,
           status: country.status,
         }));
-
         setCountry(Country);
       } catch (err) {
         console.error(err);
       }
     };
-
     getCountry();
   }, []);
 
-  // get All Branch
+  // Fetch all branches
   useEffect(() => {
     const getBranch = async () => {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allbranch`
         );
-        const cities = res.data.map((branches) => ({
-          label: branches.name,
-          id: branches._id,
-          state: branches.state,
-          status: branches.status,
-          city: branches.city,
-          branchShortCode: branches.branchShortCode,
+        const branches = res.data.map((branch) => ({
+          label: branch.name,
+          id: branch._id,
+          state: branch.state,
+          status: branch.status,
+          city: branch.city,
+          branchShortCode: branch.branchShortCode,
         }));
-        setBranchData(cities);
+        setBranchData(branches);
       } catch (err) {
         console.error(err);
       }
     };
-
     getBranch();
   }, []);
 
-  const [selectedRows, setSelectedRows] = useState([]);
+  // Fetch dealer list from API
+  useEffect(() => {
+    const getDealers = async () => {
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/alldealer`
+        );
+        const dealers = res.data.dealers.map((dealer) => ({
+          label: dealer.name,
+          id: dealer.dealerid || dealer._id,
+        }));
+        setDealerList(dealers);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    getDealers();
+  }, []);
 
+  const [selectedRows, setSelectedRows] = useState([]);
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(data?.map((item) => item._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
-
-  const handleRowSelect = (countryId) => {
-    if (selectedRows.includes(countryId)) {
-      // Deselect the row
-      setSelectedRows(selectedRows.filter((id) => id !== countryId));
+  const handleRowSelect = (id) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(selectedRows.filter((itemId) => itemId !== id));
     } else {
-      // Select the row
-      setSelectedRows([...selectedRows, countryId]);
+      setSelectedRows([...selectedRows, id]);
     }
   };
 
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => setIsOpen(false);
+
+  // Updated Create button handler to open modal for new user creation
+  const handleCreateModal = () => {
+    setCurrentData({}); // clear form data
+    setEditModal(false);
+    setShowModal(true);
+  };
+
   const handleCloseModal = () => {
-    setShowModal((prev) => !prev);
+    setShowModal(false);
     setEditModal(false);
     setCurrentData({});
   };
 
-  const handleOpenModal = (country) => {
-    setCurrentData(country);
+  const handleOpenModal = (user) => {
+    setCurrentData(user);
     setEditModal(true);
     setShowModal(true);
   };
 
   const handleFormData = (name, value) => {
-    setCurrentData((prev) => {
-      return {
-        ...prev,
-        [name]: value,
-      };
-    });
+    setCurrentData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleDelete = (id) => {
@@ -188,10 +206,10 @@ const UserData = () => {
       if (result.isConfirmed) {
         axios
           .delete(`${process.env.REACT_APP_BASE_URL}/collections/user/${id}`)
-          .then((res) => {
-            Swal.fire("Deleted!", "Countrys has been deleted.", "success");
+          .then(() => {
+            Swal.fire("Deleted!", "User has been deleted.", "success");
           })
-          .then((res) => {
+          .then(() => {
             getData();
           })
           .catch((error) => {
@@ -200,11 +218,9 @@ const UserData = () => {
       }
     });
   };
-  const handleSearch = async () => {
-    if (!searchQuery) {
-      return;
-    }
 
+  const handleSearch = async () => {
+    if (!searchQuery) return;
     setLoader(true);
     try {
       const response = await axios.get(
@@ -220,7 +236,7 @@ const UserData = () => {
 
   const getData = () => {
     setLoader(true);
-    setSearchQuery(""); // Reset search query
+    setSearchQuery("");
     axios
       .get(
         `${process.env.REACT_APP_BASE_URL}/collections/user?page=${page}&limit=${limit}`
@@ -246,7 +262,7 @@ const UserData = () => {
 
   const handleSubmit = (id) => {
     if (editModal && id) {
-      handleEditCountry(id);
+      handleEditUser(id);
     } else {
       handleCreate();
     }
@@ -255,7 +271,7 @@ const UserData = () => {
   const handleCreate = () => {
     axios
       .post(`${process.env.REACT_APP_BASE_URL}/collections/user`, currentData)
-      .then((res) => {
+      .then(() => {
         getData();
       })
       .catch((error) => {
@@ -263,13 +279,13 @@ const UserData = () => {
       });
   };
 
-  const handleEditCountry = (id) => {
+  const handleEditUser = (id) => {
     axios
       .put(
         `${process.env.REACT_APP_BASE_URL}/collections/user/${id}`,
         currentData
       )
-      .then((res) => {
+      .then(() => {
         getData();
       })
       .catch((error) => {
@@ -280,7 +296,6 @@ const UserData = () => {
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
   };
-
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
   };
@@ -289,11 +304,11 @@ const UserData = () => {
     <>
       {loader ? (
         <div className="flex items-center justify-center h-[60vh]">
-          <span class="CustomLoader"></span>
+          <span className="CustomLoader"></span>
         </div>
       ) : (
         <>
-          <div className="flex   items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex gap-3 justify-center">
               <FormControl sx={{ flex: 1 }} size="sm">
                 <Input
@@ -302,12 +317,13 @@ const UserData = () => {
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
                 />
               </FormControl>
               <button
                 onClick={handleSearch}
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Search
               </button>
@@ -316,20 +332,21 @@ const UserData = () => {
               <button
                 onClick={openModal}
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Upload
               </button>
+              {/* Updated Create button now opens the modal */}
               <button
-                onClick={handleCloseModal}
+                onClick={handleCreateModal}
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Create
               </button>
               <button
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Filter
               </button>
@@ -339,16 +356,16 @@ const UserData = () => {
             {selectedRows?.length > 0 && (
               <button
                 type="button"
-                class="text-white bg-blue-700 hover:bg-blue-800  focus:ring-4 focus:outline-none focus:ring-blue-700 :focus:ring-red-800 font-medium rounded-[4px] text-sm px-5 py-2.5 text-center me-2 mb-2"
+                className="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-[4px] text-sm px-5 py-2.5 mb-2"
               >
                 Delete Selected
               </button>
             )}
           </div>
-          <div className="relative w-full overflow-x-auto border ">
-            <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700 ">
-                <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+          <div className="relative w-full overflow-x-auto border">
+            <table className="w-full border min-w-max caption-bottom text-sm">
+              <thead className="[&amp;_tr]:border-b bg-blue-700">
+                <tr className="border-b text-white">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
                       <input
@@ -363,78 +380,35 @@ const UserData = () => {
                       </label>
                     </div>
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    First Name
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Last Name
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Email
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Mobile Number
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Branch
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  <th className="px-4 text-left font-medium">First Name</th>
+                  <th className="px-4 text-left font-medium">Last Name</th>
+                  <th className="px-4 text-left font-medium">Email</th>
+                  <th className="px-4 text-left font-medium">Mobile Number</th>
+                  <th className="px-4 text-left font-medium">Branch</th>
+                  <th className="px-4 text-left font-medium">
                     Login Expiry Date
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Employee ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Country
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State/Region
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    City
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Department
-                  </th>
-                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Password
-                  </th> */}
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Created Date
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Modified Date
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Manager Email
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Skills
-                  </th>
-                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Profile Image
-                  </th> */}
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Device ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  <th className="px-4 text-left font-medium">Status</th>
+                  <th className="px-4 text-left font-medium">Employee ID</th>
+                  <th className="px-4 text-left font-medium">Country</th>
+                  <th className="px-4 text-left font-medium">State/Region</th>
+                  <th className="px-4 text-left font-medium">City</th>
+                  <th className="px-4 text-left font-medium">Department</th>
+                  <th className="px-4 text-left font-medium">Created Date</th>
+                  <th className="px-4 text-left font-medium">Modified Date</th>
+                  <th className="px-4 text-left font-medium">Manager Email</th>
+                  <th className="px-4 text-left font-medium">Skills</th>
+                  <th className="px-4 text-left font-medium">Device ID</th>
+                  <th className="px-4 text-left font-medium">
                     Device Reg Date
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Action
-                  </th>
+                  <th className="px-4 text-left font-medium">Action</th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
+              <tbody>
                 {data?.map((item, index) => (
-                  <tr
-                    key={item?._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
+                  <tr key={item?._id} className="border-b">
+                    <th scope="row" className="p-4">
                       <div className="flex items-center">
                         <input
                           id={`checkbox-${index}`}
@@ -451,84 +425,49 @@ const UserData = () => {
                         </label>
                       </div>
                     </th>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.firstname}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.lastname}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.email}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.mobilenumber}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.branch}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
+                    <td className="p-4 capitalize">{item?.firstname}</td>
+                    <td className="p-4 capitalize">{item?.lastname}</td>
+                    <td className="p-4">{item?.email}</td>
+                    <td className="p-4">{item?.mobilenumber}</td>
+                    <td className="p-4">{item?.branch}</td>
+                    <td className="p-4">
                       {moment(item?.loginexpirydate).format("MMM D, YYYY")}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
                           item?.status === "Active"
                             ? "bg-green-100 text-green-800 border-green-400"
                             : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-orange-100 text-orange-800 border-orange-400"
                         }`}
                       >
                         {item?.status}
                       </span>
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.employeeid}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.country}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.state}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.city}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.department}
-                    </td>
-                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.password}
-                    </td> */}
-                    <td className="p-4 align-middle whitespace-nowrap">
+                    <td className="p-4">{item?.employeeid}</td>
+                    <td className="p-4">{item?.country}</td>
+                    <td className="p-4">{item?.state}</td>
+                    <td className="p-4">{item?.city}</td>
+                    <td className="p-4">{item?.department}</td>
+                    <td className="p-4">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
+                    <td className="p-4">
                       {moment(item?.modifiedAt).format("MMM D, YYYY")}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.manageremail}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.skills}
-                    </td>
-                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.profileimage}
-                    </td> */}
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.deviceid}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
+                    <td className="p-4">{item?.manageremail}</td>
+                    <td className="p-4">{item?.skills}</td>
+                    <td className="p-4">{item?.deviceid}</td>
+                    <td className="p-4">
                       {moment(item?.deviceregistereddate).format("MMM D, YYYY")}
                     </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
+                    <td className="p-4">
+                      <div className="flex gap-4">
                         <button
-                          onClick={() => {
-                            handleOpenModal(item);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          onClick={() => handleOpenModal(item)}
+                          className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -540,14 +479,14 @@ const UserData = () => {
                           >
                             <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
                             <path
-                              fill-rule="evenodd"
+                              fillRule="evenodd"
                               d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
                             />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleDelete(item?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -567,36 +506,26 @@ const UserData = () => {
               </tbody>
             </table>
           </div>
-          <div
-            className="Pagination-laptopUp"
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "16px",
-            }}
-          >
+          <div className="Pagination-laptopUp flex justify-between p-4">
             <button
-              className={`border rounded p-1 ${
+              className={`border rounded p-1 w-[100px] ${
                 page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              } bg-gray-100 font-semibold hover:bg-gray-300`}
               onClick={handlePreviousPage}
               disabled={page === 1}
             >
               Previous
             </button>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="flex gap-2">
               {Array.from({ length: totalPages }, (_, index) => index + 1)
-                .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
-                  return (
+                .filter(
+                  (p) =>
                     p === 1 ||
                     p === totalPages ||
                     (p >= page - 3 && p <= page + 3)
-                  );
-                })
+                )
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
@@ -611,7 +540,7 @@ const UserData = () => {
                 ))}
             </div>
             <button
-              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              className="border rounded p-1 w-[100px] bg-blue-700 text-white font-semibold hover:bg-blue-500"
               onClick={handleNextPage}
               disabled={page === totalPages}
             >
@@ -619,347 +548,434 @@ const UserData = () => {
             </button>
           </div>
 
+          {/* Modal for Create / Edit User */}
           <Modal
             open={showModal}
             onClose={handleCloseModal}
-            className="z-[1] thin-scroll"
+            className="z-[1]"
             size="lg"
           >
-            <ModalDialog size="lg" className="p-2  thin-scroll">
-              <div className="flex items-start justify-between p-2  px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
+            <ModalDialog size="lg" className="p-2">
+              <div className="flex items-start justify-between p-2 px-5 border-b">
                 <h3 className="text-xl font-semibold">
                   {editModal ? "Update UserData" : "Create UserData"}
                 </h3>
                 <div
-                  onClick={() => handleCloseModal()}
-                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                  onClick={handleCloseModal}
+                  className="border p-2 rounded hover:bg-gray-200 cursor-pointer"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
                     height="18"
                     fill="currentColor"
-                    className="bi bi-x-lg font-semibold "
+                    className="bi bi-x-lg"
                     viewBox="0 0 16 16"
                   >
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
                   </svg>
                 </div>
               </div>
-
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleCloseModal();
                 }}
-                className="thin-scroll"
+                className="p-3 max-h-[380px] w-[650px] overflow-y-auto"
               >
-                <div className=" w-[300px] md:w-[500px]  lg:w-[700px] border-y  border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
-                  <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("firstname", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.firstname}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Last Name{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("lastname", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.lastname}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Email{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("email", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.email}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Mobile Number
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("mobilenumber", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.mobilenumber}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Basic User Details */}
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={currentData?.firstname || ""}
+                      onChange={(e) =>
+                        handleFormData("firstname", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.lastname || ""}
+                      onChange={(e) =>
+                        handleFormData("lastname", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Email
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.email || ""}
+                      onChange={(e) => handleFormData("email", e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Mobile Number
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.mobilenumber || ""}
+                      onChange={(e) =>
+                        handleFormData("mobilenumber", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Login Expiry Date
+                    </label>
+                    <input
+                      type="date"
+                      value={
+                        currentData?.loginexpirydate
+                          ? currentData.loginexpirydate.split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) =>
+                        handleFormData("loginexpirydate", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Status
+                    </label>
+                    <Select
+                      variant="soft"
+                      defaultValue={currentData?.status || ""}
+                      onChange={(e, value) => handleFormData("status", value)}
+                      className="w-full"
+                    >
+                      <Option value="">Select Status</Option>
+                      <Option value="Active">Active</Option>
+                      <Option value="Pending">Pending</Option>
+                      <Option value="Inactive">Inactive</Option>
+                    </Select>
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Employee ID
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.employeeid || ""}
+                      onChange={(e) =>
+                        handleFormData("employeeid", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  {/* Country, State, City */}
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Search Country
+                    </label>
+                    <Autocomplete
+                      options={country}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          name="country"
+                          label="Select Country"
+                          className="w-full"
+                        />
+                      )}
+                      onChange={(event, value) =>
+                        handleFormData("country", value ? value.label : "")
+                      }
+                      className="w-full"
+                    />
+                  </div>
 
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Login Expiry Date{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData("loginexpirydate", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.loginexpirydate?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Status
-                      </label>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Search City
+                    </label>
+                    <Autocomplete
+                      options={cityList}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          name="city"
+                          label="Select City"
+                          className="w-full"
+                        />
+                      )}
+                      onChange={(event, value) =>
+                        handleFormData("city", value ? value.label : "")
+                      }
+                      className="w-full"
+                    />
+                  </div>
 
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        defaultValue={currentData?.status || ""}
-                        onChange={(e, value) => handleFormData("status", value)}
-                      >
-                        <Option value="">Select Status</Option>
-                        <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
-                        <Option value="Inactive">Inactive</Option>
-                      </Select>
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Employee ID{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("employeeid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.employeeid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative w-full mb-5 group">
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Department
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.department || ""}
+                      onChange={(e) =>
+                        handleFormData("department", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  {!editModal && (
+                    <div className="relative">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Search Country
-                      </label>
-
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={country} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="country"
-                            label="Select Country"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("country", value ? value.label : "")
-                        }
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        State/Region{" "}
-                      </label>
-
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={state} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="state"
-                            label="Select State"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("state", value ? value.label : "")
-                        }
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Search City{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={cityList} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="city"
-                            label="Select City"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("city", value ? value.label : "")
-                        }
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Branch{" "}
-                      </label>
-
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={BranchData} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the branch name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="branch"
-                            label="Select Branch"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("branch", value ? value.label : "")
-                        } // Update form data
-                      />
-                    </div>
-
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Department{" "}
+                        Password
                       </label>
                       <input
                         type="text"
-                        onChange={(e) =>
-                          handleFormData("department", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.department}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Password{" "}
-                      </label>
-                      <input
-                        type="text"
+                        value={currentData?.password || ""}
                         onChange={(e) =>
                           handleFormData("password", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.password}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Manager Email{" "}
+                  )}
+
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Manager Email
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.manageremail || ""}
+                      onChange={(e) =>
+                        handleFormData("manageremail", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Skills
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.skills || ""}
+                      onChange={(e) => handleFormData("skills", e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Profile Image
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.profileimage || ""}
+                      onChange={(e) =>
+                        handleFormData("profileimage", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Device ID
+                    </label>
+                    <input
+                      type="text"
+                      value={currentData?.deviceid || ""}
+                      onChange={(e) =>
+                        handleFormData("deviceid", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Device Registered Date
+                    </label>
+                    <input
+                      type="date"
+                      value={
+                        currentData?.deviceregistereddate
+                          ? currentData.deviceregistereddate.split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) =>
+                        handleFormData("deviceregistereddate", e.target.value)
+                      }
+                      className="w-full bg-gray-50 border border-gray-300 text-sm rounded p-2"
+                    />
+                  </div>
+
+                  {/* New Section: User Type */}
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      User Type
+                    </label>
+                    <Select
+                      variant="soft"
+                      defaultValue={currentData?.usertype || ""}
+                      onChange={(e, value) => handleFormData("usertype", value)}
+                      className="w-full"
+                    >
+                      <Option value="">Select User Type</Option>
+                      <Option value="skanray">Skanray</Option>
+                      <Option value="dealer">Dealer</Option>
+                    </Select>
+                  </div>
+                  {/* Conditional Section: Role for Skanray */}
+                  {currentData?.usertype === "skanray" && (
+                    <div className="relative">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Role
                       </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("manageremail", e.target.value)
+                      <Select
+                        variant="soft"
+                        defaultValue={
+                          (currentData?.role && currentData.role.roleName) || ""
                         }
-                        id="name"
-                        value={currentData?.manageremail}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
+                        onChange={(e, value) => {
+                          handleFormData("roleName", value);
+                          // Set roleId according to mapping
+                          handleFormData("roleId", roleMapping[value] || "");
+                        }}
+                        className="w-full"
+                      >
+                        <Option value="">Select Role</Option>
+                        <Option value="Super Admin">Super Admin</Option>
+                        <Option value="admin">admin</Option>
+                        <Option value="cic">cic</Option>
+                        <Option value="Support">Support</Option>
+                        <Option value="Manager">Manager</Option>
+                        <Option value="Service Engineer">
+                          Service Engineer
+                        </Option>
+                      </Select>
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Skills{" "}
+                  )}
+                  {/* Conditional Section: Dealer selection for Dealer */}
+                  {currentData?.usertype === "dealer" && (
+                    <div className="relative">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Select Dealer
                       </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("skills", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.skills}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                      <Autocomplete
+                        options={dealerList}
+                        getOptionLabel={(option) => option.label}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            name="dealer"
+                            label="Select Dealer"
+                            className="w-full"
+                          />
+                        )}
+                        onChange={(event, value) => {
+                          handleFormData(
+                            "dealerName",
+                            value ? value.label : ""
+                          );
+                          handleFormData("dealerId", value ? value.id : "");
+                        }}
+                        className="w-full"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Profile Image{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("profileimage", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.profileimage}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Device ID{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("deviceid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.deviceid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Device Registered Date{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData("deviceregistereddate", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.deviceregistereddate?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
+                  )}
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Branch
+                    </label>
+                    <Autocomplete
+                      options={BranchData}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          name="branch"
+                          label="Select Branch"
+                          className="w-full"
+                        />
+                      )}
+                      onChange={(event, value) =>
+                        handleFormData("branch", value ? value.label : "")
+                      }
+                      className="w-full"
+                    />
+                  </div>
+                  {/* New Field: Location (multiple) */}
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      Location
+                    </label>
+                    <Autocomplete
+                      multiple
+                      freeSolo
+                      options={[]} // No preset options
+                      value={currentData?.location || []}
+                      onChange={(event, newValue) =>
+                        handleFormData("location", newValue)
+                      }
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Enter Locations"
+                          className="w-full"
+                        />
+                      )}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="relative">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
+                      State/Region
+                    </label>
+                    <Autocomplete
+                      options={state}
+                      getOptionLabel={(option) => option.label}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          name="state"
+                          label="Select State"
+                          className="w-full"
+                        />
+                      )}
+                      onChange={(event, value) =>
+                        handleFormData("state", value ? value.label : "")
+                      }
+                      className="w-full"
+                    />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
+                <div className="flex items-center gap-3 justify-end mt-3">
                   <button
-                    onClick={() => handleCloseModal()}
+                    onClick={handleCloseModal}
                     type="button"
-                    class=" focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                    className="border shadow text-black hover:bg-gray-200 font-medium rounded text-sm px-5 py-2.5"
                   >
                     Close
                   </button>
-
                   <button
                     onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 hover:bg-blue-800 flex items-center px-8 font-medium rounded text-sm py-2.5"
                   >
                     {editModal ? "Update User" : "Create User"}
                   </button>
@@ -969,12 +985,10 @@ const UserData = () => {
           </Modal>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
-              <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
+              <div className="bg-gray-200 rounded-lg p-6 w-[80vh] relative">
                 <button
                   onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
+                  className="absolute top-3 right-3 text-3xl text-gray-400 hover:text-gray-600"
                 >
                   &times;
                 </button>

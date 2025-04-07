@@ -494,7 +494,7 @@ function CheckPointType() {
                     <button
                       onClick={() => handleSubmit(CheckPointType?._id)}
                       type="submit"
-                      className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                      className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5   :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                     >
                           {editModal ? "Update CheckPoint Type " : "Create CheckPoint Type "} 
                     </button>

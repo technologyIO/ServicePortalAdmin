@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import PendingComplaintsBulk from "./PendingComplaintsBulk";
 
 function PendingComplaint() {
   const [showModal, setShowModal] = useState(false);
@@ -518,14 +519,14 @@ function PendingComplaint() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}
 
-              <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
+              <div className="bg-white rounded-lg p-6  relative">
                 <button
                   onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
+                  className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
                 >
                   &times;
                 </button>
-                <BulkModal />
+                <PendingComplaintsBulk />
               </div>
             </div>
           )}

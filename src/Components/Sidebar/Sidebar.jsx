@@ -4,14 +4,12 @@ import Avatar from "@mui/joy/Avatar";
 import Box from "@mui/joy/Box";
 import Divider from "@mui/joy/Divider";
 import IconButton from "@mui/joy/IconButton";
-import Input from "@mui/joy/Input";
 import List from "@mui/joy/List";
 import ListItem from "@mui/joy/ListItem";
 import ListItemButton, { listItemButtonClasses } from "@mui/joy/ListItemButton";
 import ListItemContent from "@mui/joy/ListItemContent";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
-import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
@@ -23,8 +21,22 @@ import { closeSidebar } from "./utils";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Modal } from "@mui/joy";
 
-function Toggler({ defaultExpanded = false, renderToggle, children }) {
-  const [open, setOpen] = useState(defaultExpanded);
+function Toggler({
+  defaultExpanded = false,
+  renderToggle,
+  children,
+  storageKey,
+}) {
+  const storedState = localStorage.getItem(storageKey);
+  const initialState =
+    storedState !== null ? JSON.parse(storedState) : defaultExpanded;
+  const [open, setOpen] = useState(initialState);
+
+  // Save the state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(open));
+  }, [open, storageKey]);
+
   return (
     <React.Fragment>
       {renderToggle({ open, setOpen })}
@@ -51,17 +63,21 @@ export default function Sidebar({ onSidebarItemClick }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user")) || {};
 
-  // Check if image exists in localStorage, otherwise use a default image
+  // Use correct key names from the user data
   const avatarImage =
-    user?.image ||
+    user?.profileimage || // Correct field name
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
-  const userName = user?.name || "Default Name"; // Fallback to "Default Name" if not available
-  const userId = user?.employeeId || "Default ID"; // Fallback to "Default ID" if not available
-  const userRole = user?.roleName || "User";
+
+  const userName = user?.firstname || "Default Name"; // First name fallback
+  const userId = user?.employeeid || "Default ID"; // Corrected key for employee ID
+  const userRole = user?.role?.name || "User"; // Ensure role is fetched correctly
+
   const handleLogout = () => {
-    localStorage.removeItem("user"); // Clear user data from localStorage
-    window.location.reload(); // Refresh the page or navigate to login page
+    localStorage.removeItem("user"); // Clear user data
+    window.location.reload(); // Refresh the page
   };
+
+  console.log({ avatarImage, userName, userId, userRole });
 
   useEffect(() => {
     // Set the selected item based on the current route
@@ -71,13 +87,7 @@ export default function Sidebar({ onSidebarItemClick }) {
   const handleItemClick = (item) => {
     setSelectedItem(item);
   };
-  const [activeToggler, setActiveToggler] = useState(null);
 
-  const handleToggle = (toggler) => {
-    setActiveToggler((prevToggler) =>
-      prevToggler === toggler ? null : toggler
-    );
-  };
   return (
     <Sheet
       className="Sidebar"
@@ -160,13 +170,14 @@ export default function Sidebar({ onSidebarItemClick }) {
           size="sm"
           className="mb-5 mt-6 mx-1"
           sx={{
-            gap: 1,
+            gap: 3,
             "--List-nestedInsetStart": "30px",
             "--ListItem-radius": "3px",
           }}
         >
           <ListItem nested>
             <Toggler
+              storageKey="masterManagementTogglerState" // Unique key for Master Management toggler state
               renderToggle={({ open, setOpen }) => (
                 <ListItemButton onClick={() => setOpen(!open)}>
                   <DashboardRoundedIcon />
@@ -298,6 +309,17 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/formatmaster");
+                    handleItemClick("/formatmaster");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/formatmaster"}>
+                    Format Master
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/admin-checklist");
                     handleItemClick("/admin-checklist");
                   }}
@@ -311,18 +333,10 @@ export default function Sidebar({ onSidebarItemClick }) {
               </List>
             </Toggler>
           </ListItem>
-        </List>
-        <List
-          size="sm"
-          className="mb-5 mx-1"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": "3px",
-          }}
-        >
+
           <ListItem nested>
             <Toggler
+              storageKey="uploadManagementTogglerState" // Unique key for Upload Management toggler state
               renderToggle={({ open, setOpen }) => (
                 <ListItemButton onClick={() => setOpen(!open)}>
                   <svg
@@ -443,16 +457,6 @@ export default function Sidebar({ onSidebarItemClick }) {
               </List>
             </Toggler>
           </ListItem>
-        </List>
-        <List
-          size="sm"
-          className="mx-1 mb-5"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": "3px",
-          }}
-        >
           <ListItem nested>
             <Toggler
               renderToggle={({ open, setOpen }) => (
@@ -617,6 +621,8 @@ export default function Sidebar({ onSidebarItemClick }) {
             </Toggler>
           </ListItem>
         </List>
+        
+        
         {/* <List
           size="sm"
           className="mx-1"

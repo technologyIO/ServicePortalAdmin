@@ -50,6 +50,7 @@ import PreventiveMaintenance from './Components/DataComponents/Upload_Management
 import CheckListType from './Components/DataComponents/Admin/CheckListType';
 import CheckPointType from './Components/DataComponents/Admin/CheckPointType';
 import Spare from './Components/DataComponents/Master_Managemnet/SparePart/Spare';
+import FormatMaster from './Components/DataComponents/Master_Managemnet/Format/FormatMaster';
 
 
 const PrivateRoute = ({ children }) => {
@@ -171,6 +172,7 @@ const AppContent = () => {
             <Route path="/preventive-maintenance" element={<PreventiveMaintenance />} />
             <Route path="/checklist-type" element={<CheckListType />} />
             <Route path="/checkpoint-type" element={<CheckPointType />} />
+            <Route path="/formatmaster" element={<FormatMaster />} />
             {/* Add other protected routes here */}
           </Routes>
         </Box>

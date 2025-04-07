@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import SpareMasterBulk from "./SpareMasterBulk";
 
 function Spare() {
   const [showModal, setShowModal] = useState(false);
@@ -155,7 +156,10 @@ function Spare() {
   // Updated create endpoint and payload fields
   const handleCreate = () => {
     axios
-      .post(`${process.env.REACT_APP_BASE_URL}/collections/addsparemaster`, currentData)
+      .post(
+        `${process.env.REACT_APP_BASE_URL}/collections/addsparemaster`,
+        currentData
+      )
       .then(() => {
         getData();
       })
@@ -167,7 +171,10 @@ function Spare() {
   // Updated edit endpoint to match spare master API
   const handleEditRecord = (id) => {
     axios
-      .put(`${process.env.REACT_APP_BASE_URL}/collections/addsparemaster/${id}`, currentData)
+      .put(
+        `${process.env.REACT_APP_BASE_URL}/collections/addsparemaster/${id}`,
+        currentData
+      )
       .then(() => {
         getData();
       })
@@ -306,18 +313,35 @@ function Spare() {
                           checked={selectedRows?.includes(item?._id)}
                           onChange={() => handleRowSelect(item?._id)}
                         />
-                        <label htmlFor={`checkbox-${index}`} className="sr-only">
+                        <label
+                          htmlFor={`checkbox-${index}`}
+                          className="sr-only"
+                        >
                           checkbox
                         </label>
                       </div>
                     </th>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.Sub_grp}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.PartNumber}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.Description}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.Type}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.Rate}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.DP}</td>
-                    <td className="p-4 capitalize whitespace-nowrap">{item?.Charges}</td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.Sub_grp}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.PartNumber}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.Description}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.Type}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.Rate}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.DP}
+                    </td>
+                    <td className="p-4 capitalize whitespace-nowrap">
+                      {item?.Charges}
+                    </td>
                     <td className="p-4 whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
@@ -371,10 +395,16 @@ function Spare() {
           </div>
           <div
             className="Pagination-laptopUp"
-            style={{ display: "flex", justifyContent: "space-between", padding: "16px" }}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "16px",
+            }}
           >
             <button
-              className={`border rounded p-1 ${page === 1 ? "cursor-not-allowed" : "cursor-pointer"} w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              className={`border rounded p-1 ${
+                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
               onClick={handlePreviousPage}
               disabled={page === 1}
             >
@@ -382,12 +412,19 @@ function Spare() {
             </button>
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
-                .filter((p) => p === 1 || p === totalPages || (p >= page - 3 && p <= page + 3))
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 3 && p <= page + 3)
+                )
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
-                      className={`border px-3 rounded ${p === page ? "bg-blue-700 text-white" : ""}`}
+                      className={`border px-3 rounded ${
+                        p === page ? "bg-blue-700 text-white" : ""
+                      }`}
                       onClick={() => setPage(p)}
                       disabled={p === page}
                     >
@@ -416,7 +453,10 @@ function Spare() {
                 <h3 className="text-xl font-semibold">
                   {editModal ? "Update Spare Master" : "Create Spare Master"}
                 </h3>
-                <div onClick={handleCloseModal} className="border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer">
+                <div
+                  onClick={handleCloseModal}
+                  className="border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
@@ -446,7 +486,9 @@ function Spare() {
                       <input
                         type="text"
                         required
-                        onChange={(e) => handleFormData("Sub_grp", e.target.value)}
+                        onChange={(e) =>
+                          handleFormData("Sub_grp", e.target.value)
+                        }
                         value={currentData?.Sub_grp || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
@@ -458,7 +500,9 @@ function Spare() {
                       <input
                         type="text"
                         required
-                        onChange={(e) => handleFormData("PartNumber", e.target.value)}
+                        onChange={(e) =>
+                          handleFormData("PartNumber", e.target.value)
+                        }
                         value={currentData?.PartNumber || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
@@ -470,7 +514,9 @@ function Spare() {
                       <input
                         type="text"
                         required
-                        onChange={(e) => handleFormData("Description", e.target.value)}
+                        onChange={(e) =>
+                          handleFormData("Description", e.target.value)
+                        }
                         value={currentData?.Description || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
@@ -518,7 +564,9 @@ function Spare() {
                       <input
                         type="number"
                         required
-                        onChange={(e) => handleFormData("Charges", e.target.value)}
+                        onChange={(e) =>
+                          handleFormData("Charges", e.target.value)
+                        }
                         value={currentData?.Charges || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
@@ -546,11 +594,14 @@ function Spare() {
           </Modal>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-gray-200 rounded-lg p-6 w-[80vh] relative">
-                <button onClick={closeModal} className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600">
+              <div className="bg-white rounded-lg p-6  relative">
+                <button
+                  onClick={closeModal}
+                  className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
+                >
                   &times;
                 </button>
-                <BulkModal />
+                <SpareMasterBulk />
               </div>
             </div>
           )}
