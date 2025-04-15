@@ -1,3 +1,4 @@
+// EquipmentBulk.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -18,27 +19,21 @@ export default function EquipmentBulk() {
 
   const validateAndSetFile = (selectedFile) => {
     setError(null);
-
     if (!selectedFile) {
       setFile(null);
       return;
     }
-
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
-
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
-
     if (selectedFile.size > 5 * 1024 * 1024) {
-      // 5MB limit
       setError("File size exceeds 5MB limit");
       setFile(null);
       return;
     }
-
     setFile(selectedFile);
   };
 
@@ -64,22 +59,17 @@ export default function EquipmentBulk() {
       setError("Please select a file to upload");
       return;
     }
-  
     setIsUploading(true);
     setProgress(0);
     setError(null);
-  
     const formData = new FormData();
     formData.append("file", file);
-  
     try {
       const response = await axios.post(
         `${process.env.REACT_APP_BASE_URL}/bulk/equipment/bulk-upload`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round(
@@ -90,37 +80,34 @@ export default function EquipmentBulk() {
           },
         }
       );
-  
+
+      // Set response to state and switch to results tab.
       setResult(response.data);
       setActiveTab("results");
-  
-      // Check if any result has status "Failed"
-      const failedResult = response.data.results.find(item => item.status === "Failed");
-      if (failedResult) {
-        toast.error(failedResult.error || "One or more uploads failed.");
+
+      // Check both equipment and PM results for any failures.
+      const failedEquipment = response.data.equipmentResults.filter(
+        (item) => item.status === "Failed"
+      );
+      const failedPM = response.data.pmResults.filter(
+        (item) => item.status === "Failed"
+      );
+      if (failedEquipment.length || failedPM.length) {
+        toast.error("One or more uploads failed.");
       }
-  
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       toast.error("An error occurred during upload. Please try again.");
       setError("An error occurred during upload. Please try again.");
     } finally {
       setIsUploading(false);
     }
   };
-  
 
-  const csvContent = `name,materialdescription,serialnumber,materialcode,status,currentcustomer,endcustomer,custWarrantystartdate,custWarrantyenddate,dealerwarrantystartdate,dealerwarrantyenddate,dealer,palnumber,installationreportno
-Equipment A,"High quality equipment for industrial use",SN-A-001,MC-A-100,Active,Customer X,Customer Y,2025-01-01,2025-12-31,2024-12-01,2025-06-30,Dealer A,PAL-001,IR-001
-Equipment B,"Light duty equipment for daily operations",SN-B-002,MC-B-200,Inactive,Customer Y,Customer Z,2024-05-01,2025-04-30,2024-04-15,2024-10-15,Dealer B,PAL-002,IR-002
-Equipment C,"Heavy duty industrial equipment",SN-C-003,MC-C-300,Active,Customer Z,Customer A,2025-02-01,2026-01-31,2025-01-15,2025-07-15,Dealer C,PAL-003,IR-003
-Equipment D,"Portable equipment for outdoor usage",SN-D-004,MC-D-400,Maintenance,Customer A,Customer B,2025-03-01,2026-02-28,2025-02-15,2025-08-15,Dealer D,PAL-004,IR-004
-Equipment E,"High performance equipment",SN-E-005,MC-E-500,Active,Customer B,Customer C,2025-04-01,2026-03-31,2025-03-15,2025-09-15,Dealer E,PAL-005,IR-005
-Equipment F,"Standard equipment for mid-level operations",SN-F-006,MC-F-600,Inactive,Customer C,Customer D,2024-07-01,2025-06-30,2024-06-15,2024-12-15,Dealer F,PAL-006,IR-006
-Equipment G,"Versatile equipment for various tasks",SN-G-007,MC-G-700,Active,Customer D,Customer E,2025-05-01,2026-04-30,2025-04-15,2025-10-15,Dealer G,PAL-007,IR-007
-Equipment H,"Robust equipment for heavy operations",SN-H-008,MC-H-800,Active,Customer E,Customer F,2025-06-01,2026-05-31,2025-05-15,2025-11-15,Dealer H,PAL-008,IR-008
-Equipment I,"Eco-friendly equipment",SN-I-009,MC-I-900,Active,Customer F,Customer G,2025-07-01,2026-06-30,2025-06-15,2025-12-15,Dealer I,PAL-009,IR-009
-Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Active,Customer G,Customer H,2025-08-01,2026-07-31,2025-07-15,2026-01-15,Dealer J,PAL-010,IR-010`;
+  // Updated CSV template with date fields in "YYYY-MM-DD" format.
+  const csvContent = `equipmentid,name,materialdescription,serialnumber,materialcode,status,currentcustomer,endcustomer,custWarrantystartdate,custWarrantyenddate,dealerwarrantystartdate,dealerwarrantyenddate,dealer,palnumber,installationreportno
+EQID-001,Equipment A,"High quality equipment for industrial use",SN-001,MAT3333,Active,CUST006,Customer Y,2025-01-01,2025-12-31,2024-12-01,2025-06-30,Dealer A,PAL-001,IR-001
+EQID-002,Equipment B,"Light duty equipment for daily operations",SN-002,MAT3334,Inactive,CUST002,Customer Z,2024-05-01,2025-04-30,2024-04-15,2024-10-15,Dealer B,PAL-002,IR-002`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -143,9 +130,8 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
 
   return (
     <div className="container mx-auto px-2">
-      {/* Card container */}
-      <div className="bg-white rounded-xl   overflow-hidden w-full max-w-4xl h-[470px]   mx-auto  ">
-        {/* Card header */}
+      <div className="bg-white rounded-xl overflow-hidden w-full max-w-4xl h-[470px] mx-auto">
+        {/* Header */}
         <div className="p-5 border-b pb-2 border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -179,9 +165,8 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
             </button>
           </div>
         </div>
-
-        {/* Card content */}
-        <div className="p-5 pt-0">
+        {/* Content */}
+        <div className=" pt-0">
           {/* Tabs */}
           <div className="mb-4">
             <div className="flex border-b border-gray-200">
@@ -208,11 +193,9 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
               </button>
             </div>
           </div>
-
-          {/* Upload tab content */}
+          {/* Upload Tab */}
           {activeTab === "upload" && (
             <div className="space-y-6">
-              {/* Error alert */}
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
                   <svg
@@ -237,10 +220,8 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
                   </div>
                 </div>
               )}
-
-              {/* File upload area */}
               <div
-                className={`relative border-2 border-dashed rounded-lg  transition-colors ${
+                className={`relative border-2 border-dashed rounded-lg transition-colors ${
                   isDragging
                     ? "border-blue-500 bg-blue-50"
                     : file
@@ -346,8 +327,6 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
                   <span className="sr-only">Upload file</span>
                 </label>
               </div>
-
-              {/* Progress bar */}
               {isUploading && (
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -362,8 +341,6 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
                   </div>
                 </div>
               )}
-
-              {/* Action buttons */}
               <div className="flex justify-end gap-3">
                 {file && (
                   <button
@@ -407,44 +384,67 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
               </div>
             </div>
           )}
-
-          {/* Results tab content */}
+          {/* Results Tab */}
           {activeTab === "results" && result && (
-            <div className="space-y-6 h-[400px] overflow-y-auto py-4">
-              {/* Stats cards */}
+            <div className="space-y-6 h-[400px] px-2 overflow-y-auto py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-500">
-                      Total Records
+                      Total Equipment
                     </p>
                     <p className="text-3xl font-bold text-gray-800 mt-1">
-                      {result.total}
+                      {result.totalEquipment}
                     </p>
                   </div>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                   <div className="text-center">
                     <p className="text-sm font-medium text-gray-500">
-                      Processed
+                      Processed Equipment
                     </p>
                     <p className="text-3xl font-bold text-gray-800 mt-1">
-                      {result.processed}
+                      {result.processedEquipment}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-500">
+                      Total PM Expected
+                    </p>
+                    <p className="text-3xl font-bold text-gray-800 mt-1">
+                      {result.totalPMExpected}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-500">
+                      Total PM Created
+                    </p>
+                    <p className="text-3xl font-bold text-gray-800 mt-1">
+                      {result.totalPMCreated}
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm col-span-2">
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-500">
+                      PM Completion Percentage
+                    </p>
+                    <p className="text-3xl font-bold text-gray-800 mt-1">
+                      {result.pmCompletionPercentage}%
                     </p>
                   </div>
                 </div>
               </div>
-
-              {/* Separator */}
-              <div className="h-px bg-gray-200 w-full"></div>
-
-              {/* Results list */}
-              <div>
+              <div className="mt-6">
                 <h3 className="text-lg font-medium text-gray-800 mb-3">
-                  Processing Results
+                  Equipment Upload Results
                 </h3>
                 <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
-                  {(result?.results || []).map((item, index) => (
+                  {(result.equipmentResults || []).map((item, index) => (
                     <div
                       key={index}
                       className="p-3 flex items-center justify-between"
@@ -508,8 +508,75 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
                   ))}
                 </div>
               </div>
-
-              {/* Action button */}
+              <div className="mt-6">
+                <h3 className="text-lg font-medium text-gray-800 mb-3">
+                  Preventive Maintenance Results
+                </h3>
+                <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
+                  {(result.pmResults || []).map((item, index) => (
+                    <div
+                      key={index}
+                      className="p-3 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-800">
+                          {item.serialnumber} - {item.pmType}
+                        </p>
+                        {item.message && (
+                          <p className="text-sm text-gray-500">
+                            {item.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {item.status === "Created" ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-green-500"
+                          >
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-red-500"
+                          >
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                          </svg>
+                        )}
+                        <span
+                          className={
+                            item.status === "Created"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }
+                        >
+                          {item.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="flex justify-end">
                 <button
                   onClick={resetForm}
@@ -521,9 +588,8 @@ Equipment J,"Next-gen equipment with advanced features",SN-J-010,MC-J-1000,Activ
             </div>
           )}
         </div>
-
-        {/* Card footer */}
-        <div className="p-3 pt-2 border-t border-gray-200 bg-gray-100">
+        {/* Footer */}
+        <div className="p-3 pt-2 mt-2 border-t border-gray-200 bg-gray-100">
           <div className="flex flex-col items-start text-sm text-gray-500">
             <p className="font-medium">Notes:</p>
             <ul className="list-disc list-inside space-y-1 mt-2">

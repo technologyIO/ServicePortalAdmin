@@ -218,13 +218,13 @@ function PreventiveMaintenance() {
                 </button>
               </div>
               <div className="flex gap-3">
-                <button
+                {/* <button
                   onClick={openModal}
                   type="button"
                   className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
                 >
                   Upload
-                </button>
+                </button> */}
                 <button
                   onClick={handleCloseModal}
                   type="button"
@@ -276,6 +276,9 @@ function PreventiveMaintenance() {
                     </th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                       PM number (Report number){" "}
+                    </th>
+                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                      Document Number (Report Formate no , rev){" "}
                     </th>
                     <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                       Material Description
@@ -339,6 +342,9 @@ function PreventiveMaintenance() {
                         {item?.pmNumber}
                       </td>
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.documentnumber}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.materialDescription}
                       </td>
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
@@ -348,7 +354,13 @@ function PreventiveMaintenance() {
                         {item?.customerCode}
                       </td>
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                        {item?.regionBranch}
+                        {item?.region}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.pmDueMonth}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.pmDoneDate}
                       </td>
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.pmVendorCode}
@@ -373,21 +385,6 @@ function PreventiveMaintenance() {
                         >
                           {item?.pmStatus}
                         </span>
-                      </td>
-
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {item?.pmDueMonth
-                          ? moment(item.pmDueMonth, "MM/YYYY").format(
-                              "MMM, YYYY"
-                            )
-                          : "N/A"}
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {item?.pmDoneDate
-                          ? moment(item.pmDoneDate, "DD/MM/YYYY").format(
-                              "MMM D, YYYY"
-                            )
-                          : "N/A"}
                       </td>
 
                       <td className="p-4 align-middle whitespace-nowrap">
@@ -501,7 +498,9 @@ function PreventiveMaintenance() {
               <ModalDialog size="lg" className="p-2  thin-scroll">
                 <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                   <h3 className="text-2xl font-semibold">
-                    {editModal ? "Update Preventive maintenance" : "Create Preventive maintenance"}
+                    {editModal
+                      ? "Update Preventive maintenance"
+                      : "Create Preventive maintenance"}
                   </h3>
                   <div
                     onClick={() => handleCloseModal()}
@@ -734,9 +733,11 @@ function PreventiveMaintenance() {
                     <button
                       onClick={() => handleSubmit(currentData?._id)}
                       type="submit"
-                      className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                      className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 "
                     >
-                      {editModal ? "Update Preventive Maintenance" : "Create Preventive Maintenance"}
+                      {editModal
+                        ? "Update Preventive Maintenance"
+                        : "Create Preventive Maintenance"}
                     </button>
                   </div>
                 </form>
