@@ -259,7 +259,7 @@ function WarrantyCode() {
             </div>
           )}
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border border  min-w-max caption-bottom text-sm">
+            <table className="w-full   border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
                 <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
@@ -575,7 +575,7 @@ function WarrantyCode() {
                   <button
                     onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5   :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
                     {editModal ? "Update WarrantyCode" : "Create WarrantyCode"}
                   </button>

@@ -51,6 +51,12 @@ import CheckListType from './Components/DataComponents/Admin/CheckListType';
 import CheckPointType from './Components/DataComponents/Admin/CheckPointType';
 import Spare from './Components/DataComponents/Master_Managemnet/SparePart/Spare';
 import FormatMaster from './Components/DataComponents/Master_Managemnet/Format/FormatMaster';
+import CmcNcmcWYears from './Components/DataComponents/Admin/CmcNcmcWYears';
+import CmcNcmcPrice from './Components/DataComponents/Admin/CmcNcmcPrice';
+import CmcNcmcTds from './Components/DataComponents/Admin/CmcNcmcTds';
+import CmcNcmcGst from './Components/DataComponents/Admin/CmcNcmcGst';
+import CmcNcmcDiscount from './Components/DataComponents/Admin/CmcNcmcDiscount';
+import QuoteApproval from './Components/DataComponents/Admin/QuoteApproval';
 
 
 const PrivateRoute = ({ children }) => {
@@ -173,6 +179,12 @@ const AppContent = () => {
             <Route path="/checklist-type" element={<CheckListType />} />
             <Route path="/checkpoint-type" element={<CheckPointType />} />
             <Route path="/formatmaster" element={<FormatMaster />} />
+            <Route path="/cmc-ncmc-years" element={<CmcNcmcWYears />} />
+            <Route path="/cmc-ncmc-price" element={<CmcNcmcPrice />} />
+            <Route path="/cmc-ncmc-tds" element={<CmcNcmcTds />} />
+            <Route path="/cmc-ncmc-gst" element={<CmcNcmcGst />} />
+            <Route path="/cmc-ncmc-discount" element={<CmcNcmcDiscount />} />
+            <Route path="/quote-approval" element={<QuoteApproval />} />
             {/* Add other protected routes here */}
           </Routes>
         </Box>

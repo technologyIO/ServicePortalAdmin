@@ -10,9 +10,8 @@ import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
-import BulkModal from "../../BulkUpload.jsx/BulkModal";
-import EquipmentBulk from "./EquipmentBulk";
-const UserData = () => {
+import BulkModal from "../BulkUpload.jsx/BulkModal";
+function CmcNcmcDiscount() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
@@ -96,9 +95,7 @@ const UserData = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(
-            `${process.env.REACT_APP_BASE_URL}/collections/equipment/${id}`
-          )
+          .delete(`${process.env.REACT_APP_BASE_URL}/admin/discount/${id}`)
           .then((res) => {
             Swal.fire("Deleted!", "Countrys has been deleted.", "success");
           })
@@ -120,7 +117,7 @@ const UserData = () => {
     setLoader(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchequipment?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
       );
       setData(response.data);
       setLoader(false);
@@ -135,11 +132,11 @@ const UserData = () => {
     setSearchQuery("");
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/equipment?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/admin/discount?page=${page}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.equipment);
+        setData(res.data);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -165,10 +162,7 @@ const UserData = () => {
 
   const handleCreate = () => {
     axios
-      .post(
-        `${process.env.REACT_APP_BASE_URL}/collections/equipment`,
-        currentData
-      )
+      .post(`${process.env.REACT_APP_BASE_URL}/admin/discount`, currentData)
       .then((res) => {
         getData();
       })
@@ -179,10 +173,7 @@ const UserData = () => {
 
   const handleEditCountry = (id) => {
     axios
-      .put(
-        `${process.env.REACT_APP_BASE_URL}/collections/equipment/${id}`,
-        currentData
-      )
+      .put(`${process.env.REACT_APP_BASE_URL}/admin/discount/${id}`, currentData)
       .then((res) => {
         getData();
       })
@@ -198,25 +189,6 @@ const UserData = () => {
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
   };
-
-  const formatAnyDate = (dateValue) => {
-    if (!dateValue) return "N/A";
-
-    let finalDate;
-
-    if (typeof dateValue === "number") {
-      // Remove decimal part for Excel serial
-      const excelDays = Math.floor(dateValue);
-      finalDate = new Date((excelDays - 25569) * 86400 * 1000);
-    } else {
-      finalDate = new Date(dateValue);
-    }
-
-    return moment(finalDate).isValid()
-      ? moment(finalDate).format("MMM D, YYYY")
-      : "Invalid Date";
-  };
-
   return (
     <>
       {loader ? (
@@ -278,7 +250,7 @@ const UserData = () => {
             </div>
           )}
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border   min-w-max caption-bottom text-sm">
+            <table className="w-full   border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
                 <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
@@ -296,46 +268,11 @@ const UserData = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Equipment (ID)
+                  Discount
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Material Code
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Material Description
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Serial Number
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Current Customer
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    End Customer
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    CustWarrantyStart{" "}
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    CustWarrantyEnd{" "}
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    DealerWarrantyStart{" "}
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    DealerWarrantyEnd{" "}
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Dealer
-                  </th>
+                  
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    NPAL numberame
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Created Date
@@ -372,42 +309,9 @@ const UserData = () => {
                       </div>
                     </th>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.equipmentid}
+                      {item?.discount}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.materialcode}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.name}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.materialdescription}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.serialnumber}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.currentcustomer}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.endcustomer}
-                    </td>
-                    <td className="p-4 text-md capitalize whitespace-nowrap">
-                      {formatAnyDate(item?.custWarrantystartdate)}
-                    </td>
-                    <td className="p-4 text-md capitalize whitespace-nowrap">
-                      {formatAnyDate(item?.custWarrantyenddate)}
-                    </td>
-                    <td className="p-4 text-md capitalize whitespace-nowrap">
-                      {formatAnyDate(item?.dealerwarrantystartdate)}
-                    </td>
-                    <td className="p-4 text-md capitalize whitespace-nowrap">
-                      {formatAnyDate(item?.dealerwarrantyenddate)}
-                    </td>
-
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.dealer}
-                    </td>
+              
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
@@ -420,9 +324,6 @@ const UserData = () => {
                       >
                         {item?.status}
                       </span>
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.palnumber}
                     </td>
 
                     <td className="p-4 align-middle whitespace-nowrap">
@@ -532,14 +433,14 @@ const UserData = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}
 
-              <div className="bg-white rounded-lg p-6   relative">
+              <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
                 <button
                   onClick={closeModal}
-                  className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
+                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
                 >
                   &times;
                 </button>
-                <EquipmentBulk />
+                <BulkModal />
               </div>
             </div>
           )}
@@ -552,7 +453,7 @@ const UserData = () => {
             <ModalDialog size="lg" className="p-2  thin-scroll">
               <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-xl font-semibold">
-                  {editModal ? "Update Equipment" : "Create Equipment"}
+                  {editModal ? "Update Warranty Code" : "Create Warranty Code"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
@@ -582,187 +483,17 @@ const UserData = () => {
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Equipment (ID)
+                      Discount
                       </label>
                       <input
                         type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("equipmentid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.equipmentid}
+                        onChange={(e) => handleFormData("discount", e.target.value)}
+                        id="discount"
+                        value={currentData?.discount}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Material Code
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("materialcode", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.materialcode}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) => handleFormData("name", e.target.value)}
-                        id="name"
-                        value={currentData?.name}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Material Description
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("materialdescription", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.materialdescription}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2  text-sm font-medium text-gray-900 ">
-                        Serial Number{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("serialnumber", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.serialnumber}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Current Customer
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("currentcustomer", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.currentcustomer}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        End Customer
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("endcustomer", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.endcustomer?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Cust Warranty Start{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData(
-                            "custWarrantystartdate",
-                            e.target.value
-                          )
-                        }
-                        id="name"
-                        value={
-                          currentData?.custWarrantystartdate?.split("T")[0]
-                        }
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Cust Warranty End{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData("custWarrantyenddate", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.custWarrantyenddate?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Dealer Warranty Start{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData(
-                            "dealerwarrantystartdate",
-                            e.target.value
-                          )
-                        }
-                        id="name"
-                        value={
-                          currentData?.dealerwarrantystartdate?.split("T")[0]
-                        }
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Dealer Warranty End{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData(
-                            "dealerwarrantyenddate",
-                            e.target.value
-                          )
-                        }
-                        id="name"
-                        value={
-                          currentData?.dealerwarrantyenddate?.split("T")[0]
-                        }
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Dealer
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("dealer", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.dealer}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
+                     
 
                     <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
@@ -777,24 +508,8 @@ const UserData = () => {
                       >
                         <Option value="">Select Status</Option>
                         <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
                         <Option value="Inactive">Inactive</Option>
                       </Select>
-                    </div>
-
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        PAL number
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("palnumber", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.palnumber}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
                     </div>
                   </div>
                 </div>
@@ -810,9 +525,9 @@ const UserData = () => {
                   <button
                     onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5   :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                    {editModal ? "Update Equipment" : "Create Equipment"}
+                    {editModal ? "Update WarrantyCode" : "Create WarrantyCode"}
                   </button>
                 </div>
               </form>
@@ -822,6 +537,6 @@ const UserData = () => {
       )}
     </>
   );
-};
+}
 
-export default UserData;
+export default CmcNcmcDiscount;

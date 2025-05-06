@@ -107,7 +107,13 @@ export default function EquipmentBulk() {
   // Updated CSV template with date fields in "YYYY-MM-DD" format.
   const csvContent = `equipmentid,name,materialdescription,serialnumber,materialcode,status,currentcustomer,endcustomer,custWarrantystartdate,custWarrantyenddate,dealerwarrantystartdate,dealerwarrantyenddate,dealer,palnumber,installationreportno
 EQID-001,Equipment A,"High quality equipment for industrial use",SN-001,MAT3333,Active,CUST006,Customer Y,2025-01-01,2025-12-31,2024-12-01,2025-06-30,Dealer A,PAL-001,IR-001
-EQID-002,Equipment B,"Light duty equipment for daily operations",SN-002,MAT3334,Inactive,CUST002,Customer Z,2024-05-01,2025-04-30,2024-04-15,2024-10-15,Dealer B,PAL-002,IR-002`;
+EQID-002,Equipment B,"Light duty equipment for daily operations",SN-002,MAT3334,Inactive,CUST002,Customer Z,2024-05-01,2025-04-30,2024-04-15,2024-10-15,Dealer B,PAL-002,IR-002
+EQID-003,Equipment C,"Heavy-duty equipment for construction sites",SN-003,MAT3335,Active,CUST003,Customer X,2025-02-01,2026-01-31,2025-01-10,2025-07-10,Dealer C,PAL-003,IR-003
+EQID-004,Equipment D,"Compact machine for small scale industries",SN-004,MAT3336,Inactive,CUST004,Customer W,2024-06-01,2025-05-31,2024-05-01,2024-11-01,Dealer D,PAL-004,IR-004
+EQID-005,Equipment E,"Advanced equipment with AI support",SN-005,MAT3337,Active,CUST005,Customer V,2025-03-15,2026-03-14,2025-02-20,2025-08-20,Dealer E,PAL-005,IR-005
+EQID-006,Equipment F,"Multi-purpose industrial machine",SN-006,MAT3338,Active,CUST007,Customer U,2024-07-01,2025-06-30,2024-06-15,2024-12-15,Dealer F,PAL-006,IR-006
+EQID-007,Equipment G,"Durable outdoor equipment for heavy weather",SN-007,MAT3339,Inactive,CUST008,Customer T,2023-11-01,2024-10-31,2023-10-01,2024-04-01,Dealer G,PAL-007,IR-007
+`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });

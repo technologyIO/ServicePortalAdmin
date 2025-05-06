@@ -617,12 +617,81 @@ export default function Sidebar({ onSidebarItemClick }) {
                     PM Master
                   </ListItemButton>
                 </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cmc-ncmc-years");
+                    handleItemClick("/cmc-ncmc-years");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/cmc-ncmc-years"}>
+                    CMC/NCMC Years
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cmc-ncmc-price");
+                    handleItemClick("/cmc-ncmc-price");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/cmc-ncmc-price"}>
+                    CMC/NCMC Price
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cmc-ncmc-tds");
+                    handleItemClick("/cmc-ncmc-tds");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/cmc-ncmc-tds"}>
+                    CMC/NCMC TDS
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cmc-ncmc-gst");
+                    handleItemClick("/cmc-ncmc-gst");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/cmc-ncmc-gst"}>
+                    CMC/NCMC Gst
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cmc-ncmc-discount");
+                    handleItemClick("/cmc-ncmc-discount");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/cmc-ncmc-discount"}
+                  >
+                    CMC/NCMC Discount
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/quote-approval");
+                    handleItemClick("/quote-approval");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/quote-approval"}
+                  >
+                    Quote Approval
+                  </ListItemButton>
+                </ListItem>
               </List>
             </Toggler>
           </ListItem>
         </List>
-        
-        
+
         {/* <List
           size="sm"
           className="mx-1"
