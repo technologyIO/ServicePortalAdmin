@@ -681,10 +681,61 @@ export default function Sidebar({ onSidebarItemClick }) {
                     handleItemClick("/quote-approval");
                   }}
                 >
-                  <ListItemButton
-                    selected={selectedItem === "/quote-approval"}
-                  >
+                  <ListItemButton selected={selectedItem === "/quote-approval"}>
                     Quote Approval
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            </Toggler>
+          </ListItem>
+          <ListItem nested>
+            <Toggler
+              renderToggle={({ open, setOpen }) => (
+                <ListItemButton onClick={() => setOpen(!open)}>
+                  <SummarizeIcon />
+                  <ListItemContent>
+                    <Typography level="title-sm">Close Order</Typography>
+                  </ListItemContent>
+
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="12"
+                    height="12"
+                    fill="currentColor"
+                    className="bi bi-chevron-down"
+                    viewBox="0 0 16 16"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
+                    />
+                  </svg>
+                </ListItemButton>
+              )}
+            >
+              <List sx={{ gap: 0.5 }}>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/open-proposal");
+                    handleItemClick("/open-proposal");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/open-proposal"}
+                  >
+                    Open
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/close-proposal");
+                    handleItemClick("/close-proposal");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/close-proposal"}>
+                    Close
                   </ListItemButton>
                 </ListItem>
               </List>

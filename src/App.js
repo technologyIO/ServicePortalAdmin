@@ -57,6 +57,8 @@ import CmcNcmcTds from './Components/DataComponents/Admin/CmcNcmcTds';
 import CmcNcmcGst from './Components/DataComponents/Admin/CmcNcmcGst';
 import CmcNcmcDiscount from './Components/DataComponents/Admin/CmcNcmcDiscount';
 import QuoteApproval from './Components/DataComponents/Admin/QuoteApproval';
+import OpenProposal from './Components/DataComponents/CloseOrder/OpenProposal';
+import CloseProposal from './Components/DataComponents/CloseOrder/CloseProposal';
 
 
 const PrivateRoute = ({ children }) => {
@@ -185,6 +187,8 @@ const AppContent = () => {
             <Route path="/cmc-ncmc-gst" element={<CmcNcmcGst />} />
             <Route path="/cmc-ncmc-discount" element={<CmcNcmcDiscount />} />
             <Route path="/quote-approval" element={<QuoteApproval />} />
+            <Route path="/open-proposal" element={<OpenProposal />} />
+            <Route path="/close-proposal" element={<CloseProposal />} />
             {/* Add other protected routes here */}
           </Routes>
         </Box>
