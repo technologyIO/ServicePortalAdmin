@@ -56,9 +56,10 @@ import CmcNcmcPrice from './Components/DataComponents/Admin/CmcNcmcPrice';
 import CmcNcmcTds from './Components/DataComponents/Admin/CmcNcmcTds';
 import CmcNcmcGst from './Components/DataComponents/Admin/CmcNcmcGst';
 import CmcNcmcDiscount from './Components/DataComponents/Admin/CmcNcmcDiscount';
-import QuoteApproval from './Components/DataComponents/Admin/QuoteApproval';
+import QuoteApproval from './Components/DataComponents/Admin/QuoteApproval/QuoteApproval';
 import OpenProposal from './Components/DataComponents/CloseOrder/OpenProposal';
 import CloseProposal from './Components/DataComponents/CloseOrder/CloseProposal';
+import ProposalApprovalPage from './Components/DataComponents/Admin/QuoteApproval/ProposalApprovalPage';
 
 
 const PrivateRoute = ({ children }) => {
@@ -188,6 +189,7 @@ const AppContent = () => {
             <Route path="/cmc-ncmc-discount" element={<CmcNcmcDiscount />} />
             <Route path="/quote-approval" element={<QuoteApproval />} />
             <Route path="/open-proposal" element={<OpenProposal />} />
+            <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
             <Route path="/close-proposal" element={<CloseProposal />} />
             {/* Add other protected routes here */}
           </Routes>
