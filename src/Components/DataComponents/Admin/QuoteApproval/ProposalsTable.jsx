@@ -19,6 +19,7 @@ const ProposalsTable = ({ proposals, onView, onEdit, getStatusChip }) => {
       </thead>
       <tbody>
         {[...proposals]
+          .filter(proposal => proposal.discountPercentage > 5) // Filter out proposals with 5% or less discount
           .sort((a, b) => {
             const dateA = new Date(a.revisionData?.revisionDate || a.createdAt);
             const dateB = new Date(b.revisionData?.revisionDate || b.createdAt);

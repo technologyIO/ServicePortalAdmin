@@ -239,10 +239,16 @@ const AdminCity = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
+                    City Name
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    City ID
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     State
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    State ID
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
@@ -282,8 +288,14 @@ const AdminCity = () => {
                     <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
                       {i?.name}
                     </td>
+                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                      {i?.cityID}
+                    </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.state}
+                    </td>
+                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                      {i?.stateId}
                     </td>
                     <td>
                       <span
@@ -445,6 +457,7 @@ const AdminCity = () => {
                       <input
                         type="text"
                         required
+                        placeholder="Enter City Name"
                         onChange={(e) => handleFormData("name", e.target.value)}
                         id="name"
                         value={currentData?.name}
@@ -458,6 +471,7 @@ const AdminCity = () => {
                       <input
                         type="text"
                         required
+                        placeholder="Enter City ID"
                         onChange={(e) =>
                           handleFormData("cityID", e.target.value)
                         }
@@ -473,6 +487,7 @@ const AdminCity = () => {
                       <Autocomplete
                         className="h-10 w-full"
                         options={state}
+                        placeholder="Enter State"
                         getOptionLabel={(option) => option.label}
                         renderInput={(params) => (
                           <TextField
@@ -485,6 +500,21 @@ const AdminCity = () => {
                         onChange={(event, value) =>
                           handleFormData("state", value ? value.label : "")
                         }
+                      />
+                    </div>
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        State ID
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Enter State ID"
+                        onChange={(e) =>
+                          handleFormData("stateId", e.target.value)
+                        }
+                        value={currentData?.stateId || ""}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
 

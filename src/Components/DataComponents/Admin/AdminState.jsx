@@ -301,7 +301,10 @@ const AdminState = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
+                    State Name
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    State ID
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Country
@@ -345,6 +348,9 @@ const AdminState = () => {
                     </th>
                     <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
                       {i?.name}
+                    </td>
+                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                      {i?.stateId}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.country}
@@ -415,56 +421,56 @@ const AdminState = () => {
             </table>
           </div>
           <div
-                     className="Pagination-laptopUp"
-                     style={{
-                       display: "flex",
-                       justifyContent: "space-between",
-                       padding: "16px",
-                     }}
-                   >
-                     <button
-                       className={`border rounded p-1 ${
-                         page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-                       } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-                       onClick={handlePreviousPage}
-                       disabled={page === 1}
-                     >
-                       Previous
-                     </button>
-                     <div style={{ display: "flex", gap: "8px" }}>
-                       {Array.from({ length: totalPages }, (_, index) => index + 1)
-                         .filter((p) => {
-                           // Show the first page, last page, and pages around the current page
-                           return (
-                             p === 1 ||
-                             p === totalPages ||
-                             (p >= page - 3 && p <= page + 3)
-                           );
-                         })
-                         .map((p, i, array) => (
-                           <React.Fragment key={p}>
-                             {/* Add ellipsis for skipped ranges */}
-                             {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                             <button
-                               className={`border px-3 rounded ${
-                                 p === page ? "bg-blue-700 text-white" : ""
-                               }`}
-                               onClick={() => setPage(p)}
-                               disabled={p === page}
-                             >
-                               {p}
-                             </button>
-                           </React.Fragment>
-                         ))}
-                     </div>
-                     <button
-                       className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-                       onClick={handleNextPage}
-                       disabled={page === totalPages}
-                     >
-                       Next
-                     </button>
-                   </div>
+            className="Pagination-laptopUp"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "16px",
+            }}
+          >
+            <button
+              className={`border rounded p-1 ${
+                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              onClick={handlePreviousPage}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((p) => {
+                  // Show the first page, last page, and pages around the current page
+                  return (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 3 && p <= page + 3)
+                  );
+                })
+                .map((p, i, array) => (
+                  <React.Fragment key={p}>
+                    {/* Add ellipsis for skipped ranges */}
+                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                    <button
+                      className={`border px-3 rounded ${
+                        p === page ? "bg-blue-700 text-white" : ""
+                      }`}
+                      onClick={() => setPage(p)}
+                      disabled={p === page}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                ))}
+            </div>
+            <button
+              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              onClick={handleNextPage}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
 
           <Modal
             open={showModal}
@@ -514,7 +520,24 @@ const AdminState = () => {
                         id="name"
                         value={currentData?.name}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                        placeholder=" "
+                        placeholder="Enter State Name "
+                        required
+                      />
+                    </div>
+                    <div class="relative z-0 w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                        State Id
+                      </label>
+                      <input
+                        onChange={(e) =>
+                          handleFormData("stateId", e.target.value)
+                        }
+                        type="text"
+                        name="stateId"
+                        id="stateId"
+                        value={currentData?.stateId}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        placeholder="Enter State ID "
                         required
                       />
                     </div>
@@ -535,38 +558,29 @@ const AdminState = () => {
                         <Option value="Inactive">Inactive</Option>
                       </Select>
                     </div>
-                  </div>
-                  <div>
-                    <label class="block mb-2 text-sm font-medium text-gray-900">
-                      Select Country
-                    </label>
-                    <Autocomplete
-                      className="h-10 w-full"
-                      options={country} // Data from API
-                      getOptionLabel={(option) => option.label} // Display the country name
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          name="country"
-                          label="Select country"
-                        />
-                      )}
-                      sx={{ width: 300 }}
-                      onChange={(event, value) =>
-                        handleFormData("country", value ? value.label : "")
-                      }
-                    />
-                    {/* <Select
-                      variant="soft"
-                      className="rounded-[4px] py-2 border"
-                      defaultValue={currentData?.country || ""}
-                      onChange={(e, value) => handleFormData("country", value)}
-                    >
-                      <Option value="">Select Country</Option>
-                      {countrys?.map((country) => (
-                        <Option value={country?.name}>{country?.name}</Option>
-                      ))}
-                    </Select> */}
+                    <div>
+                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                        Select Country
+                      </label>
+                      <Autocomplete
+                        className="h-10 w-full"
+                        options={country} // Data from API
+                        getOptionLabel={(option) => option.label} // Display the country name
+                        placeholder="Search Country"
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            name="country"
+                            label="Select country"
+                          />
+                        )}
+                        sx={{ width: 300 }}
+                        onChange={(event, value) =>
+                          handleFormData("country", value ? value.label : "")
+                        }
+                      />
+                      
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">

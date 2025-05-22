@@ -65,12 +65,12 @@ export default function Sidebar({ onSidebarItemClick }) {
 
   // Use correct key names from the user data
   const avatarImage =
-    user?.profileimage || // Correct field name
+    user?.details?.profileimage || // Correct field name
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
 
-  const userName = user?.firstname || "Default Name"; // First name fallback
-  const userId = user?.employeeid || "Default ID"; // Corrected key for employee ID
-  const userRole = user?.role?.name || "User"; // Ensure role is fetched correctly
+  const userName = user?.details?.firstname || "Default Name"; // First name fallback
+  const userId = user?.details?.employeeid || "Default ID"; // Corrected key for employee ID
+  const userRole = user?.details?.role?.roleName || "User"; // Ensure role is fetched correctly
 
   const handleLogout = () => {
     localStorage.removeItem("user"); // Clear user data
@@ -556,12 +556,12 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/Roles");
-                    handleItemClick("/Roles");
+                    navigate("/role-manage");
+                    handleItemClick("/role-manage");
                   }}
                 >
-                  <ListItemButton selected={selectedItem === "/Roles"}>
-                    Roles
+                  <ListItemButton selected={selectedItem === "/role-manage"}>
+                    Role Manage
                   </ListItemButton>
                 </ListItem>
                 <ListItem
@@ -685,6 +685,17 @@ export default function Sidebar({ onSidebarItemClick }) {
                     Quote Approval
                   </ListItemButton>
                 </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/cnote-delete");
+                    handleItemClick("/cnote-delete");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/cnote-delete"}>
+                    CNote Delete
+                  </ListItemButton>
+                </ListItem>
               </List>
             </Toggler>
           </ListItem>
@@ -721,9 +732,7 @@ export default function Sidebar({ onSidebarItemClick }) {
                     handleItemClick("/open-proposal");
                   }}
                 >
-                  <ListItemButton
-                    selected={selectedItem === "/open-proposal"}
-                  >
+                  <ListItemButton selected={selectedItem === "/open-proposal"}>
                     Open
                   </ListItemButton>
                 </ListItem>
@@ -1107,9 +1116,9 @@ export default function Sidebar({ onSidebarItemClick }) {
         </List> */}
       </Box>
 
-      <Divider />
+      {/* <Divider /> */}
       <Box sx={{ width: "100%" }}>
-        <List
+        {/* <List
           size="sm"
           sx={{
             gap: 1,
@@ -1158,18 +1167,16 @@ export default function Sidebar({ onSidebarItemClick }) {
                     Change password
                   </ListItemButton>
                 </ListItem>
-                <ListItem>
-                  {/* <ListItemButton onClick={()=>navigate('/reported-problem')}>Roles & permission</ListItemButton> */}
-                </ListItem>
+         
               </List>
             </Toggler>
           </ListItem>
-        </List>
-        <div className="flex my-3 border mx-1 bg-gray-100 gap-1 items-center rounded pl-1 py-1">
+        </List> */}
+        {/* <div className="flex my-3 border mx-1 bg-gray-100 gap-1 items-center rounded pl-1 py-1">
           <Avatar
             variant="outlined"
             size="sm"
-            src={avatarImage} // Dynamically set avatar image
+            src={avatarImage}  
           />
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography level="title-sm" className="text-xs font-bold">
@@ -1187,7 +1194,7 @@ export default function Sidebar({ onSidebarItemClick }) {
               </Typography>
             </div>
           </Box>
-        </div>
+        </div> */}
         <div className="mx-1">
           <IconButton
             size="sm"
@@ -1199,11 +1206,11 @@ export default function Sidebar({ onSidebarItemClick }) {
             LogOut <LogoutRoundedIcon />
           </IconButton>
 
-          {/* Logout confirmation modal */}
+        
           <LogoutModal
             open={isModalOpen}
-            onClose={() => setIsModalOpen(false)} // Close modal without logging out
-            onConfirm={handleLogout} // Confirm and logout
+            onClose={() => setIsModalOpen(false)}  
+            onConfirm={handleLogout}  
           />
         </div>
       </Box>

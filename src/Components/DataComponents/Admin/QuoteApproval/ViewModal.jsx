@@ -15,7 +15,11 @@ import moment from "moment";
 
 const ViewModal = ({ open, onClose, proposal, revision }) => {
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal
+    
+      open={open}
+      onClose={onClose}
+    >
       <ModalDialog
         size="lg"
         sx={{
@@ -62,21 +66,15 @@ const ViewModal = ({ open, onClose, proposal, revision }) => {
             </Box>
             <Box>
               <Typography fontWeight="bold">Contact:</Typography>
-              <Typography>
-                {proposal?.customer?.telephone || "N/A"}
-              </Typography>
+              <Typography>{proposal?.customer?.telephone || "N/A"}</Typography>
             </Box>
             <Box>
               <Typography fontWeight="bold">Email:</Typography>
-              <Typography>
-                {proposal?.customer?.email || "N/A"}
-              </Typography>
+              <Typography>{proposal?.customer?.email || "N/A"}</Typography>
             </Box>
             <Box>
               <Typography fontWeight="bold">City:</Typography>
-              <Typography>
-                {proposal?.customer?.city || "N/A"}
-              </Typography>
+              <Typography>{proposal?.customer?.city || "N/A"}</Typography>
             </Box>
           </Box>
         </Box>
@@ -94,9 +92,9 @@ const ViewModal = ({ open, onClose, proposal, revision }) => {
           <Divider sx={{ my: 1 }} />
           <Typography>
             <strong>Date:</strong>{" "}
-            {moment(
-              revision?.revisionDate || proposal?.createdAt
-            ).format("MMM D, YYYY h:mm A")}
+            {moment(revision?.revisionDate || proposal?.createdAt).format(
+              "MMM D, YYYY h:mm A"
+            )}
           </Typography>
           <Typography>
             <strong>Status:</strong>{" "}
@@ -136,83 +134,111 @@ const ViewModal = ({ open, onClose, proposal, revision }) => {
             </Box>
             <Box>
               <Typography fontWeight="bold">Final Amount:</Typography>
-              <Typography>
-                ₹{proposal?.finalAmount?.toFixed(2)}
-              </Typography>
+              <Typography>₹{proposal?.finalAmount?.toFixed(2)}</Typography>
             </Box>
           </Box>
         </Box>
 
         {/* Equipment Table */}
-        <Box sx={{ maxHeight: "500px", overflowY: "auto" }}>
-          <Table>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Code</th>
-                <th>Warranty</th>
-                <th>Price</th>
-                <th>RSH Status</th>
-                <th>NSH Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {proposal?.items?.map((item) => (
-                <tr key={item._id}>
-                  <td>{item.equipment?.materialdescription}</td>
-                  <td>{item.equipment?.materialcode}</td>
-                  <td>
-                    {item.years} year(s) {item.warrantyType}
-                  </td>
-                  <td>₹{item.subtotal?.toFixed(2)}</td>
-                  <td>
-                    {item.RSHApproval?.approved ? (
-                      <>
-                        <Chip color="success" variant="solid">
-                          Approved
-                        </Chip>
-                        <Typography variant="body2">
-                          By: {item.RSHApproval.approvedBy?.name || "Unknown"}
-                        </Typography>
-                        <Typography variant="body2">
-                          On:{" "}
-                          {moment(item.RSHApproval.approvedAt).format(
-                            "MMM D, YYYY h:mm A"
-                          )}
-                        </Typography>
-                      </>
-                    ) : (
-                      <Chip color="neutral" variant="outlined">
-                        Pending
-                      </Chip>
-                    )}
-                  </td>
-                  <td>
-                    {item.NSHApproval?.approved ? (
-                      <>
-                        <Chip color="success" variant="solid">
-                          Approved
-                        </Chip>
-                        <Typography variant="body2">
-                          By: {item.NSHApproval.approvedBy?.name || "Unknown"}
-                        </Typography>
-                        <Typography variant="body2">
-                          On:{" "}
-                          {moment(item.NSHApproval.approvedAt).format(
-                            "MMM D, YYYY h:mm A"
-                          )}
-                        </Typography>
-                      </>
-                    ) : (
-                      <Chip color="neutral" variant="outlined">
-                        Pending
-                      </Chip>
-                    )}
-                  </td>
+        <Box sx={{ mb: 3 }}>
+          <Typography level="h6" mb={1}>
+            Equipment Details
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ maxHeight: "500px", overflowY: "auto" }}>
+            <Table borderAxis="bothBetween" sx={{ tableLayout: "fixed" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "25%" }}>Description</th>
+                  <th style={{ width: "10%" }}>Code</th>
+                  <th style={{ width: "10%" }}>Dealer</th>
+                  <th style={{ width: "15%" }}>Warranty</th>
+                  <th style={{ width: "10%" }}>Price</th>
+                  <th style={{ width: "15%" }}>RSH Status</th>
+                  <th style={{ width: "15%" }}>NSH Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {proposal?.items?.map((item) => (
+                  <tr key={item._id}>
+                    <td>
+                      <Typography fontWeight="lg">
+                        {item.equipment?.name}
+                      </Typography>
+                      <Typography level="body2">
+                        {item.equipment?.materialdescription}
+                      </Typography>
+                    </td>
+                    <td>{item.equipment?.materialcode}</td>
+                    <td>{item.equipment?.dealer}</td>
+                    <td>
+                      <Box>
+                        <Typography>{item.years} year(s)</Typography>
+                        <Typography level="body2">
+                          {item.warrantyType}
+                        </Typography>
+                      </Box>
+                    </td>
+                    <td>₹{item.subtotal?.toFixed(2)}</td>
+                    <td>
+                      {item.RSHApproval?.approved ? (
+                        <Box>
+                          <Chip color="success" variant="solid" size="sm">
+                            Approved
+                          </Chip>
+                          <Typography level="body2" mt={0.5}>
+                            By: {item.RSHApproval.approvedBy?.name || "Unknown"}
+                          </Typography>
+                          <Typography level="body2">
+                            On:{" "}
+                            {moment(item.RSHApproval.approvedAt).format(
+                              "MMM D, YYYY"
+                            )}
+                          </Typography>
+                          {item.RSHApproval.remark && (
+                            <Typography level="body2">
+                              Remark: {item.RSHApproval.remark}
+                            </Typography>
+                          )}
+                        </Box>
+                      ) : (
+                        <Chip color="neutral" variant="outlined" size="sm">
+                          Pending
+                        </Chip>
+                      )}
+                    </td>
+                    <td>
+                      {item.NSHApproval?.approved ? (
+                        <Box>
+                          <Chip color="success" variant="solid" size="sm">
+                            Approved
+                          </Chip>
+                          <Typography level="body2" mt={0.5}>
+                            By: {item.NSHApproval.approvedBy?.name || "Unknown"}
+                          </Typography>
+                          <Typography level="body2">
+                            On:{" "}
+                            {moment(item.NSHApproval.approvedAt).format(
+                              "MMM D, YYYY"
+                            )}
+                          </Typography>
+                          {item.NSHApproval.remark && (
+                            <Typography level="body2">
+                              Remark: {item.NSHApproval.remark}
+                            </Typography>
+                          )}
+                        </Box>
+                      ) : (
+                        <Chip color="neutral" variant="outlined" size="sm">
+                          Pending
+                        </Chip>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </Box>
         </Box>
       </ModalDialog>
     </Modal>

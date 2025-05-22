@@ -15,16 +15,6 @@ import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 
-// Role mapping: roleName to roleId
-const roleMapping = {
-  "Super Admin": "1",
-  admin: "2",
-  cic: "3",
-  Support: "4",
-  Manager: "5",
-  "Service Engineer": "6",
-};
-
 const UserData = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -42,7 +32,28 @@ const UserData = () => {
   const [cityList, setCityList] = useState([]);
   const [country, setCountry] = useState([]);
   const [dealerList, setDealerList] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [roleMapping, setRoleMapping] = useState({});
 
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/roles");
+        setRoles(res.data);
+
+        // Optional: Create roleName to roleId mapping
+        const mapping = {};
+        res.data.forEach((role) => {
+          mapping[role.roleName] = role._id;
+        });
+        setRoleMapping(mapping);
+      } catch (error) {
+        console.error("Error fetching roles:", error);
+      }
+    };
+
+    fetchRoles();
+  }, []);
   // Fetch all cities
   useEffect(() => {
     const getCities = async () => {
@@ -848,28 +859,26 @@ const UserData = () => {
                       </label>
                       <Select
                         variant="soft"
-                        defaultValue={
-                          (currentData?.role && currentData.role.roleName) || ""
-                        }
-                        onChange={(e, value) => {
-                          handleFormData("roleName", value);
-                          // Set roleId according to mapping
-                          handleFormData("roleId", roleMapping[value] || "");
+                        defaultValue={currentData?.role?.roleId || ""}
+                        onChange={(e, selectedRoleId) => {
+                          const selectedRole = roles.find(
+                            (r) => r.roleId === selectedRoleId
+                          );
+                          handleFormData("roleName", selectedRole?.name || "");
+                          handleFormData("roleId", selectedRoleId);
                         }}
                         className="w-full"
                       >
                         <Option value="">Select Role</Option>
-                        <Option value="Super Admin">Super Admin</Option>
-                        <Option value="admin">admin</Option>
-                        <Option value="cic">cic</Option>
-                        <Option value="Support">Support</Option>
-                        <Option value="Manager">Manager</Option>
-                        <Option value="Service Engineer">
-                          Service Engineer
-                        </Option>
+                        {roles.map((role) => (
+                          <Option key={role.roleId} value={role.roleId}>
+                            {role.name}
+                          </Option>
+                        ))}
                       </Select>
                     </div>
                   )}
+
                   {/* Conditional Section: Dealer selection for Dealer */}
                   {currentData?.usertype === "dealer" && (
                     <div className="relative">
