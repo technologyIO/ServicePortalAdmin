@@ -38,7 +38,7 @@ const UserData = () => {
   useEffect(() => {
     const fetchRoles = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/roles");
+        const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/roles`);
         setRoles(res.data);
 
         // Optional: Create roleName to roleId mapping

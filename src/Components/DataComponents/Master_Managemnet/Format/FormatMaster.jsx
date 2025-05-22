@@ -87,7 +87,7 @@ function FormatMaster() {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(`http://localhost:5000/master/format/${id}`)
+          .delete(`${process.env.REACT_APP_BASE_URL}/master/format/${id}`)
           .then(() => {
             Swal.fire("Deleted!", "Record has been deleted.", "success");
           })
@@ -107,7 +107,7 @@ function FormatMaster() {
     try {
       // Assuming your search endpoint for FormatMaster records exists at this URL
       const response = await axios.get(
-        `http://localhost:5000/master/format/search?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/master/format/search?q=${searchQuery}`
       );
       setData(response.data);
       setLoader(false);
@@ -122,7 +122,7 @@ function FormatMaster() {
     setSearchQuery("");
     axios
       .get(
-        `http://localhost:5000/master/format/paginated?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/master/format/paginated?page=${page}&limit=${limit}`
       )
       .then((res) => {
         // Use res.data.data instead of res.data.formats to match your API response
@@ -154,7 +154,7 @@ function FormatMaster() {
 
   const handleCreateRecord = () => {
     axios
-      .post(`http://localhost:5000/master/format`, currentData)
+      .post(`${process.env.REACT_APP_BASE_URL}/master/format`, currentData)
       .then(() => {
         getData();
       })
@@ -165,7 +165,7 @@ function FormatMaster() {
 
   const handleEditRecord = (id) => {
     axios
-      .put(`http://localhost:5000/master/format/${id}`, currentData)
+      .put(`${process.env.REACT_APP_BASE_URL}/master/format/${id}`, currentData)
       .then(() => {
         getData();
       })

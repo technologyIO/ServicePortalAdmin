@@ -47,7 +47,7 @@ const RoleManagement = () => {
 
   const fetchRoles = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/roles");
+      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/roles`);
       setRoles(res.data);
     } catch (err) {
       toast.error("Failed to fetch roles");
@@ -57,7 +57,7 @@ const RoleManagement = () => {
 
   const fetchStates = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/collections/allstate");
+      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/collections/allstate`);
       setAvailableStates(res.data);
     } catch (err) {
       toast.error("Failed to fetch states");
@@ -67,7 +67,7 @@ const RoleManagement = () => {
 
   const fetchCities = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/collections/allcity");
+      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/collections/allcity`);
       setAvailableCities(res.data);
     } catch (err) {
       toast.error("Failed to fetch cities");
@@ -78,7 +78,7 @@ const RoleManagement = () => {
   const fetchComponents = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get("http://localhost:5000/role/components");
+      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/role/components`);
       setAvailableComponents(res.data || []);
       setIsLoading(false);
     } catch (err) {
@@ -91,7 +91,7 @@ const RoleManagement = () => {
 
   const fetchParentRoles = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/roles");
+      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/roles`);
       setParentRoles(res.data);
     } catch (err) {
       toast.error("Failed to fetch parent roles");
@@ -242,7 +242,7 @@ const RoleManagement = () => {
   const handleDelete = async (roleId) => {
     if (window.confirm("Are you sure you want to delete this role?")) {
       try {
-        await axios.delete(`http://localhost:5000/roles/${roleId}`);
+        await axios.delete(`${process.env.REACT_APP_BASE_URL}/roles/${roleId}`);
         toast.success("Role deleted successfully");
         fetchRoles();
       } catch (err) {
@@ -276,12 +276,12 @@ const RoleManagement = () => {
 
       if (isEditing) {
         await axios.put(
-          `http://localhost:5000/roles/${currentRoleId}`,
+          `${process.env.REACT_APP_BASE_URL}/roles/${currentRoleId}`,
           roleData
         );
         toast.success("Role updated successfully");
       } else {
-        await axios.post("http://localhost:5000/roles", roleData);
+        await axios.post(`${process.env.REACT_APP_BASE_URL}/roles`, roleData);
         toast.success("Role created successfully");
       }
 

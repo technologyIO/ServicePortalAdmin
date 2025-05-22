@@ -17,7 +17,7 @@ export const PermissionProvider = ({ children }) => {
                 if (user?.details?.role?.roleId) {
                     console.log("Fetching permissions for roleId:", user.details.role.roleId);
                     
-                    const response = await fetch(`http://localhost:5000/roles/by-roleid/${user.details.role.roleId}`);
+                    const response = await fetch(`${process.env.REACT_APP_BASE_URL}/roles/by-roleid/${user.details.role.roleId}`);
                     
                     if (!response.ok) {
                         throw new Error(`Failed to fetch permissions: ${response.status}`);
