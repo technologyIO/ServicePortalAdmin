@@ -301,9 +301,7 @@ const UserData = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Material Code
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
-                  </th>
+                 
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Material Description
                   </th>
@@ -377,9 +375,7 @@ const UserData = () => {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.materialcode}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.name}
-                    </td>
+                  
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.materialdescription}
                     </td>
@@ -580,21 +576,8 @@ const UserData = () => {
               >
                 <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Equipment (ID)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("equipmentid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.equipmentid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
+                   
+                     
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Code
@@ -604,23 +587,12 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("materialcode", e.target.value)
                         }
-                        id="name"
+                        id="materialcode"
                         value={currentData?.materialcode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) => handleFormData("name", e.target.value)}
-                        id="name"
-                        value={currentData?.name}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      />
-                    </div>
+                     
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Description
@@ -630,7 +602,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("materialdescription", e.target.value)
                         }
-                        id="name"
+                        id="materialdescription"
                         value={currentData?.materialdescription}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -645,7 +617,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("serialnumber", e.target.value)
                         }
-                        id="name"
+                        id="serialnumber"
                         value={currentData?.serialnumber}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -659,7 +631,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("currentcustomer", e.target.value)
                         }
-                        id="name"
+                        id="currentcustomer"
                         value={currentData?.currentcustomer}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -673,7 +645,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("endcustomer", e.target.value)
                         }
-                        id="name"
+                        id="endcustomer"
                         value={currentData?.endcustomer?.split("T")[0]}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -690,7 +662,7 @@ const UserData = () => {
                             e.target.value
                           )
                         }
-                        id="name"
+                        id="custWarrantystartdate"
                         value={
                           currentData?.custWarrantystartdate?.split("T")[0]
                         }
@@ -706,7 +678,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("custWarrantyenddate", e.target.value)
                         }
-                        id="name"
+                        id="custWarrantyenddate"
                         value={currentData?.custWarrantyenddate?.split("T")[0]}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -723,7 +695,7 @@ const UserData = () => {
                             e.target.value
                           )
                         }
-                        id="name"
+                        id="dealerwarrantystartdate"
                         value={
                           currentData?.dealerwarrantystartdate?.split("T")[0]
                         }
@@ -742,7 +714,7 @@ const UserData = () => {
                             e.target.value
                           )
                         }
-                        id="name"
+                        id="dealerwarrantyenddate"
                         value={
                           currentData?.dealerwarrantyenddate?.split("T")[0]
                         }
@@ -758,7 +730,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("dealer", e.target.value)
                         }
-                        id="name"
+                        id="dealer"
                         value={currentData?.dealer}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
@@ -791,7 +763,7 @@ const UserData = () => {
                         onChange={(e) =>
                           handleFormData("palnumber", e.target.value)
                         }
-                        id="name"
+                        id="palnumber"
                         value={currentData?.palnumber}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                       />
