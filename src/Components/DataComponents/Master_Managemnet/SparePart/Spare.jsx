@@ -601,7 +601,7 @@ function Spare() {
                 >
                   &times;
                 </button>
-                <SpareMasterBulk />
+                <SpareMasterBulk getData={getData}  closeModal={closeModal}/>
               </div>
             </div>
           )}

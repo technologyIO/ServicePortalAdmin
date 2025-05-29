@@ -1037,7 +1037,7 @@ function PendingInstallation() {
                 >
                   &times;
                 </button>
-                <PendingInstallationBulk />
+                <PendingInstallationBulk getData={getData} closeModal ={closeModal} />
               </div>
             </div>
           )}

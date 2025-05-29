@@ -1,15 +1,27 @@
-import React, { useState } from "react";
-import axios from "axios";
+"use client";
+
+import { useState } from "react";
 import toast from "react-hot-toast";
 
-function SpareMasterBulk() {
+function SpareMasterBulk({ getData, closeModal }) {
   const [file, setFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [result, setResult] = useState(null);
+
+  // Progress modal states
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressData, setProgressData] = useState({
+    processed: 0,
+    total: 0,
+    currentStatus: "",
+    created: 0,
+    updated: 0,
+    failed: 0,
+  });
+  const [latestRecord, setLatestRecord] = useState(null);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -58,43 +70,113 @@ function SpareMasterBulk() {
       setError("Please select a file to upload");
       return;
     }
+
     setIsUploading(true);
-    setProgress(0);
     setError(null);
+    setShowProgressModal(true);
+    setProgressData({
+      processed: 0,
+      total: 0,
+      currentStatus: "Starting upload...",
+      created: 0,
+      updated: 0,
+      failed: 0,
+    });
+
     const formData = new FormData();
     formData.append("file", file);
+
     try {
-      const response = await axios.post(
+      const response = await fetch(
         `${process.env.REACT_APP_BASE_URL}/bulk/sparemaster/bulk-upload`,
-        formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setProgress(percentCompleted);
-            }
-          },
+          method: "POST",
+          body: formData,
         }
       );
-      setResult(response.data);
-      setActiveTab("results");
 
-      // If any record failed, show an error toast
-      const failedResult = response.data.results.find(
-        (item) => item.status === "Failed"
-      );
-      if (failedResult) {
-        toast.error(failedResult.error || "Some records failed to upload.");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        // Process complete lines, keep the last incomplete line in buffer
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const data = JSON.parse(line);
+
+              if (data.progress) {
+                // Update progress data
+                setProgressData((prev) => ({
+                  ...prev,
+                  processed: data.progress.processed,
+                  total: data.progress.total,
+                  currentStatus: data.progress.currentStatus,
+                }));
+
+                if (data.latestRecord) {
+                  setLatestRecord(data.latestRecord);
+
+                  // Update counters based on status
+                  setProgressData((prev) => {
+                    const newData = { ...prev };
+                    if (data.latestRecord.status === "created") {
+                      newData.created = prev.created + 1;
+                    } else if (data.latestRecord.status === "updated") {
+                      newData.updated = prev.updated + 1;
+                    } else if (data.latestRecord.status === "failed") {
+                      newData.failed = prev.failed + 1;
+                    }
+                    return newData;
+                  });
+                }
+              } else if (data.summary) {
+                // Final summary received
+                setResult(data);
+                setProgressData((prev) => ({
+                  ...prev,
+                  currentStatus: "Upload completed!",
+                  created: data.summary.created,
+                  updated: data.summary.updated,
+                  failed: data.summary.failed,
+                }));
+
+                setTimeout(() => {
+                  setShowProgressModal(false);
+                  setActiveTab("results");
+                }, 2000);
+              }
+            } catch (parseError) {
+              console.error("Error parsing JSON:", parseError);
+            }
+          }
+        }
+      }
+
+      toast.success("Bulk upload completed successfully!");
+      setTimeout(() => {
+        closeModal();
+        getData();
+      }, 4000);
     } catch (err) {
       console.error(err);
       toast.error("An error occurred during upload. Please try again.");
       setError("An error occurred during upload. Please try again.");
+      setShowProgressModal(false);
     } finally {
       setIsUploading(false);
     }
@@ -121,16 +203,144 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
 
   const resetForm = () => {
     setFile(null);
-    setProgress(0);
     setResult(null);
     setError(null);
     setActiveTab("upload");
+    setProgressData({
+      processed: 0,
+      total: 0,
+      currentStatus: "",
+      created: 0,
+      updated: 0,
+      failed: 0,
+    });
+    setLatestRecord(null);
+  };
+
+  const closeProgressModal = () => {
+    if (!isUploading) {
+      setShowProgressModal(false);
+    }
   };
 
   return (
     <div className="container mx-auto px-2">
+      {/* Progress Modal */}
+      {showProgressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                Upload Progress
+              </h3>
+              {!isUploading && (
+                <button
+                  onClick={closeProgressModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    ></path>
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Processing Records</span>
+                <span>
+                  {progressData.processed} / {progressData.total}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width:
+                      progressData.total > 0
+                        ? `${
+                            (progressData.processed / progressData.total) * 100
+                          }%`
+                        : "0%",
+                  }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                {progressData.currentStatus}
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {progressData.created}
+                </div>
+                <div className="text-xs text-gray-500">Created</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {progressData.updated}
+                </div>
+                <div className="text-xs text-gray-500">Updated</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {progressData.failed}
+                </div>
+                <div className="text-xs text-gray-500">Failed</div>
+              </div>
+            </div>
+
+            {/* Latest Record */}
+            {latestRecord && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm font-medium text-gray-800 mb-1">
+                  Latest Record:
+                </div>
+                <div className="text-sm text-gray-600">
+                  <div>Part Number: {latestRecord.partNumber}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span>Status:</span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        latestRecord.status === "created"
+                          ? "bg-green-100 text-green-800"
+                          : latestRecord.status === "updated"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {latestRecord.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Spinner */}
+            {isUploading && (
+              <div className="flex justify-center mt-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Card container */}
-      <div className="bg-white rounded-xl   overflow-hidden w-full max-w-4xl mx-auto">
+      <div className="bg-white rounded-xl overflow-hidden w-full max-w-4xl mx-auto">
         {/* Card header */}
         <div className="p-5 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -139,7 +349,8 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                 Spare Master Bulk Upload
               </h2>
               <p className="text-gray-500 text-sm mt-1">
-                This will update existing Spare Master records (based on unique PartNumber) and add new ones.
+                This will update existing Spare Master records (based on unique
+                PartNumber) and add new ones.
               </p>
             </div>
             <button
@@ -180,17 +391,6 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                 onClick={() => setActiveTab("upload")}
               >
                 Upload
-              </button>
-              <button
-                className={`px-4 py-2 font-medium text-sm ${
-                  activeTab === "results"
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-                onClick={() => setActiveTab("results")}
-                disabled={!result}
-              >
-                Results
               </button>
             </div>
           </div>
@@ -309,7 +509,8 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                         </svg>
                       </div>
                       <p className="mb-2 text-sm text-center">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
+                        <span className="font-semibold">Click to upload</span>{" "}
+                        or drag and drop
                       </p>
                       <p className="text-xs text-center text-gray-500">
                         CSV or Excel files only (max 5MB)
@@ -324,34 +525,25 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                   accept=".csv,.xls,.xlsx"
                   onChange={handleFileChange}
                 />
-                <label htmlFor="file-upload" className="absolute inset-0 cursor-pointer">
+                <label
+                  htmlFor="file-upload"
+                  className="absolute inset-0 cursor-pointer"
+                >
                   <span className="sr-only">Upload file</span>
                 </label>
               </div>
-    
-              {/* Progress bar for upload/insertion */}
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Uploading...</span>
-                    <span className="text-gray-600">{progress}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              )}
-    
+
               {/* Action buttons */}
               <div className="flex justify-end gap-3">
                 {file && (
                   <button
                     onClick={resetForm}
                     disabled={isUploading}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-gray-700 ${isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"} transition-colors`}
+                    className={`px-4 py-2 border border-gray-300 rounded-lg text-gray-700 ${
+                      isUploading
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-gray-50"
+                    } transition-colors`}
                   >
                     Reset
                   </button>
@@ -359,7 +551,11 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                 <button
                   onClick={handleUpload}
                   disabled={!file || isUploading}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${!file || isUploading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} text-white transition-colors`}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                    !file || isUploading
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  } text-white transition-colors`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -381,105 +577,6 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
               </div>
             </div>
           )}
-    
-          {/* Results tab content */}
-          {activeTab === "results" && result && (
-            <div className="space-y-6 h-[230px] overflow-y-auto py-4">
-              {/* Insertion stats */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-500">Total Records</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-1">{result.total}</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-500">Processed</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-1">{result.processed}</p>
-                  </div>
-                </div>
-              </div>
-    
-              {/* Separator */}
-              <div className="h-px bg-gray-200 w-full"></div>
-    
-              {/* Results list */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-800 mb-3">Insertion Results</h3>
-                <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
-                  {(result?.results || []).map((item, index) => (
-                    <div key={index} className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          {item.PartNumber} - {item.Description}
-                        </p>
-                        {item.message && (
-                          <p className="text-sm text-gray-500">{item.message}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {item.status === "Created" || item.status === "Updated" ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-green-500"
-                          >
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                          </svg>
-                        ) : (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-red-500"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                          </svg>
-                        )}
-                        <span
-                          className={
-                            item.status === "Created" || item.status === "Updated"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-    
-        {/* Card footer */}
-        <div className="p-3 pt-2 border-t border-gray-200 bg-gray-100">
-          <div className="flex flex-col items-start text-sm text-gray-500">
-            <p className="font-medium">Notes:</p>
-            <ul className="list-disc list-inside space-y-1 mt-2">
-              <li>Maximum file size: 5MB</li>
-              <li>Supported formats: CSV, Excel (.xls, .xlsx)</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
