@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { EventSourcePolyfill } from "event-source-polyfill";
 
 function SpareMasterBulk({ getData, closeModal }) {
   const [file, setFile] = useState(null);
@@ -22,6 +23,7 @@ function SpareMasterBulk({ getData, closeModal }) {
     failed: 0,
   });
   const [latestRecord, setLatestRecord] = useState(null);
+  const [eventSource, setEventSource] = useState(null);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -82,102 +84,80 @@ function SpareMasterBulk({ getData, closeModal }) {
       updated: 0,
       failed: 0,
     });
+    setLatestRecord(null);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const response = await fetch(
+      // Close any existing event source
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      // Create new EventSource connection
+      const es = new EventSourcePolyfill(
         `${process.env.REACT_APP_BASE_URL}/bulk/sparemaster/bulk-upload`,
         {
           method: "POST",
           body: formData,
+          headers: {
+            Accept: "text/event-stream",
+          },
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      setEventSource(es);
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      es.onopen = () => {
+        console.log("Connection to server opened");
+      };
 
-      while (true) {
-        const { done, value } = await reader.read();
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Received SSE data:", data);
 
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-
-        // Process complete lines, keep the last incomplete line in buffer
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const data = JSON.parse(line);
-
-              if (data.progress) {
-                // Update progress data
-                setProgressData((prev) => ({
-                  ...prev,
-                  processed: data.progress.processed,
-                  total: data.progress.total,
-                  currentStatus: data.progress.currentStatus,
-                }));
-
-                if (data.latestRecord) {
-                  setLatestRecord(data.latestRecord);
-
-                  // Update counters based on status
-                  setProgressData((prev) => {
-                    const newData = { ...prev };
-                    if (data.latestRecord.status === "created") {
-                      newData.created = prev.created + 1;
-                    } else if (data.latestRecord.status === "updated") {
-                      newData.updated = prev.updated + 1;
-                    } else if (data.latestRecord.status === "failed") {
-                      newData.failed = prev.failed + 1;
-                    }
-                    return newData;
-                  });
-                }
-              } else if (data.summary) {
-                // Final summary received
-                setResult(data);
-                setProgressData((prev) => ({
-                  ...prev,
-                  currentStatus: "Upload completed!",
-                  created: data.summary.created,
-                  updated: data.summary.updated,
-                  failed: data.summary.failed,
-                }));
-
-                setTimeout(() => {
-                  setShowProgressModal(false);
-                  setActiveTab("results");
-                }, 2000);
-              }
-            } catch (parseError) {
-              console.error("Error parsing JSON:", parseError);
-            }
+          if (data.type === "init") {
+            setProgressData((prev) => ({
+              ...prev,
+              total: data.data.totalRecords,
+              currentStatus: data.data.message,
+            }));
+          } else if (data.type === "progress") {
+            setProgressData((prev) => ({
+              ...prev,
+              processed: data.data.processed,
+              total: data.data.total,
+              currentStatus: data.data.currentStatus,
+              updated: prev.updated + (data.data.latestRecord.status === "updated" ? 1 : 0),
+            }));
+            setLatestRecord(data.data.latestRecord);
           }
+        } catch (error) {
+          console.error("Error parsing SSE data:", error);
         }
-      }
+      };
 
-      toast.success("Bulk upload completed successfully!");
-      setTimeout(() => {
-        closeModal();
-        getData();
-      }, 4000);
+      es.onerror = (error) => {
+        console.error("EventSource error:", error);
+        if (es.readyState === EventSource.CLOSED) {
+          console.log("Connection was closed");
+          setIsUploading(false);
+          toast.success("Upload completed successfully!");
+        } else {
+          setError("An error occurred during upload. Please try again.");
+          setIsUploading(false);
+          toast.error("Upload failed!");
+        }
+        es.close();
+      };
+
     } catch (err) {
-      console.error(err);
-      toast.error("An error occurred during upload. Please try again.");
-      setError("An error occurred during upload. Please try again.");
+      console.error("Upload error:", err);
+      toast.error("An error occurred during upload setup. Please try again.");
+      setError("An error occurred during upload setup. Please try again.");
       setShowProgressModal(false);
-    } finally {
       setIsUploading(false);
     }
   };
@@ -215,6 +195,10 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
       failed: 0,
     });
     setLatestRecord(null);
+    if (eventSource) {
+      eventSource.close();
+      setEventSource(null);
+    }
   };
 
   const closeProgressModal = () => {
@@ -269,9 +253,7 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                   style={{
                     width:
                       progressData.total > 0
-                        ? `${
-                            (progressData.processed / progressData.total) * 100
-                          }%`
+                        ? `${(progressData.processed / progressData.total) * 100}%`
                         : "0%",
                   }}
                 ></div>
@@ -325,6 +307,11 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                       {latestRecord.status}
                     </span>
                   </div>
+                  {latestRecord.message && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      {latestRecord.message}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -335,10 +322,34 @@ Electronics,SP-005,Wireless Charger,Accessory,300,250,50,https://example.com/ima
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             )}
+
+            {/* Completion Message */}
+            {!isUploading && progressData.processed === progressData.total && progressData.total > 0 && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg text-green-800 text-sm">
+                <div className="flex items-center gap-2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                  <span>Upload completed successfully!</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Rest of your component remains the same */}
       {/* Card container */}
       <div className="bg-white rounded-xl overflow-hidden w-full max-w-4xl mx-auto">
         {/* Card header */}

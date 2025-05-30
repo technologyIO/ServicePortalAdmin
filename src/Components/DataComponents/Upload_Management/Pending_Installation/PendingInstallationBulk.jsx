@@ -11,18 +11,24 @@ function PendingInstallationBulk({ closeModal, getData }) {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
 
-  // States for processing progress
   const [processingState, setProcessingState] = useState({
     status: "idle", // 'idle' | 'processing' | 'completed' | 'error'
-    current: 0,
-    total: 0,
-    percentage: 0,
-    processed: 0,
-    failed: 0,
+    startTime: null,
+    endTime: null,
+    duration: null,
+    totalRecords: 0,
+    processedRecords: 0,
+    successCount: 0,
+    errorCount: 0,
     currentRecord: null,
-    message: "",
-    insertionResults: [],
+    message: "Ready to upload",
     errors: [],
+    summary: {
+      totalRecords: 0,
+      processed: 0,
+      failed: 0,
+      completionPercentage: 0
+    }
   });
 
   const handleFileChange = (e) => {
@@ -36,17 +42,20 @@ function PendingInstallationBulk({ closeModal, getData }) {
       setFile(null);
       return;
     }
+    
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
+    
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError("File size exceeds 5MB limit");
       setFile(null);
       return;
     }
+    
     setFile(selectedFile);
   };
 
@@ -67,24 +76,11 @@ function PendingInstallationBulk({ closeModal, getData }) {
     validateAndSetFile(droppedFile);
   };
 
-  // Pending Installation sample CSV content
-  const csvContent = `invoiceno,invoicedate,distchnl,customerid,customername1,customername2,customercity,customerpostalcode,material,description,serialnumber,salesdist,salesoff,customercountry,customerregion,currentcustomerid,currentcustomername1,currentcustomername2,currentcustomercity,currentcustomerregion,currentcustomerpostalcode,currentcustomercountry,mtl_grp4,key,status
-9016032553,11-12-2022,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E22GD0300,DS_KL,COK,,,1020882,,,,,,,1YR,,Active
-9836025727,31-03-2025,1,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E25GD0400,DN_DL,DEL,,,1049037,,,,,,,2YR,,Active
-9016028833,03-11-2020,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E20GB0168,SOUTH3,COK,,,1046504,,,,,,,1YR,,Active
-9016028820,31-10-2020,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E20GB0164,EAST,GAU,,,1010245,,,,,,,1YR,,Active
-9216007774,30-11-2021,2,111111,,,,,3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E21GB0128,DN_DL,DEL,,,1009488,,,,,,,2YR,,Active
-9016032557,13-12-2022,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E22GD0301,DN_DL,DEL,,,1010028,,,,,,,1YR,,Active
-9016029365,17-02-2021,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E20GB0148,EAST,GAU,,,1020156,,,,,,,1YR,,Active
-9016033014,31-05-2023,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E23GD0329,DN_UP,LKO,,,1021702,,,,,,,2YR,,Active
-9016034679,21-05-2025,5,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E25GD0407,DN_PB,CHD,,,1056275,,,,,,,2YR,,Active
-9016034680,21-05-2025,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E25GD0408,DS_KA,BLR,,,1053507,,,,,,,2YR,,Active
-9016034251,30-11-2024,2,111111,,,,,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E24GD0390,DN_UP,LKO,,,1021702,,,,,,,2YR,,Active
-9016033953,05-07-2024,1,111111,,,,,F3-86-390-0999-24,TruSkan S500 ER2TNS+CO2,H24GK6353,D_CORP,BLR,,,1051426,,,,,,,1YR,1478898624,Active
-9016034554,25-03-2025,2,111111,,,,,F3-86-390-0999-24,TruSkan S500 ER2TNS+CO2,H25GM6794,DN_DL,DEL,,,1009488,,,,,,,2YR,1154072537,Active
-9016034554,25-03-2025,2,111111,,,,,F3-86-390-0999-24,TruSkan S500 ER2TNS+CO2,H25GM6802,DN_DL,DEL,,,1009488,,,,,,,2YR,1999955610,Active`;
-
   const handleDownload = () => {
+    const csvContent = `invoiceno,invoicedate,distchnl,customerid,material,description,serialnumber,salesdist,salesoff,currentcustomerid,mtl_grp4,key,status
+9016032553,11-12-2022,2,111111,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E22GD0300,DS_KL,COK,1020882,1YR,,Active
+9836025727,31-03-2025,1,111111,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E25GD0400,DN_DL,DEL,1049037,2YR,,Active`;
+
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -101,15 +97,22 @@ function PendingInstallationBulk({ closeModal, getData }) {
     setError(null);
     setProcessingState({
       status: "idle",
-      current: 0,
-      total: 0,
-      percentage: 0,
-      processed: 0,
-      failed: 0,
+      startTime: null,
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successCount: 0,
+      errorCount: 0,
       currentRecord: null,
-      message: "",
-      insertionResults: [],
+      message: "Ready to upload",
       errors: [],
+      summary: {
+        totalRecords: 0,
+        processed: 0,
+        failed: 0,
+        completionPercentage: 0
+      }
     });
     setActiveTab("upload");
   };
@@ -122,27 +125,35 @@ function PendingInstallationBulk({ closeModal, getData }) {
 
     setIsUploading(true);
     setError(null);
+    setActiveTab("results");
 
-    // Reset processing state
+    // Initialize processing state
     setProcessingState({
       status: "processing",
-      current: 0,
-      total: 0,
-      percentage: 0,
-      processed: 0,
-      failed: 0,
+      startTime: new Date(),
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successCount: 0,
+      errorCount: 0,
       currentRecord: null,
-      message: "Starting upload...",
-      insertionResults: [],
+      message: "Starting file processing...",
       errors: [],
+      summary: {
+        totalRecords: 0,
+        processed: 0,
+        failed: 0,
+        completionPercentage: 0
+      }
     });
-
-    setActiveTab("results");
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+      let accumulatedData = "";
+      
       const response = await axios.post(
         `${process.env.REACT_APP_BASE_URL}/bulk/pendinginstallation/bulk-upload`,
         formData,
@@ -152,86 +163,107 @@ function PendingInstallationBulk({ closeModal, getData }) {
           },
           onDownloadProgress: (progressEvent) => {
             // Handle streaming response
-            const responseText = progressEvent.event.target.responseText;
-            const lines = responseText.trim().split("\n");
-
-            // Process each line (each progress update)
-            lines.forEach((line) => {
-              if (line.trim()) {
+            const chunk = progressEvent.event.target.responseText;
+            accumulatedData += chunk;
+            
+            // Split by newlines and process each complete JSON object
+            const lines = accumulatedData.split('\n');
+            
+            // Process all complete lines (leave incomplete one in buffer)
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i].trim();
+              if (line) {
                 try {
                   const data = JSON.parse(line);
-                  setProcessingState((prev) => ({
-                    ...prev,
-                    status: data.status,
-                    current: data.current || prev.current,
-                    total: data.total || prev.total,
-                    percentage: data.percentage || prev.percentage,
-                    processed: data.processed || prev.processed,
-                    failed: data.failed || prev.failed,
-                    currentRecord: data.currentRecord || prev.currentRecord,
-                    message: data.message || prev.message,
-                    insertionResults:
-                      data.insertionResults || prev.insertionResults,
-                    errors: data.errors || prev.errors,
-                  }));
+                  updateProcessingState(data);
                 } catch (e) {
                   console.error("Error parsing progress update:", e);
                 }
               }
-            });
+            }
+            
+            // Keep the last (potentially incomplete) line for next chunk
+            accumulatedData = lines[lines.length - 1];
           },
         }
       );
 
-      // Final completion (in case the streaming didn't already update the state)
+      // Final update with completed status
       if (response.data) {
-        setProcessingState((prev) => ({
-          ...prev,
+        updateProcessingState({
+          ...response.data,
           status: "completed",
-          total: response.data.totalRecords,
-          processed: response.data.processed,
-          failed: response.data.errors?.length || 0,
-          insertionResults: response.data.insertionResults || [],
-          errors: response.data.errors || [],
-          message: `Completed processing ${response.data.processed} records`,
-        }));
+          endTime: new Date(),
+          duration: `${((new Date() - new Date(response.data.startTime)) / 1000).toFixed(2)}s`
+        });
       }
 
-      if (response.data?.errors && response.data.errors.length > 0) {
+      if (response.data?.errors?.length > 0) {
         toast.error(
-          `Processed with ${response.data.errors.length} errors. Check the Results tab for details.`
+          `Process completed with ${response.data.errors.length} errors`
         );
       } else {
         toast.success("All records processed successfully!");
-        closeModal();
         getData();
       }
     } catch (err) {
-      console.error(err);
-      toast.error("An error occurred during upload. Please try again.");
-      setError(
-        err.response?.data?.message ||
-          "An error occurred during upload. Please try again."
-      );
-      setProcessingState((prev) => ({
+      console.error("Upload error:", err);
+      
+      const errorMessage = err.response?.data?.message || 
+                         err.message || 
+                         "An error occurred during upload";
+      
+      toast.error(errorMessage);
+      setError(errorMessage);
+      
+      setProcessingState(prev => ({
         ...prev,
         status: "error",
-        message: "Error during processing",
+        endTime: new Date(),
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
+        message: "Processing failed",
+        errors: [...prev.errors, { error: errorMessage }]
       }));
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Function to render the circular progress indicator
+  const updateProcessingState = (data) => {
+    setProcessingState(prev => {
+      const newState = {
+        ...prev,
+        ...data,
+        summary: {
+          totalRecords: data.totalRecords || prev.summary.totalRecords,
+          processed: data.processedRecords || prev.summary.processed,
+          failed: data.errorCount || prev.summary.failed,
+          completionPercentage: data.totalRecords > 0 
+            ? Math.round(((data.processedRecords || 0) / data.totalRecords) * 100)
+            : prev.summary.completionPercentage
+        }
+      };
+      
+      // Update message if not provided in the data
+      if (!data.message) {
+        if (data.status === "processing") {
+          newState.message = `Processing ${data.processedRecords || 0} of ${data.totalRecords || '?'} records`;
+        } else if (data.status === "completed") {
+          newState.message = `Completed processing ${data.processedRecords || 0} records`;
+        }
+      }
+      
+      return newState;
+    });
+  };
+
   const CircularProgressBar = ({ percentage }) => {
-    const circumference = 2 * Math.PI * 40; // r = 40
+    const circumference = 2 * Math.PI * 40;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     return (
       <div className="relative inline-flex items-center justify-center">
         <svg className="w-24 h-24" viewBox="0 0 100 100">
-          {/* Background circle */}
           <circle
             className="text-gray-200"
             strokeWidth="8"
@@ -241,7 +273,6 @@ function PendingInstallationBulk({ closeModal, getData }) {
             cx="50"
             cy="50"
           />
-          {/* Progress circle */}
           <circle
             className="text-blue-600 transition-all duration-300 ease-in-out"
             strokeWidth="8"
@@ -259,6 +290,178 @@ function PendingInstallationBulk({ closeModal, getData }) {
         <span className="absolute text-xl font-bold text-blue-700">
           {percentage}%
         </span>
+      </div>
+    );
+  };
+
+  const renderResultsTab = () => {
+    if (processingState.status === "idle") {
+      return (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="text-gray-400 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+          </div>
+          <p className="text-gray-500">Upload a file to see processing results</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 pb-10 h-[370px] overflow-y-auto">
+        {processingState.status === "processing" && (
+          <div className="flex flex-col items-center justify-center py-8">
+            <CircularProgressBar percentage={processingState.summary.completionPercentage} />
+            <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-2">
+              Processing Pending Installations
+            </h3>
+            <p className="text-gray-600 mb-1">
+              {processingState.message}
+            </p>
+            {processingState.currentRecord && (
+              <p className="text-sm text-gray-500 mb-4">
+                Current: {processingState.currentRecord.serialnumber || 'N/A'}
+              </p>
+            )}
+            <div className="w-full max-w-md bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
+                style={{ width: `${processingState.summary.completionPercentage}%` }}
+              ></div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mt-4 w-full max-w-md">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-800">Total</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {processingState.summary.totalRecords}
+                </p>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-sm text-green-800">Processed</p>
+                <p className="text-xl font-bold text-green-900">
+                  {processingState.summary.processed}
+                </p>
+              </div>
+              <div className="bg-red-50 p-3 rounded-lg">
+                <p className="text-sm text-red-800">Failed</p>
+                <p className="text-xl font-bold text-red-900">
+                  {processingState.summary.failed}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {processingState.status === "completed" && (
+          <div className="space-y-4">
+            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-md">
+              <div className="flex items-start gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500 flex-shrink-0 mt-0.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <div>
+                  <h3 className="text-sm font-medium text-green-800">Processing Completed</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    Successfully processed {processingState.summary.processed} of {processingState.summary.totalRecords} records in {processingState.duration}.
+                    {processingState.summary.failed > 0 && (
+                      <span> {processingState.summary.failed} records failed.</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white border rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-500">Total Records</h4>
+                  <span className="text-2xl font-bold text-gray-800">
+                    {processingState.summary.totalRecords}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-500">Success</h4>
+                  <span className="text-2xl font-bold text-green-600">
+                    {processingState.summary.processed}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-gray-500">Failed</h4>
+                  <span className="text-2xl font-bold text-red-600">
+                    {processingState.summary.failed}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {processingState.errors.length > 0 && (
+              <div className="bg-white border rounded-lg overflow-hidden">
+                <div className="p-4 border-b">
+                  <h4 className="font-medium text-gray-800">Error Details</h4>
+                </div>
+                <div className="overflow-y-auto max-h-60">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {processingState.errors.slice(0, 10).map((error, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                            {error.serialnumber || error.record || 'N/A'}
+                          </td>
+                          <td className="px-4 py-2 whitespace-normal text-sm text-red-600">
+                            {error.error || error.message || 'Unknown error'}
+                          </td>
+                        </tr>
+                      ))}
+                      {processingState.errors.length > 10 && (
+                        <tr>
+                          <td colSpan="2" className="px-4 py-2 text-center text-sm text-gray-500">
+                            + {processingState.errors.length - 10} more errors
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {processingState.status === "error" && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+            <div className="flex items-start gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 flex-shrink-0 mt-0.5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <div>
+                <h3 className="text-sm font-medium text-red-800">Processing Failed</h3>
+                <p className="text-sm text-red-700 mt-1">
+                  {processingState.message}
+                </p>
+                {processingState.duration && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Duration: {processingState.duration}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -310,7 +513,7 @@ function PendingInstallationBulk({ closeModal, getData }) {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("upload")}
-                disabled={processingState.status === "processing"}
+                disabled={isUploading}
               >
                 Upload
               </button>
@@ -321,9 +524,13 @@ function PendingInstallationBulk({ closeModal, getData }) {
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("results")}
-                disabled={processingState.status === "idle"}
               >
                 Results
+                {processingState.errorCount > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium leading-4 text-white bg-red-500 rounded-full">
+                    {processingState.errorCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -463,45 +670,13 @@ function PendingInstallationBulk({ closeModal, getData }) {
                 </label>
               </div>
 
-              {isUploading && (
-                <div className="flex flex-col items-center justify-center py-4">
-                  <div className="flex items-center justify-center mb-4">
-                    <svg
-                      className="animate-spin h-8 w-8 text-blue-600"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  </div>
-                  <p className="text-blue-700 font-medium">Uploading file...</p>
-                </div>
-              )}
-
               <div className="flex justify-end gap-3">
                 {file && (
                   <button
                     onClick={resetForm}
-                    disabled={
-                      isUploading || processingState.status === "processing"
-                    }
+                    disabled={isUploading}
                     className={`px-4 py-2 border border-gray-300 rounded-lg text-gray-700 ${
-                      isUploading || processingState.status === "processing"
-                        ? "opacity-50 cursor-not-allowed"
-                        : "hover:bg-gray-50"
+                      isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
                     } transition-colors`}
                   >
                     Reset
@@ -509,83 +684,63 @@ function PendingInstallationBulk({ closeModal, getData }) {
                 )}
                 <button
                   onClick={handleUpload}
-                  disabled={
-                    !file ||
-                    isUploading ||
-                    processingState.status === "processing"
-                  }
+                  disabled={!file || isUploading}
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    !file ||
-                    isUploading ||
-                    processingState.status === "processing"
+                    !file || isUploading
                       ? "bg-blue-400 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
                   } text-white transition-colors`}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Upload File
+                  {isUploading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      Upload File
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           )}
 
-          {activeTab === "results" && (
-            <div className="space-y-6 pb-10 h-[370px] overflow-y-auto">
-              {processingState.status === "processing" && (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <CircularProgressBar
-                    percentage={processingState.percentage}
-                  />
-                  <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-2">
-                    Creating Pending Installations
-                  </h3>
-                  <p className="text-gray-600 mb-1">
-                    {processingState.message}
-                  </p>
-                  {processingState.currentRecord && (
-                    <p className="text-sm text-gray-500 mb-4">
-                      Current: {processingState.currentRecord.serialnumber}{" "}
-                      (Invoice: {processingState.currentRecord.invoiceno})
-                    </p>
-                  )}
-                  <div className="w-full max-w-md bg-gray-200 rounded-full h-2.5">
-                    <div
-                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                      style={{ width: `${processingState.percentage}%` }}
-                    ></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4 w-full max-w-md">
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-sm text-blue-800">Created</p>
-                      <p className="text-xl font-bold text-blue-900">
-                        {processingState.processed}
-                      </p>
-                    </div>
-                    <div className="bg-red-50 p-3 rounded-lg">
-                      <p className="text-sm text-red-800">Failed</p>
-                      <p className="text-xl font-bold text-red-900">
-                        {processingState.failed}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {activeTab === "results" && renderResultsTab()}
         </div>
       </div>
     </div>
