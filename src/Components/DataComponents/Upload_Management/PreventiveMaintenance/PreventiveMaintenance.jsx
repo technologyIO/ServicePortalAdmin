@@ -540,7 +540,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.pmType}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -557,7 +557,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.materialDescription}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -571,7 +571,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.pmNumber}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -585,7 +585,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.customerCode}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -599,7 +599,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.regionBranch}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative w-full mb-5 group">
@@ -625,7 +625,7 @@ function PreventiveMaintenance() {
                           }}
                           id="pmDueMonth"
                           value={currentData?.pmDueMonth || ""}
-                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5     "
                         />
                       </div>
 
@@ -652,7 +652,7 @@ function PreventiveMaintenance() {
                           }}
                           id="pmDoneDate"
                           value={currentData?.pmDoneDate || ""}
-                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5     "
                         />
                       </div>
 
@@ -667,7 +667,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.pmVendorCode}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -681,7 +681,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.pmEngineerCode}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
                       <div className="relative  w-full mb-5 group">
@@ -695,7 +695,7 @@ function PreventiveMaintenance() {
                           }
                           id="name"
                           value={currentData?.serialNumber}
-                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                          class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                         />
                       </div>
 

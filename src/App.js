@@ -64,6 +64,7 @@ import CNoteDelete from './Components/DataComponents/Admin/CNote/CNoteDelete';
 import RoleManagement from './Components/DataComponents/Role/RoleManagement';
 import { PermissionProvider } from './PermissionContext';
 import ProtectedRoute from './ProtectedRoute';
+import UserManagment from './Components/DataComponents/Master_Managemnet/User/UserManagment';
 
 
 const PrivateRoute = ({ children }) => {
@@ -197,11 +198,11 @@ const AppContent = () => {
                 componentName="Branch"
                 requiredPermission="read"
               />} /> */}
-              <Route path="/complaint-create" element={<ProtectedRoute
+              {/* <Route path="/complaint-create" element={<ProtectedRoute
                 component={ComplaintCreate}
                 componentName="Complaint Create"
                 requiredPermission="read"
-              />} />
+              />} /> */}
               <Route path="/complaint-create-close" element={<ProtectedRoute
                 component={ComplaintCreateClose}
                 componentName="Complaint Create Close"
@@ -373,6 +374,8 @@ const AppContent = () => {
                 requiredPermission="read"
               />} /> */}
               <Route path="/open-proposal" element={<OpenProposal />} />
+              <Route path="/complaint-create" element={<ComplaintCreate />} />
+              <Route path="/user-create" element={<UserManagment />} />
               <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
               <Route path="/close-proposal" element={<CloseProposal />} />
               <Route path="/role-manage" element={<ProtectedRoute

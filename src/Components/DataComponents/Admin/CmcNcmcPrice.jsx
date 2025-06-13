@@ -531,7 +531,7 @@ function CmcNcmcPrice() {
                         }
                         id="partNumber"
                         value={currentData?.partNumber}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -545,7 +545,7 @@ function CmcNcmcPrice() {
                         }
                         id="description"
                         value={currentData?.description}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -559,7 +559,7 @@ function CmcNcmcPrice() {
                         }
                         id="product"
                         value={currentData?.product}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -573,7 +573,7 @@ function CmcNcmcPrice() {
                         }
                         id="cmcPriceWithGst"
                         value={currentData?.cmcPriceWithGst}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -587,7 +587,7 @@ function CmcNcmcPrice() {
                         }
                         id="ncmcPriceWithGst"
                         value={currentData?.ncmcPriceWithGst}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -601,7 +601,7 @@ function CmcNcmcPrice() {
                         }
                         id="serviceTax"
                         value={currentData?.serviceTax}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -615,7 +615,7 @@ function CmcNcmcPrice() {
                         }
                         id="remarks"
                         value={currentData?.remarks}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
 

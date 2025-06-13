@@ -752,7 +752,7 @@ export default function Sidebar({ onSidebarItemClick }) {
           </ListItem>
         </List>
 
-        {/* <List
+        <List
           size="sm"
           className="mx-1"
           sx={{
@@ -865,7 +865,7 @@ export default function Sidebar({ onSidebarItemClick }) {
               </List>
             </Toggler>
           </ListItem>
-        </List> */}
+        </List>
         {/* <List
           size="sm"
           sx={{
@@ -1206,11 +1206,10 @@ export default function Sidebar({ onSidebarItemClick }) {
             LogOut <LogoutRoundedIcon />
           </IconButton>
 
-        
           <LogoutModal
             open={isModalOpen}
-            onClose={() => setIsModalOpen(false)}  
-            onConfirm={handleLogout}  
+            onClose={() => setIsModalOpen(false)}
+            onConfirm={handleLogout}
           />
         </div>
       </Box>

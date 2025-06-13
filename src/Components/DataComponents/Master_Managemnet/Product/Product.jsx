@@ -367,25 +367,13 @@ function Product() {
                       {moment(item?.endofsupportdate).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 font- text-md capitalize text-center align-middle whitespace-nowrap">
-                      {item?.exsupportavlb ? (
-                        <TaskAltOutlinedIcon color="success" />
-                      ) : (
-                        <CancelOutlinedIcon color="danger" />
-                      )}
+                      {moment(item?.exsupportavlb).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 font- text-md capitalize text-center align-middle whitespace-nowrap">
-                      {item?.installationcheckliststatusboolean ? (
-                        <TaskAltOutlinedIcon color="success" />
-                      ) : (
-                        <CancelOutlinedIcon color="danger" />
-                      )}
+                      {item?.installationcheckliststatusboolean}
                     </td>
                     <td className="p-4 font- text-md capitalize text-center align-middle whitespace-nowrap">
-                      {item?.pmcheckliststatusboolean ? (
-                        <TaskAltOutlinedIcon color="success" />
-                      ) : (
-                        <CancelOutlinedIcon color="danger" />
-                      )}
+                      {item?.pmcheckliststatusboolean}
                     </td>
 
                     <td className="p-4 align-middle whitespace-nowrap">
@@ -555,7 +543,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.partnoid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -569,7 +557,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.product}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -583,7 +571,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.productgroup}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -597,7 +585,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.subgrp}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
 
@@ -612,7 +600,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.frequency}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -626,7 +614,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.dateoflaunch?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -640,7 +628,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.endofsaledate?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -654,7 +642,7 @@ function Product() {
                         }
                         id="name"
                         value={currentData?.endofsupportdate?.split("T")[0]}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
