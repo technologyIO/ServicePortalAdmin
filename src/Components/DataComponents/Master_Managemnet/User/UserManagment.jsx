@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import StepNavigation from "./StepNavigation";
@@ -255,7 +255,8 @@ export default function UserManagement() {
     } else if (currentStep === 2) {
       if (!formData.firstName) newErrors.firstName = "First name is required";
       if (!formData.lastName) newErrors.lastName = "Last name is required";
-      if (!formData.employeeid) newErrors.employeeid = "Employee ID is required";
+      if (!formData.employeeid)
+        newErrors.employeeid = "Employee ID is required";
       if (!formData.email) {
         newErrors.email = "Email is required";
       } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
@@ -558,7 +559,203 @@ export default function UserManagement() {
     { id: 3, name: "Skills" },
     { id: 4, name: "Location Details" },
   ];
+  const filteredCountries = useMemo(() => {
+    if (!permissions?.demographicSelections) return countries;
 
+    const geoSelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "geo"
+    );
+
+    if (!geoSelection || !geoSelection.isEnabled) return countries;
+
+    const selectedGeoValues =
+      geoSelection.selectionType === "multi"
+        ? selectedGeo.map((g) => g.geoName)
+        : selectedSingleGeo
+        ? [selectedSingleGeo.geoName]
+        : [];
+
+    return selectedGeoValues.length > 0
+      ? countries.filter((country) => selectedGeoValues.includes(country.geo))
+      : [];
+  }, [selectedGeo, selectedSingleGeo, countries, permissions]);
+
+  // Combined geo change handler
+  const handleGeoChange = (event, newValue, selection) => {
+    if (selection.selectionType === "multi") {
+      setSelectedGeo(newValue);
+    } else {
+      setSelectedSingleGeo(newValue);
+    }
+
+    // Reset all dependent selections
+    setSelectedCountries([]);
+    setSelectedSingleCountry(null);
+    setSelectedStates([]);
+    setSelectedSingleState(null);
+    setSelectedCities([]);
+    setSelectedSingleCity(null);
+    setSelectedRegions([]);
+    setSelectedRegion(null);
+    setSelectedBranches([]);
+    setSelectedBranch(null);
+
+    // Clear form fields
+    setFormData((prev) => ({
+      ...prev,
+      country: "",
+      state: "",
+      city: "",
+    }));
+  };
+
+  // In your Step4LocationDetails rendering:
+  const renderLocationControls = () => {
+    return permissions?.demographicSelections?.map((selection) => {
+      let options = [];
+      let selectedValue = null;
+      let onChangeHandler = () => {};
+      let label = selection.name;
+
+      switch (selection.name.toLowerCase()) {
+        case "geo":
+          options = geoOptions;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedGeo
+              : selectedSingleGeo;
+          onChangeHandler = (event, newValue) =>
+            handleGeoChange(event, newValue, selection);
+          break;
+
+        case "country":
+          options = filteredCountries;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedCountries
+              : selectedSingleCountry;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedCountries(newValue);
+            } else {
+              setSelectedSingleCountry(newValue);
+            }
+          };
+          break;
+
+        case "region":
+          options = regionOptions;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedRegions
+              : selectedRegion;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedRegions(newValue);
+            } else {
+              setSelectedRegion(newValue);
+            }
+          };
+          break;
+
+        case "state":
+          options = states;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedStates
+              : selectedSingleState;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedStates(newValue);
+            } else {
+              setSelectedSingleState(newValue);
+            }
+          };
+          break;
+
+        case "city":
+          options = cities;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedCities
+              : selectedSingleCity;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedCities(newValue);
+            } else {
+              setSelectedSingleCity(newValue);
+            }
+          };
+          break;
+
+        case "branch":
+          options = branches;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedBranches
+              : selectedBranch;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedBranches(newValue);
+            } else {
+              setSelectedBranch(newValue);
+            }
+          };
+          break;
+
+        default:
+          return null;
+      }
+
+      if (!selection.isEnabled) return null;
+
+      return (
+        <div key={selection.name} className="mb-8">
+          <label className="block text-sm font-medium text-blue-800 mb-2">
+            {selection.selectionType === "multi"
+              ? `Select Multiple ${selection.name}s`
+              : `Select a ${selection.name}`}
+          </label>
+
+          <Autocomplete
+            multiple={selection.selectionType === "multi"}
+            options={options}
+            getOptionLabel={(option) => {
+              if (selection.name.toLowerCase() === "branch") {
+                return `${option.name} (${option.branchShortCode}) - ${option.city}, ${option.state}`;
+              }
+              return option.name || option.geoName || option.regionName;
+            }}
+            value={selectedValue}
+            onChange={onChangeHandler}
+            isOptionEqualToValue={(option, value) => option._id === value._id}
+            disabled={
+              selection.name.toLowerCase() !== "geo" &&
+              ((selection.selectionType === "multi" &&
+                selectedGeo.length === 0) ||
+                (!selectedSingleGeo && selection.selectionType === "single"))
+            }
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="outlined"
+                placeholder={
+                  selection.selectionType === "multi"
+                    ? `Search and select ${selection.name.toLowerCase()}s`
+                    : `Search and select a ${selection.name.toLowerCase()}`
+                }
+              />
+            )}
+          />
+          {errors[selection.name] && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors[selection.name]}
+            </p>
+          )}
+        </div>
+      );
+    });
+  };
   return (
     <div className="min-h-screen overflow-y-auto bg-gradient-to-br">
       <div className="bg-white shadow-sm border-b border-blue-100">
@@ -617,144 +814,7 @@ export default function UserManagement() {
                 <h2 className="text-xl font-semibold text-blue-900 mb-6">
                   Assign locations to user
                 </h2>
-                <div>
-                  {permissions?.demographicSelections?.map((selection) => {
-                    let options = [];
-                    let selectedValue = null;
-                    let onChangeHandler = () => {};
-                    let label = selection.name;
-
-                    switch (selection.name.toLowerCase()) {
-                      case "geo":
-                        options = geoOptions;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedGeo
-                            : selectedSingleGeo;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedGeo(newValue);
-                          } else {
-                            setSelectedSingleGeo(newValue);
-                          }
-                        };
-                        break;
-                      case "country":
-                        options = countries;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedCountries
-                            : selectedSingleCountry;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedCountries(newValue);
-                          } else {
-                            setSelectedSingleCountry(newValue);
-                          }
-                        };
-                        break;
-                      case "region":
-                        options = regionOptions;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedRegions
-                            : selectedRegion;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedRegions(newValue);
-                          } else {
-                            setSelectedRegion(newValue);
-                          }
-                        };
-                        break;
-                      case "state":
-                        options = states;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedStates
-                            : selectedSingleState;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedStates(newValue);
-                          } else {
-                            setSelectedSingleState(newValue);
-                          }
-                        };
-                        break;
-                      case "branch":
-                        options = branches;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedBranches
-                            : selectedBranch;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedBranches(newValue);
-                          } else {
-                            setSelectedBranch(newValue);
-                          }
-                        };
-                        break;
-                      case "city":
-                        options = cities;
-                        selectedValue =
-                          selection.selectionType === "multi"
-                            ? selectedCities
-                            : selectedSingleCity;
-                        onChangeHandler = (event, newValue) => {
-                          if (selection.selectionType === "multi") {
-                            setSelectedCities(newValue);
-                          } else {
-                            setSelectedSingleCity(newValue);
-                          }
-                        };
-                        break;
-                      default:
-                        return null;
-                    }
-
-                    if (!selection.isEnabled) return null;
-
-                    return (
-                      <div key={selection.name} className="mb-8">
-                        <label className="block text-sm font-medium text-blue-800 mb-2">
-                          {selection.selectionType === "multi"
-                            ? `Select Multiple ${selection.name}s`
-                            : `Select a ${selection.name}`}
-                        </label>
-
-                        <Autocomplete
-                          multiple={selection.selectionType === "multi"}
-                          options={options}
-                          getOptionLabel={(option) => {
-                            if (selection.name.toLowerCase() === "branch") {
-                              return `${option.name} (${option.branchShortCode}) - ${option.city}, ${option.state}`;
-                            }
-                            return (
-                              option.name || option.geoName || option.regionName
-                            );
-                          }}
-                          value={selectedValue}
-                          onChange={onChangeHandler}
-                          isOptionEqualToValue={(option, value) =>
-                            option._id === value._id
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              variant="outlined"
-                              placeholder={
-                                selection.selectionType === "multi"
-                                  ? `Search and select ${selection.name.toLowerCase()}s`
-                                  : `Search and select a ${selection.name.toLowerCase()}`
-                              }
-                            />
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+                <div>{renderLocationControls()}</div>
               </div>
             )}
 

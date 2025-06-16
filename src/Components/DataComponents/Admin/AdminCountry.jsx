@@ -6,7 +6,14 @@ import Input from "@mui/joy/Input";
 
 import SearchIcon from "@mui/icons-material/Search";
 
-import { Modal, ModalDialog, Option, Select } from "@mui/joy";
+import {
+  Autocomplete,
+  Modal,
+  ModalDialog,
+  Option,
+  Select,
+  TextField,
+} from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
@@ -22,8 +29,9 @@ const AdminCountry = () => {
   const limit = 10;
   const [loader, setLoader] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [geoOptions, setGeoOptions] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [selectedGeo, setSelectedGeo] = useState(null);
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -92,7 +100,13 @@ const AdminCountry = () => {
       }
     });
   };
-
+  useEffect(() => {
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/api/geo`)
+      .then((res) => res.json())
+      .then((data) => {
+        setGeoOptions(data.data.geoDropdown || []);
+      });
+  }, []);
   const handleSearch = async () => {
     if (!searchQuery) {
       return;
@@ -109,6 +123,12 @@ const AdminCountry = () => {
       console.error("Error searching users:", error);
       setLoader(false);
     }
+  };
+  const handleOpenEditModal = (country) => {
+    setCurrentCountry(country);
+    const matchedGeo = geoOptions.find((g) => g.geoName === country.geoName); // Match by name now
+    setSelectedGeo(matchedGeo || null);
+    setEditModal(true);
   };
 
   const getAllCountries = () => {
@@ -145,10 +165,15 @@ const AdminCountry = () => {
   };
 
   const handleAddCountry = () => {
+    const countryData = {
+      ...currentCountry,
+      geo: selectedGeo?.geoName || "", // ✅ Send geo name instead of _id
+    };
+
     axios
       .post(
         `${process.env.REACT_APP_BASE_URL}/collections/country`,
-        currentCountry
+        countryData
       )
       .then((res) => {
         getAllCountries();
@@ -159,10 +184,15 @@ const AdminCountry = () => {
   };
 
   const handleEditCountry = (id) => {
+    const countryData = {
+      ...currentCountry,
+      geo: selectedGeo?.geoName || "", // ✅ Send geo name instead of _id
+    };
+
     axios
       .patch(
         `${process.env.REACT_APP_BASE_URL}/collections/country/${id}`,
-        currentCountry
+        countryData
       )
       .then((res) => {
         getAllCountries();
@@ -256,6 +286,9 @@ const AdminCountry = () => {
                     Name
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Geo
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -294,6 +327,9 @@ const AdminCountry = () => {
                     </th>
                     <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
                       {country?.name}
+                    </td>
+                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                      {country?.geo}
                     </td>
                     <td className="capitalize p-4">
                       <span
@@ -460,6 +496,28 @@ const AdminCountry = () => {
                         id="name"
                         value={currentCountry?.name}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Geo Name
+                      </label>
+                      <Autocomplete
+                        options={geoOptions}
+                        value={selectedGeo}
+                        onChange={(event, newValue) => setSelectedGeo(newValue)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select Geo"
+                            variant="outlined"
+                          />
+                        )}
+                        getOptionLabel={(option) => option.geoName || ""}
+                        isOptionEqualToValue={(option, value) =>
+                          option.geoName === value.geoName
+                        }
+                        fullWidth
                       />
                     </div>
                     <div>

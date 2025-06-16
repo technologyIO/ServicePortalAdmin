@@ -133,6 +133,26 @@ const UserData = () => {
     );
   };
 
+  const handleRemoveDevice = async (userId) => {
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/collections/remove-device",
+        {
+          userId,
+        }
+      );
+
+      if (res.data?.message) {
+        alert(res.data.message);
+
+        getData();
+      }
+    } catch (err) {
+      console.error("Error removing device:", err);
+      alert("Failed to remove device");
+    }
+  };
+
   return (
     <>
       {loader ? (
@@ -295,7 +315,7 @@ const UserData = () => {
                       {getDemographicNames(item, "state")}
                     </td>
                     <td className="p-4">{getDemographicNames(item, "city")}</td>
-                     
+
                     {/* <td className="p-4">{item?.department}</td> */}
                     <td className="p-4">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
@@ -305,10 +325,21 @@ const UserData = () => {
                     </td>
                     <td className="p-4">{item?.manageremail}</td>
                     <td className="p-4">{formatSkills(item?.skills)}</td>
-                    <td className="p-4">{item?.deviceid}</td>
-                    <td className="p-4">
-                      {moment(item?.deviceregistereddate).format("MMM D, YYYY")}
+                    <td className="p-4 flex flex-col">
+                      {item?.deviceid}{" "}
+                      <button
+                        onClick={() => handleRemoveDevice(item._id)}
+                        className="border p-2 bg-red-600 text-xs text-white rounded hover:bg-red-400"
+                      >
+                        Remove Device
+                      </button>
                     </td>
+                    <td className="p-4">
+                      {moment(item?.deviceregistereddate).format(
+                        "MMM D, YYYY [at] h:mm A"
+                      )}{" "}
+                    </td>
+
                     <td className="p-4">
                       <div className="flex gap-4">
                         <button className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500">
