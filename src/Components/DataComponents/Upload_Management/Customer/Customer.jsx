@@ -642,7 +642,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("customercodeid", e.target.value)
                         }
-                        id="name"
+                        id="customercodeid"
                         value={currentData?.customercodeid}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -656,7 +656,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("customername", e.target.value)
                         }
-                        id="name"
+                        id="customername"
                         value={currentData?.customername}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -670,7 +670,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("hospitalname", e.target.value)
                         }
-                        id="name"
+                        id="hospitalname"
                         value={currentData?.hospitalname}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -684,7 +684,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("street", e.target.value)
                         }
-                        id="name"
+                        id="street"
                         value={currentData?.street}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -720,7 +720,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("postalcode", e.target.value)
                         }
-                        id="name"
+                        id="postalcode"
                         value={currentData?.postalcode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -734,7 +734,7 @@ function Customer() {
                         onChange={(e) =>
                           handleFormData("district", e.target.value)
                         }
-                        id="name"
+                        id="district"
                         value={currentData?.district}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -788,10 +788,10 @@ function Customer() {
                       <input
                         type="text"
                         onChange={(e) =>
-                          handleFormData("district", e.target.value)
+                          handleFormData("telephone", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.district}
+                        id="telephone"
+                        value={currentData?.telephone}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -802,10 +802,10 @@ function Customer() {
                       <input
                         type="text"
                         onChange={(e) =>
-                          handleFormData("district", e.target.value)
+                          handleFormData("taxnumber1", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.district}
+                        id="taxnumber1"
+                        value={currentData?.taxnumber1}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -816,10 +816,10 @@ function Customer() {
                       <input
                         type="text"
                         onChange={(e) =>
-                          handleFormData("district", e.target.value)
+                          handleFormData("taxnumber2", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.district}
+                        id="taxnumber2"
+                        value={currentData?.taxnumber2}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -830,10 +830,10 @@ function Customer() {
                       <input
                         type="text"
                         onChange={(e) =>
-                          handleFormData("district", e.target.value)
+                          handleFormData("email", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.district}
+                        id="email"
+                        value={currentData?.email}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -861,10 +861,10 @@ function Customer() {
                       <input
                         type="text"
                         onChange={(e) =>
-                          handleFormData("district", e.target.value)
+                          handleFormData("customertype", e.target.value)
                         }
-                        id="name"
-                        value={currentData?.district}
+                        id="customertype"
+                        value={currentData?.customertype}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
