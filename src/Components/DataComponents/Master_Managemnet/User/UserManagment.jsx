@@ -602,14 +602,6 @@ export default function UserManagement() {
     setSelectedRegion(null);
     setSelectedBranches([]);
     setSelectedBranch(null);
-
-    // Clear form fields
-    setFormData((prev) => ({
-      ...prev,
-      country: "",
-      state: "",
-      city: "",
-    }));
   };
 
   const renderLocationControls = () => {
@@ -620,7 +612,9 @@ export default function UserManagement() {
       let selectedValue = null;
       let onChangeHandler = () => {};
       let isDisabled = false;
+      let dependsOn = null;
 
+      // Configure each field type
       switch (selection.name.toLowerCase()) {
         case "geo":
           options = geoOptions;
@@ -628,8 +622,24 @@ export default function UserManagement() {
             selection.selectionType === "multi"
               ? selectedGeo
               : selectedSingleGeo;
-          onChangeHandler = (event, newValue) =>
-            handleGeoChange(event, newValue, selection);
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedGeo(newValue);
+            } else {
+              setSelectedSingleGeo(newValue);
+            }
+            // Reset all dependent fields when geo changes
+            setSelectedCountries([]);
+            setSelectedSingleCountry(null);
+            setSelectedRegions([]);
+            setSelectedRegion(null);
+            setSelectedStates([]);
+            setSelectedSingleState(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
+            setSelectedBranches([]);
+            setSelectedBranch(null);
+          };
           break;
 
         case "country":
@@ -644,12 +654,13 @@ export default function UserManagement() {
             } else {
               setSelectedSingleCountry(newValue);
             }
+            // Reset dependent fields
+            setSelectedStates([]);
+            setSelectedSingleState(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
           };
-          // Only disable if no geo is selected
-          isDisabled =
-            selection.selectionType === "multi"
-              ? selectedGeo.length === 0
-              : !selectedSingleGeo;
+          dependsOn = "geo";
           break;
 
         case "region":
@@ -679,12 +690,11 @@ export default function UserManagement() {
             } else {
               setSelectedSingleState(newValue);
             }
+            // Reset cities when state changes
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
           };
-          // Only disable if no country is selected
-          isDisabled =
-            selection.selectionType === "multi"
-              ? selectedCountries.length === 0
-              : !selectedSingleCountry;
+          dependsOn = "country";
           break;
 
         case "city":
@@ -700,11 +710,7 @@ export default function UserManagement() {
               setSelectedSingleCity(newValue);
             }
           };
-          // Only disable if no state is selected
-          isDisabled =
-            selection.selectionType === "multi"
-              ? selectedStates.length === 0
-              : !selectedSingleState;
+          dependsOn = "state";
           break;
 
         case "branch":
@@ -724,6 +730,31 @@ export default function UserManagement() {
 
         default:
           return null;
+      }
+
+      // Determine if field should be disabled based on dependency
+      if (dependsOn) {
+        const dependency = permissions.demographicSelections.find(
+          (s) => s.name.toLowerCase() === dependsOn
+        );
+
+        if (dependency) {
+          if (dependency.selectionType === "multi") {
+            isDisabled =
+              dependsOn === "geo"
+                ? selectedGeo.length === 0
+                : dependsOn === "country"
+                ? selectedCountries.length === 0
+                : selectedStates.length === 0;
+          } else {
+            isDisabled =
+              dependsOn === "geo"
+                ? !selectedSingleGeo
+                : dependsOn === "country"
+                ? !selectedSingleCountry
+                : !selectedSingleState;
+          }
+        }
       }
 
       return (
