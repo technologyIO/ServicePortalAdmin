@@ -136,7 +136,7 @@ const UserData = () => {
   const handleRemoveDevice = async (userId) => {
     try {
       const res = await axios.post(
-        "http://localhost:5000/collections/remove-device",
+        `${process.env.REACT_APP_BASE_URL}/collections/remove-device`,
         {
           userId,
         }
