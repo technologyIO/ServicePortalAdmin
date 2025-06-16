@@ -233,6 +233,7 @@ const UserData = () => {
                   </th>
                   <th className="px-4 text-left font-medium">First Name</th>
                   <th className="px-4 text-left font-medium">Last Name</th>
+                  <th className="px-4 text-left font-medium">Role</th>
                   <th className="px-4 text-left font-medium">Email</th>
                   <th className="px-4 text-left font-medium">Mobile Number</th>
                   <th className="px-4 text-left font-medium">Branch</th>
@@ -280,6 +281,7 @@ const UserData = () => {
                     </th>
                     <td className="p-4 capitalize">{item?.firstname}</td>
                     <td className="p-4 capitalize">{item?.lastname}</td>
+                    <td className="p-4 capitalize">{item?.role?.roleName}</td>
                     <td className="p-4">{item?.email}</td>
                     <td className="p-4">{item?.mobilenumber}</td>
                     <td className="p-4">

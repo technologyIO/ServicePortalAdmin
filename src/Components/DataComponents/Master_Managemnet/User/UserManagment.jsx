@@ -8,6 +8,7 @@ import Step3Skills from "./steps/Step3Skills";
 import Step4LocationDetails from "./steps/Step4LocationDetails";
 import { Autocomplete, TextField } from "@mui/joy";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function UserManagement() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -39,6 +40,7 @@ export default function UserManagement() {
     features: [],
     demographicSelections: [],
   });
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSingleGeo, setSelectedSingleGeo] = useState(null);
@@ -534,6 +536,7 @@ export default function UserManagement() {
           );
           if (response.status === 201) {
             toast.success("User created successfully!");
+            navigate("/user");
           } else {
             throw new Error(response.data.message || "Failed to create user");
           }
@@ -609,13 +612,14 @@ export default function UserManagement() {
     }));
   };
 
-  // In your Step4LocationDetails rendering:
   const renderLocationControls = () => {
     return permissions?.demographicSelections?.map((selection) => {
+      if (!selection.isEnabled) return null;
+
       let options = [];
       let selectedValue = null;
       let onChangeHandler = () => {};
-      let label = selection.name;
+      let isDisabled = false;
 
       switch (selection.name.toLowerCase()) {
         case "geo":
@@ -641,6 +645,11 @@ export default function UserManagement() {
               setSelectedSingleCountry(newValue);
             }
           };
+          // Only disable if no geo is selected
+          isDisabled =
+            selection.selectionType === "multi"
+              ? selectedGeo.length === 0
+              : !selectedSingleGeo;
           break;
 
         case "region":
@@ -671,6 +680,11 @@ export default function UserManagement() {
               setSelectedSingleState(newValue);
             }
           };
+          // Only disable if no country is selected
+          isDisabled =
+            selection.selectionType === "multi"
+              ? selectedCountries.length === 0
+              : !selectedSingleCountry;
           break;
 
         case "city":
@@ -686,6 +700,11 @@ export default function UserManagement() {
               setSelectedSingleCity(newValue);
             }
           };
+          // Only disable if no state is selected
+          isDisabled =
+            selection.selectionType === "multi"
+              ? selectedStates.length === 0
+              : !selectedSingleState;
           break;
 
         case "branch":
@@ -707,8 +726,6 @@ export default function UserManagement() {
           return null;
       }
 
-      if (!selection.isEnabled) return null;
-
       return (
         <div key={selection.name} className="mb-8">
           <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -729,12 +746,7 @@ export default function UserManagement() {
             value={selectedValue}
             onChange={onChangeHandler}
             isOptionEqualToValue={(option, value) => option._id === value._id}
-            disabled={
-              selection.name.toLowerCase() !== "geo" &&
-              ((selection.selectionType === "multi" &&
-                selectedGeo.length === 0) ||
-                (!selectedSingleGeo && selection.selectionType === "single"))
-            }
+            disabled={isDisabled}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -747,15 +759,11 @@ export default function UserManagement() {
               />
             )}
           />
-          {errors[selection.name] && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors[selection.name]}
-            </p>
-          )}
         </div>
       );
     });
   };
+
   return (
     <div className="min-h-screen overflow-y-auto bg-gradient-to-br">
       <div className="bg-white shadow-sm border-b border-blue-100">
