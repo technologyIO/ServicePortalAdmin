@@ -1,21 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { ChevronDown, ArrowLeft, ArrowRight } from "lucide-react";
 import axios from "axios";
-import { Autocomplete, TextField } from "@mui/joy";
 import toast from "react-hot-toast";
+import StepNavigation from "./StepNavigation";
+import Step1RoleInfo from "./steps/Step1RoleInfo";
+import Step2UserDetails from "./steps/Step2UserDetails";
+import Step3Skills from "./steps/Step3Skills";
+import Step4LocationDetails from "./steps/Step4LocationDetails";
+import { Autocomplete, TextField } from "@mui/joy";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 
 export default function UserManagement() {
   const [currentStep, setCurrentStep] = useState(1);
   const [userType, setUserType] = useState("Skanray");
-  const [skills, setSkills] = useState([]);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cities, setCities] = useState([]);
   const [selectedDealer, setSelectedDealer] = useState("");
-
   const [states, setStates] = useState([]);
   const [selectedStates, setSelectedStates] = useState([]);
-
   const [selectedState, setSelectedState] = useState(null);
   const [countries, setCountries] = useState([]);
   const [selectedCountries, setSelectedCountries] = useState([]);
@@ -79,7 +81,9 @@ export default function UserManagement() {
   useEffect(() => {
     if (currentStep === 3) {
       axios
-        .get(`${process.env.REACT_APP_BASE_URL}/collections/skillbyproductgroup/`)
+        .get(
+          `${process.env.REACT_APP_BASE_URL}/collections/skillbyproductgroup/`
+        )
         .then((res) => {
           setSkill(res.data);
         })
@@ -246,17 +250,78 @@ export default function UserManagement() {
 
     if (currentStep === 1) {
       if (!selectedRole) newErrors.role = "Role is required";
+      if (userType === "Dealer" && !selectedDealer)
+        newErrors.dealer = "Dealer is required";
     } else if (currentStep === 2) {
       if (!formData.firstName) newErrors.firstName = "First name is required";
       if (!formData.lastName) newErrors.lastName = "Last name is required";
+      if (!formData.employeeid) newErrors.employeeid = "Employee ID is required";
       if (!formData.email) {
         newErrors.email = "Email is required";
       } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
         newErrors.email = "Email is invalid";
       }
-      if (formData.mobile && !/^\d{10,15}$/.test(formData.mobile)) {
-        newErrors.mobile = "mobile number is invalid";
+      if (!formData.mobile) {
+        newErrors.mobile = "Mobile is required";
+      } else if (!/^\d{10,15}$/.test(formData.mobile)) {
+        newErrors.mobile = "Mobile number is invalid";
       }
+      if (!formData.password) newErrors.password = "Password is required";
+      if (!formData.manageremail)
+        newErrors.manageremail = "Manager email is required";
+    } else if (currentStep === 4) {
+      permissions.demographicSelections.forEach((selection) => {
+        if (selection.isEnabled) {
+          let value;
+          switch (selection.name.toLowerCase()) {
+            case "geo":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedGeo
+                  : selectedSingleGeo;
+              break;
+            case "country":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedCountries
+                  : selectedSingleCountry;
+              break;
+            case "region":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedRegions
+                  : selectedRegion;
+              break;
+            case "state":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedStates
+                  : selectedSingleState;
+              break;
+            case "city":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedCities
+                  : selectedSingleCity;
+              break;
+            case "branch":
+              value =
+                selection.selectionType === "multi"
+                  ? selectedBranches
+                  : selectedBranch;
+              break;
+            default:
+              value = null;
+          }
+
+          if (
+            (Array.isArray(value) && value.length === 0) ||
+            (!Array.isArray(value) && !value)
+          ) {
+            newErrors[selection.name] = `${selection.name} is required`;
+          }
+        }
+      });
     }
 
     setErrors(newErrors);
@@ -508,504 +573,43 @@ export default function UserManagement() {
 
       <div className="">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-          <nav
-            className="flex items-center justify-center"
-            aria-label="Progress"
-          >
-            <ol className="flex items-center space-x-8 w-full">
-              {steps.map((step) => (
-                <li key={step.name} className="flex-1">
-                  {step.id < currentStep ? (
-                    <div className="group flex flex-col border-t-4 border-blue-700 pt-4 pb-2">
-                      <span className="text-sm font-medium text-blue-700">
-                        {step.name}
-                      </span>
-                    </div>
-                  ) : step.id === currentStep ? (
-                    <div
-                      className="flex flex-col border-t-4 border-blue-700 pt-4 pb-2"
-                      aria-current="step"
-                    >
-                      <span className="text-sm font-medium text-blue-700">
-                        {step.name}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="group flex flex-col border-t-4 border-gray-200 pt-4 pb-2">
-                      <span className="text-sm font-medium text-gray-500">
-                        {step.name}
-                      </span>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <StepNavigation currentStep={currentStep} />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <form onSubmit={handleSubmit} className="space-y-8">
             {currentStep === 1 && (
-              <div className="h-[440px] overflow-y-auto">
-                <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
-                  <h2 className="text-xl font-semibold text-blue-900 mb-6">
-                    Role Information
-                  </h2>
-
-                  <div
-                    className={`grid grid-cols-1 ${
-                      userType === "Dealer"
-                        ? "lg:grid-cols-3"
-                        : "lg:grid-cols-2"
-                    } gap-6`}
-                  >
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        User Type
-                      </label>
-                      <div className="flex flex-wrap gap-4">
-                        {["Skanray", "Dealer"].map((type) => (
-                          <label key={type} className="flex items-center">
-                            <input
-                              type="radio"
-                              name="userType"
-                              value={type}
-                              checked={userType === type}
-                              onChange={(e) => {
-                                setUserType(e.target.value);
-                                if (e.target.value === "Dealer") {
-                                  const serviceEngineerRole = roles.find(
-                                    (role) => role.name === "Service Engineer"
-                                  );
-                                  if (serviceEngineerRole) {
-                                    setSelectedRole(serviceEngineerRole);
-                                    fetchRolePermissions(
-                                      serviceEngineerRole.roleId
-                                    );
-                                  }
-                                } else {
-                                  setSelectedRole(null);
-                                }
-                              }}
-                              className="w-5 h-5 text-blue-700 border-blue-300 focus:ring-blue-500"
-                            />
-                            <span className="ml-2 text-lg text-blue-700">
-                              {type}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-
-                    {userType === "Dealer" && (
-                      <div>
-                        <label className="block text-sm font-medium text-blue-800 mb-2">
-                          Dealer <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <select
-                            value={selectedDealer}
-                            onChange={(e) => setSelectedDealer(e.target.value)}
-                            className="w-full px-4 py-3 border border-blue-200 rounded-lg appearance-none bg-white"
-                          >
-                            <option value="">Select dealer</option>
-                            {dealerList.map((dealer) => (
-                              <option key={dealer._id} value={dealer.name}>
-                                {dealer.name}
-                              </option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5 pointer-events-none" />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="w-full">
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Role <span className="text-red-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedRole?._id || ""}
-                          onChange={(e) => {
-                            const selected = roles.find(
-                              (role) => role._id === e.target.value
-                            );
-                            setSelectedRole(selected);
-                            if (errors.role) {
-                              setErrors({ ...errors, role: null });
-                            }
-                            if (selected) {
-                              fetchRolePermissions(selected.roleId);
-                            }
-                          }}
-                          className={`w-full px-4 py-3 border ${
-                            errors.role ? "border-red-500" : "border-blue-200"
-                          } rounded-lg appearance-none bg-white`}
-                          disabled={userType === "Dealer"}
-                        >
-                          <option value="">
-                            {userType === "Dealer"
-                              ? "Service Engineer"
-                              : "Select role"}
-                          </option>
-                          {(userType === "Dealer"
-                            ? roles.filter(
-                                (role) => role.name === "Service Engineer"
-                              )
-                            : roles
-                          ).map((role) => (
-                            <option key={role._id} value={role._id}>
-                              {role.name}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5 pointer-events-none" />
-                      </div>
-                      {errors.role && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.role}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Step1RoleInfo
+                userType={userType}
+                setUserType={setUserType}
+                selectedDealer={selectedDealer}
+                setSelectedDealer={setSelectedDealer}
+                dealerList={dealerList}
+                roles={roles}
+                selectedRole={selectedRole}
+                setSelectedRole={setSelectedRole}
+                errors={errors}
+                setErrors={setErrors}
+                fetchRolePermissions={fetchRolePermissions}
+              />
             )}
 
             <div className="overflow-y-auto">
               {currentStep === 2 && (
-                <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
-                  <h2 className="text-xl font-semibold text-blue-900 mb-6">
-                    User Details
-                  </h2>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        First Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.firstName
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter first name"
-                      />
-                      {errors.firstName && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.firstName}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Last Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.lastName ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter last name"
-                      />
-                      {errors.lastName && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.lastName}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Email <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.email ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter email address"
-                      />
-                      {errors.email && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.email}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Mobile <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="tel"
-                        name="mobile"
-                        value={formData.mobile}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.mobile ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Mobile number"
-                      />
-                      {errors.mobile && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.mobile}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Login Expiry Date
-                      </label>
-                      <input
-                        type="date"
-                        name="loginexpirydate"
-                        value={formData.loginexpirydate}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.loginexpirydate
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Mobile number"
-                      />
-                      {errors.loginexpirydate && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.loginexpirydate}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Zip Code
-                      </label>
-                      <input
-                        type="text"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.zipCode ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter zip code"
-                      />
-                      {errors.zipCode && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.zipCode}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Employee ID
-                      </label>
-                      <input
-                        type="text"
-                        name="employeeid"
-                        value={formData.employeeid}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.employeeid
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Employee Id"
-                      />
-                      {errors.employeeid && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.employeeid}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Password
-                      </label>
-                      <input
-                        type="text"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.password ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Password"
-                      />
-                      {errors.password && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.password}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Manager Email <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        name="manageremail"
-                        value={formData.manageremail}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.manageremail
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Manager Email"
-                      />
-                      {errors.manageremail && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.manageremail}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Profile Image
-                      </label>
-                      <input
-                        type="text"
-                        name="profileimage"
-                        value={formData.profileimage}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.profileimage
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Profile Image "
-                      />
-                      {errors.profileimage && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.profileimage}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Device Id
-                      </label>
-                      <input
-                        type="text"
-                        name="deviceid"
-                        value={formData.deviceid}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.deviceid ? "border-red-500" : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Device Id"
-                      />
-                      {errors.deviceid && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.deviceid}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Device Registered Date
-                      </label>
-                      <input
-                        type="date"
-                        name="deviceregistereddate"
-                        value={formData.deviceregistereddate}
-                        onChange={handleInputChange}
-                        className={`w-full px-4 py-3 border ${
-                          errors.deviceregistereddate
-                            ? "border-red-500"
-                            : "border-blue-200"
-                        } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                        placeholder="Enter Manager Email"
-                      />
-                      {errors.deviceregistereddate && (
-                        <p className="mt-1 text-sm text-red-700">
-                          {errors.deviceregistereddate}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Address
-                      </label>
-                      <textarea
-                        name="address"
-                        value={formData.address}
-                        onChange={handleInputChange}
-                        rows={3}
-                        className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter full address"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <Step2UserDetails
+                  formData={formData}
+                  handleInputChange={handleInputChange}
+                  errors={errors}
+                />
               )}
             </div>
 
             {currentStep === 3 && (
-              <div className="">
-                <h2 className="text-xl font-semibold text-blue-900 mb-6">
-                  Skills & Expertise
-                </h2>
-                <div className="grid grid-cols-3">
-                  {Array.isArray(Skill) &&
-                    Skill.map((skill) => (
-                      <div
-                        key={skill.productgroup}
-                        className="mb-6 border-b pb-4"
-                      >
-                        <div className="flex items-center mb-2">
-                          <input
-                            type="checkbox"
-                            checked={isskillFullySelected(skill)}
-                            onChange={(e) =>
-                              handleskillCheckboxChange(skill, e.target.checked)
-                            }
-                            className="mr-2"
-                          />
-                          <label className="text-lg font-bold text-blue-800">
-                            {skill.productgroup}
-                          </label>
-                        </div>
-                        <ul className="pl-6 space-y-1">
-                          {Array.isArray(skill.products) &&
-                            skill.products.map((product) => (
-                              <li
-                                key={product._id}
-                                className="flex items-center"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={!!selectedSkill[product._id]}
-                                  onChange={(e) =>
-                                    handleProductCheckboxChange(
-                                      product._id,
-                                      e.target.checked
-                                    )
-                                  }
-                                  className="mr-2"
-                                />
-                                <span>{product.product}</span>
-                              </li>
-                            ))}
-                        </ul>
-                      </div>
-                    ))}
-                </div>
-              </div>
+              <Step3Skills
+                Skill={Skill}
+                selectedSkill={selectedSkill}
+                setSelectedSkill={setSelectedSkill}
+              />
             )}
 
             {currentStep === 4 && (

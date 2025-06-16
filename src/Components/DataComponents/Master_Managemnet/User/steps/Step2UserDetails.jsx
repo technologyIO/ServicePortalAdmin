@@ -89,7 +89,24 @@ export default function Step2UserDetails({
             <p className="mt-1 text-sm text-red-700">{errors.mobile}</p>
           )}
         </div>
-
+        <div>
+          <label className="block text-sm font-medium text-blue-800 mb-2">
+            Employee ID <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            name="employeeid"
+            value={formData.employeeid}
+            onChange={handleInputChange}
+            className={`w-full px-4 py-3 border ${
+              errors.employeeid ? "border-red-500" : "border-blue-200"
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            placeholder="Enter Employee Id"
+          />
+          {errors.employeeid && (
+            <p className="mt-1 text-sm text-red-700">{errors.employeeid}</p>
+          )}
+        </div>
         {/* Password */}
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
@@ -132,24 +149,6 @@ export default function Step2UserDetails({
 
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
-            Manager Email <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="manageremail"
-            value={formData.manageremail}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-3 border ${
-              errors.manageremail ? "border-red-500" : "border-blue-200"
-            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            placeholder="Enter Manager Email"
-          />
-          {errors.manageremail && (
-            <p className="mt-1 text-sm text-red-700">{errors.manageremail}</p>
-          )}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-blue-800 mb-2">
             Profile Image
           </label>
           <input
@@ -168,6 +167,26 @@ export default function Step2UserDetails({
         </div>
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
+            Login Expiry Date
+          </label>
+          <input
+            type="date"
+            name="loginexpirydate"
+            value={formData.loginexpirydate}
+            onChange={handleInputChange}
+            className={`w-full px-4 py-3 border ${
+              errors.loginexpirydate ? "border-red-500" : "border-blue-200"
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            placeholder="Enter Mobile number"
+          />
+          {errors.loginexpirydate && (
+            <p className="mt-1 text-sm text-red-700">
+              {errors.loginexpirydate}
+            </p>
+          )}
+        </div>
+        {/* <div>
+          <label className="block text-sm font-medium text-blue-800 mb-2">
             Device Id
           </label>
           <input
@@ -183,8 +202,8 @@ export default function Step2UserDetails({
           {errors.deviceid && (
             <p className="mt-1 text-sm text-red-700">{errors.deviceid}</p>
           )}
-        </div>
-        <div>
+        </div> */}
+        {/* <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Device Registered Date
           </label>
@@ -203,8 +222,25 @@ export default function Step2UserDetails({
               {errors.deviceregistereddate}
             </p>
           )}
+        </div> */}
+        <div>
+          <label className="block text-sm font-medium text-blue-800 mb-2">
+            Zip Code
+          </label>
+          <input
+            type="text"
+            name="zipCode"
+            value={formData.zipCode}
+            onChange={handleInputChange}
+            className={`w-full px-4 py-3 border ${
+              errors.zipCode ? "border-red-500" : "border-blue-200"
+            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            placeholder="Enter zip code"
+          />
+          {errors.zipCode && (
+            <p className="mt-1 text-sm text-red-700">{errors.zipCode}</p>
+          )}
         </div>
-
         <div className="md:col-span-3">
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Address
