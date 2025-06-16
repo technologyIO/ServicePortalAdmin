@@ -79,7 +79,7 @@ export default function UserManagement() {
   useEffect(() => {
     if (currentStep === 3) {
       axios
-        .get("http://localhost:5000/collections/skillbyproductgroup/")
+        .get(`${process.env.REACT_APP_BASE_URL}/collections/skillbyproductgroup/`)
         .then((res) => {
           setSkill(res.data);
         })
@@ -154,7 +154,7 @@ export default function UserManagement() {
   }, [userType, dealerList, roles]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/collections/allbranch")
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allbranch`)
       .then((res) => res.json())
       .then((data) => {
         const cleanBranches = data.branches.map((branch) => ({
@@ -167,7 +167,7 @@ export default function UserManagement() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5000/collections/api/region")
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/api/region`)
       .then((res) => res.json())
       .then((data) => {
         setRegionOptions(data.data.regionDropdown || []);
@@ -175,7 +175,7 @@ export default function UserManagement() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5000/collections/api/geo")
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/api/geo`)
       .then((res) => res.json())
       .then((data) => {
         setGeoOptions(data.data.geoDropdown || []);
@@ -196,14 +196,14 @@ export default function UserManagement() {
   };
 
   useEffect(() => {
-    fetch("http://localhost:5000/collections/allcountry")
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allcountry`)
       .then((res) => res.json())
       .then((data) => setCountries(data.countries || []))
       .catch((err) => console.error("Failed to fetch countries", err));
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5000/collections/allstate")
+    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allstate`)
       .then((res) => res.json())
       .then((data) => setStates(data))
       .catch((err) => console.error("Failed to load states", err));
@@ -211,7 +211,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/collections/allcity")
+      .get(`${process.env.REACT_APP_BASE_URL}/collections/allcity`)
       .then((res) => {
         setCities(res.data);
       })
@@ -748,7 +748,7 @@ export default function UserManagement() {
 
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Mobile
+                        Mobile <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="tel"
@@ -852,7 +852,7 @@ export default function UserManagement() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-blue-800 mb-2">
-                        Manager Email
+                        Manager Email <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"

@@ -7,7 +7,7 @@ const ReportsSection = ({ watch, setValue, register }) => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/role/reports")
+      .get(`${process.env.REACT_APP_BASE_URL}/role/reports`)
       .then((res) => {
         setReports(res.data);
         const initialState = {};

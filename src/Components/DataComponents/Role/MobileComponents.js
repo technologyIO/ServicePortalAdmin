@@ -7,7 +7,7 @@ const MobileComponents = ({ watch, setValue, register }) => {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/role/mobilecomponents")
+      .get(`${process.env.REACT_APP_BASE_URL}/role/mobilecomponents`)
       .then((response) => {
         setMobileComponents(response.data);
         const initialSelection = {};
