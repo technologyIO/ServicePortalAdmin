@@ -106,13 +106,20 @@ export default function EquipmentBulk() {
     try {
       addLiveUpdate("Starting file upload...", "info");
 
+      // Create an abort controller for timeout handling
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 300000); // 5 minute timeout
+
       const response = await fetch(
         `${process.env.REACT_APP_BASE_URL}/bulk/equipment/bulk-upload`,
         {
           method: "POST",
           body: formData,
+          signal: abortController.signal,
         }
       );
+
+      clearTimeout(timeoutId); // Clear timeout if request completes
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -125,72 +132,125 @@ export default function EquipmentBulk() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let partialLine = "";
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      while (retryCount < maxRetries) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((line) => line.trim());
+            const chunk = partialLine + decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            partialLine = lines.pop() || ""; // Save incomplete line for next chunk
 
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
+            for (const line of lines) {
+              if (!line.trim()) continue;
 
-            setProcessingData((prev) => {
-              const newData = {
+              try {
+                const data = JSON.parse(line);
+
+                setProcessingData((prev) => {
+                  const newData = {
+                    ...prev,
+                    ...data,
+                    equipmentResults:
+                      data.equipmentResults || prev.equipmentResults,
+                    pmResults: data.pmResults || prev.pmResults,
+                    summary: data.summary
+                      ? { ...prev.summary, ...data.summary }
+                      : prev.summary,
+                  };
+
+                  // Add live updates for significant changes
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed =
+                      data.processedRecords - prev.processedRecords;
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} more equipment records (${data.processedRecords}/${data.totalRecords})`,
+                      "success"
+                    );
+                  }
+
+                  if (
+                    data.summary?.totalPMCreated > prev.summary?.totalPMCreated
+                  ) {
+                    const newPMs =
+                      data.summary.totalPMCreated - prev.summary.totalPMCreated;
+                    addLiveUpdate(
+                      `Created ${newPMs} new PM tasks (Total: ${data.summary.totalPMCreated})`,
+                      "info"
+                    );
+                  }
+
+                  if (data.status === "completed") {
+                    addLiveUpdate(
+                      `Processing completed in ${data.duration}!`,
+                      "success"
+                    );
+                    setIsProcessing(false);
+                    setTimeout(() => setActiveTab("results"), 1500);
+                  } else if (data.status === "failed") {
+                    addLiveUpdate("Processing failed!", "error");
+                    setIsProcessing(false);
+                  }
+
+                  return newData;
+                });
+              } catch (parseError) {
+                console.error("Error parsing JSON:", parseError, "Line:", line);
+                addLiveUpdate(
+                  `Error processing data chunk: ${parseError.message}`,
+                  "error"
+                );
+              }
+            }
+          }
+
+          // Process any remaining partial line
+          if (partialLine.trim()) {
+            try {
+              const data = JSON.parse(partialLine);
+              setProcessingData((prev) => ({
                 ...prev,
                 ...data,
-                equipmentResults:
-                  data.equipmentResults || prev.equipmentResults,
-                pmResults: data.pmResults || prev.pmResults,
-                summary: data.summary
-                  ? { ...prev.summary, ...data.summary }
-                  : prev.summary,
-              };
-
-              // Add live updates for significant changes
-              if (data.processedRecords > prev.processedRecords) {
-                const newlyProcessed =
-                  data.processedRecords - prev.processedRecords;
-                addLiveUpdate(
-                  `Processed ${newlyProcessed} more equipment records (${data.processedRecords}/${data.totalRecords})`,
-                  "success"
-                );
-              }
-
-              if (data.summary?.totalPMCreated > prev.summary?.totalPMCreated) {
-                const newPMs =
-                  data.summary.totalPMCreated - prev.summary.totalPMCreated;
-                addLiveUpdate(
-                  `Created ${newPMs} new PM tasks (Total: ${data.summary.totalPMCreated})`,
-                  "info"
-                );
-              }
-
-              if (data.status === "completed") {
-                addLiveUpdate(
-                  `Processing completed in ${data.duration}!`,
-                  "success"
-                );
-                setIsProcessing(false);
-                setTimeout(() => setActiveTab("results"), 1500); // Auto switch to results after 1.5 seconds
-              } else if (data.status === "failed") {
-                addLiveUpdate("Processing failed!", "error");
-                setIsProcessing(false);
-              }
-
-              return newData;
-            });
-          } catch (parseError) {
-            console.error("Error parsing JSON:", parseError);
+              }));
+            } catch (parseError) {
+              console.error("Error parsing final JSON:", parseError);
+            }
           }
+
+          break; // Exit retry loop if successful
+        } catch (streamError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw streamError;
+          }
+
+          addLiveUpdate(
+            `Stream error (retry ${retryCount}/${maxRetries}): ${streamError.message}`,
+            "warning"
+          );
+
+          // Wait before retrying
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          );
         }
       }
     } catch (err) {
       addLiveUpdate("Upload failed: " + err.message, "error");
       setIsProcessing(false);
       setError("Upload failed: " + err.message);
+
+      setProcessingData((prev) => ({
+        ...prev,
+        status: "failed",
+        endTime: new Date(),
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
+      }));
     }
   };
 
