@@ -109,7 +109,7 @@ function Spare() {
     setLoader(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchaerb?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searched/spare?q=${searchQuery}`
       );
       setData(response.data);
       setLoader(false);
