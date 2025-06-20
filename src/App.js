@@ -233,7 +233,7 @@ const AppContent = () => {
                 componentName="City"
                 requiredPermission="read"
               />} />
-              <Route path="/admin-branch" element={<ProtectedRoute
+              <Route path="/branch" element={<ProtectedRoute
                 component={AdminBranch}
                 componentName="Branch"
                 requiredPermission="read"

@@ -567,7 +567,7 @@ function CmcNcmcPrice() {
                         CMC Price (With GST)
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         onChange={(e) =>
                           handleFormData("cmcPriceWithGst", e.target.value)
                         }
@@ -581,7 +581,7 @@ function CmcNcmcPrice() {
                         NCMC Price (With GST)
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         onChange={(e) =>
                           handleFormData("ncmcPriceWithGst", e.target.value)
                         }

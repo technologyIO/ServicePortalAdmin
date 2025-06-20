@@ -217,65 +217,6 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/equipment");
-                    handleItemClick("/equipment");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/equipment"}>
-                    Equipment
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/product");
-                    handleItemClick("/product");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/product"}>
-                    Product
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/reported-problem");
-                    handleItemClick("/reported-problem");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/reported-problem"}
-                  >
-                    Reported Problem
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/warrenty-code");
-                    handleItemClick("/warrenty-code");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/warrenty-code"}>
-                    Warranty Code
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/replaced-part-code");
-                    handleItemClick("/replaced-part-code");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/replaced-part-code"}
-                  >
-                    Replaced Part Code
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
                     navigate("/aerb");
                     handleItemClick("/aerb");
                   }}
@@ -298,6 +239,53 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/branch");
+                    handleItemClick("/branch");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/branch"}>
+                    Branch
+                  </ListItemButton>
+                </ListItem>
+
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/product");
+                    handleItemClick("/product");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/product"}>
+                    Product
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/admin-checklist");
+                    handleItemClick("/admin-checklist");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/admin-checklist"}
+                  >
+                    Checklist
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/equipment");
+                    handleItemClick("/equipment");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/equipment"}>
+                    Equipment
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/spare");
                     handleItemClick("/spare");
                   }}
@@ -306,6 +294,7 @@ export default function Sidebar({ onSidebarItemClick }) {
                     Spare Master
                   </ListItemButton>
                 </ListItem>
+
                 <ListItem
                   nested
                   onClick={() => {
@@ -320,14 +309,53 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/admin-checklist");
-                    handleItemClick("/admin-checklist");
+                    navigate("/warrenty-code");
+                    handleItemClick("/warrenty-code");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/warrenty-code"}>
+                    Warranty Code
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/reported-problem");
+                    handleItemClick("/reported-problem");
                   }}
                 >
                   <ListItemButton
-                    selected={selectedItem === "/admin-checklist"}
+                    selected={selectedItem === "/reported-problem"}
                   >
-                    Checklist
+                    Reported Problem
+                  </ListItemButton>
+                </ListItem>
+
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/replaced-part-code");
+                    handleItemClick("/replaced-part-code");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/replaced-part-code"}
+                  >
+                    Replaced Part Code
+                  </ListItemButton>
+                </ListItem>
+
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/preventive-maintenance");
+                    handleItemClick("/preventive-maintenance");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/preventive-maintenance"}
+                  >
+                    Preventive Maintenance
                   </ListItemButton>
                 </ListItem>
               </List>
@@ -373,35 +401,12 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/amc-contract");
-                    handleItemClick("/amc-contract");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/amc-contract"}>
-                    AMC Contract
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
                     navigate("/customer");
                     handleItemClick("/customer");
                   }}
                 >
                   <ListItemButton selected={selectedItem === "/customer"}>
                     Customer
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/dealer-stock");
-                    handleItemClick("/dealer-stock");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/dealer-stock"}>
-                    Dealer Stock
                   </ListItemButton>
                 </ListItem>
                 <ListItem
@@ -418,14 +423,24 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/pending-installation");
-                    handleItemClick("/pending-installation");
+                    navigate("/dealer-stock");
+                    handleItemClick("/dealer-stock");
                   }}
                 >
-                  <ListItemButton
-                    selected={selectedItem === "/pending-installation"}
-                  >
-                    Pending Installation
+                  <ListItemButton selected={selectedItem === "/dealer-stock"}>
+                    Dealer Stock
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/amc-contract");
+                    handleItemClick("/amc-contract");
+                  }}
+                  sx={{ mt: 0.5 }}
+                >
+                  <ListItemButton selected={selectedItem === "/amc-contract"}>
+                    AMC Contract
                   </ListItemButton>
                 </ListItem>
                 <ListItem
@@ -444,14 +459,14 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/preventive-maintenance");
-                    handleItemClick("/preventive-maintenance");
+                    navigate("/pending-installation");
+                    handleItemClick("/pending-installation");
                   }}
                 >
                   <ListItemButton
-                    selected={selectedItem === "/preventive-maintenance"}
+                    selected={selectedItem === "/pending-installation"}
                   >
-                    Preventive Maintenance
+                    Pending Installation
                   </ListItemButton>
                 </ListItem>
               </List>
@@ -542,17 +557,6 @@ export default function Sidebar({ onSidebarItemClick }) {
                   </ListItemButton>
                 </ListItem>
 
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-branch");
-                    handleItemClick("/admin-branch");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-branch"}>
-                    Branch
-                  </ListItemButton>
-                </ListItem>
                 <ListItem
                   nested
                   onClick={() => {
@@ -1074,7 +1078,7 @@ export default function Sidebar({ onSidebarItemClick }) {
                   </ListItemButton>
                 </ListItem>
                 <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-branch")}>
+                  <ListItemButton onClick={() => navigate("/branch")}>
                     Branch
                   </ListItemButton>
                 </ListItem>

@@ -55,7 +55,7 @@ function Customer() {
 
     getCities();
   }, []);
-  // Get All State/Region
+  // Get All State/state
   useEffect(() => {
     const getState = async () => {
       try {
@@ -377,7 +377,7 @@ function Customer() {
                     District
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Region
+                    State
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Country
@@ -456,7 +456,7 @@ function Customer() {
                       {item?.district}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.region}
+                      {item?.state}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.country}
@@ -741,7 +741,7 @@ function Customer() {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Region{" "}
+                        State{" "}
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
@@ -750,13 +750,13 @@ function Customer() {
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="region"
-                            label="region State"
+                            name="state"
+                            label="state State"
                           />
                         )}
                         sx={{ width: 300 }}
                         onChange={(event, value) =>
-                          handleFormData("region", value ? value.label : "")
+                          handleFormData("state", value ? value.label : "")
                         }
                       />
                     </div>

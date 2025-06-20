@@ -540,7 +540,7 @@ function HubStock() {
                         Quantity
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         onChange={(e) =>
                           handleFormData("quantity", e.target.value)
                         }
@@ -564,7 +564,7 @@ function HubStock() {
                       />
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Status
                       </label>
@@ -580,7 +580,7 @@ function HubStock() {
                         <Option value="Pending">Pending</Option>
                         <Option value="Inactive">Inactive</Option>
                       </Select>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 justify-end mt-3 rounded-b">

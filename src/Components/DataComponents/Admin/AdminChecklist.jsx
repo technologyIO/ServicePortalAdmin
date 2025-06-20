@@ -353,9 +353,9 @@ const AdminChecklist = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     ProdGroup
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Result
-                  </th>
+                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
@@ -408,9 +408,9 @@ const AdminChecklist = () => {
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.prodGroup}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    {/* <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.result}
-                    </td>
+                    </td> */}
 
                     <td className="p-4 align-middle whitespace-nowrap">
                       <span
@@ -740,7 +740,7 @@ const AdminChecklist = () => {
                       </Select>
                     </div>
                   </div>
-                  <div className="relative z-0 w-full mb-5 group">
+                  {/* <div className="relative z-0 w-full mb-5 group">
                     <label className="block mb-2 text-sm font-medium text-gray-900">
                       Result
                     </label>
@@ -826,7 +826,7 @@ const AdminChecklist = () => {
                         rows={3}
                       />
                     )}
-                  </div>
+                  </div> */}
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">
                   <button

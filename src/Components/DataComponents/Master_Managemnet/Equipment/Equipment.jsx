@@ -299,9 +299,12 @@ const UserData = () => {
                     Equipment (ID)
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Installation Report no
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Material Code
                   </th>
-                 
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Material Description
                   </th>
@@ -373,9 +376,12 @@ const UserData = () => {
                       {item?.equipmentid}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                      {item?.installationreportno}
+                    </td>
+                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.materialcode}
                     </td>
-                  
+
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.materialdescription}
                     </td>
@@ -576,8 +582,20 @@ const UserData = () => {
               >
                 <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                   
-                     
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Equipment (ID)
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("equipmentid", e.target.value)
+                        }
+                        id="equipmentid"
+                        value={currentData?.equipmentid}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Code
@@ -592,7 +610,7 @@ const UserData = () => {
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                     
+
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Description
@@ -765,6 +783,20 @@ const UserData = () => {
                         }
                         id="palnumber"
                         value={currentData?.palnumber}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Installation Report No
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("installationreportno", e.target.value)
+                        }
+                        id="installationreportno"
+                        value={currentData?.installationreportno}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>

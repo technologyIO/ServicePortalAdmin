@@ -8,17 +8,7 @@ import SearchIcon from "@mui/icons-material/Search";
 
 import {
   Autocomplete,
-  Box,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Dropdown,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
   Modal,
-  ModalClose,
   ModalDialog,
   Option,
   Select,
@@ -34,12 +24,9 @@ const AdminBranch = () => {
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
   const [currentData, setCurrentData] = useState({});
-  const [countrys, setCountries] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectAll, setSelectAll] = useState(false);
-  const [stateList, setStateList] = useState([]);
-  const [cityList, setCityList] = useState([]);
   const limit = 10;
   const [loader, setLoader] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -74,49 +61,30 @@ const AdminBranch = () => {
     setCurrentData({});
   };
 
-  const [state, setstate] = useState([]);
+  const [region, setRegion] = useState([]);
 
-  // Get All City
-  useEffect(() => {
-    const getCities = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allcity`
-        );
-        const cities = res.data.map((city) => ({
-          label: city.name,
-          id: city._id,
-          state: city.state,
-          status: city.status,
-        }));
-        setCityList(cities);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    getCities();
-  }, []);
+ 
   // Get All State/Region
   useEffect(() => {
-    const getState = async () => {
+    const getRegions = async () => {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allstate`
+          `${process.env.REACT_APP_BASE_URL}/collections/api/region`
         );
-        const State = res.data.map((state) => ({
-          label: state.name,
-          id: state._id,
-          country: state.country,
-          status: state.status,
+
+        const regions = res.data.data.regionDropdown.map((region) => ({
+          label: region.regionName,
+          id: region._id,
+          states: region.states,
         }));
-        setstate(State);
+
+        setRegion(regions); // `setRegion` ko `setRegions` ya kuch meaningful naam dena better hoga
       } catch (err) {
         console.error(err);
       }
     };
 
-    getState();
+    getRegions();
   }, []);
 
   const handleOpenModal = (country) => {
@@ -159,16 +127,7 @@ const AdminBranch = () => {
       }
     });
   };
-  const getAllCountries = () => {
-    axios
-      .get(`${process.env.REACT_APP_BASE_URL}/collections/country`)
-      .then((res) => {
-        setCountries(res.data.countries);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  };
+ 
   const handleSearch = async () => {
     if (!searchQuery) {
       return;
@@ -208,7 +167,6 @@ const AdminBranch = () => {
   }, []);
   useEffect(() => {
     getAllData();
-    getAllCountries();
   }, [page]);
 
   const handleSubmit = (id) => {
@@ -317,11 +275,9 @@ const AdminBranch = () => {
                     Name
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State
+                    Region
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    City
-                  </th>
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Branch Short Code
                   </th>
@@ -366,11 +322,9 @@ const AdminBranch = () => {
                       {i?.name}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.state}
+                      {i?.region}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.city}
-                    </td>
+
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.branchShortCode}
                     </td>
@@ -596,47 +550,26 @@ const AdminBranch = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Select State
+                        Select Region
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
-                        options={state} // Data from API
+                        options={region} // Data from API
                         getOptionLabel={(option) => option.label} // Display the country name
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="state"
-                            label="region State"
+                            name="region"
+                            label="Region"
                           />
                         )}
                         sx={{ width: 300 }}
                         onChange={(event, value) =>
-                          handleFormData("state", value ? value.label : "")
+                          handleFormData("region", value ? value.label : "")
                         }
                       />
                     </div>
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Select City
-                      </label>
-
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={cityList} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="city"
-                            label="region City"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("city", value ? value.label : "")
-                        }
-                      />
-                    </div>
+                   
                   </div>
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">

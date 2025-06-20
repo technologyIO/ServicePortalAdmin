@@ -535,7 +535,7 @@ function WarrantyCode() {
                         Months
                       </label>
                       <input
-                        type="text"
+                        type="number"
                         onChange={(e) =>
                           handleFormData("months", e.target.value)
                         }

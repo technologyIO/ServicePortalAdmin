@@ -40,7 +40,6 @@ function Dealer() {
   const [country, setCountry] = useState([]);
   const [cityList, setCityList] = useState([]);
 
-  
   // Get All City
   useEffect(() => {
     const getCities = async () => {
@@ -384,18 +383,6 @@ function Dealer() {
                     Email
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Mobile Number
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Branch
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Region
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Login Expiry Date
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -405,10 +392,7 @@ function Dealer() {
                     Person Responsible
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Country
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State/Region
+                    State
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     City
@@ -416,32 +400,12 @@ function Dealer() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Pincode
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Department
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Password
-                  </th>
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Created Date
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Modified Date
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Manager Email
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Skills
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Profile Image
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Device ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Device Registered Date
                   </th>
 
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -479,18 +443,6 @@ function Dealer() {
                       {item?.email}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.mobilenumber}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.branch}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.region}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.loginexpirydate}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
                           item?.status === "Active"
@@ -504,14 +456,12 @@ function Dealer() {
                       </span>
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.dealerid}
+                      {item?.dealercode}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.personresponsible}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.country}
-                    </td>
+
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.state}
                     </td>
@@ -521,32 +471,12 @@ function Dealer() {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.pincode}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.department}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.password}
-                    </td>
+
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.manageremail}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.skills}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.profileimage}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.deviceid}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.deviceregistereddate}
                     </td>
 
                     <td className="p-4 align-middle whitespace-nowrap">
@@ -594,57 +524,57 @@ function Dealer() {
               </tbody>
             </table>
           </div>
-         <div
-                    className="Pagination-laptopUp"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                    }}
-                  >
+          <div
+            className="Pagination-laptopUp"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "16px",
+            }}
+          >
+            <button
+              className={`border rounded p-1 ${
+                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              onClick={handlePreviousPage}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((p) => {
+                  // Show the first page, last page, and pages around the current page
+                  return (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 3 && p <= page + 3)
+                  );
+                })
+                .map((p, i, array) => (
+                  <React.Fragment key={p}>
+                    {/* Add ellipsis for skipped ranges */}
+                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
-                      className={`border rounded p-1 ${
-                        page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-                      } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
+                      className={`border px-3 rounded ${
+                        p === page ? "bg-blue-700 text-white" : ""
+                      }`}
+                      onClick={() => setPage(p)}
+                      disabled={p === page}
                     >
-                      Previous
+                      {p}
                     </button>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      {Array.from({ length: totalPages }, (_, index) => index + 1)
-                        .filter((p) => {
-                          // Show the first page, last page, and pages around the current page
-                          return (
-                            p === 1 ||
-                            p === totalPages ||
-                            (p >= page - 3 && p <= page + 3)
-                          );
-                        })
-                        .map((p, i, array) => (
-                          <React.Fragment key={p}>
-                            {/* Add ellipsis for skipped ranges */}
-                            {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                            <button
-                              className={`border px-3 rounded ${
-                                p === page ? "bg-blue-700 text-white" : ""
-                              }`}
-                              onClick={() => setPage(p)}
-                              disabled={p === page}
-                            >
-                              {p}
-                            </button>
-                          </React.Fragment>
-                        ))}
-                    </div>
-                    <button
-                      className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-                      onClick={handleNextPage}
-                      disabled={page === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
+                  </React.Fragment>
+                ))}
+            </div>
+            <button
+              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              onClick={handleNextPage}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
 
           <Modal
             open={showModal}
@@ -685,14 +615,30 @@ function Dealer() {
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Name{" "}
+                        Dealer Name{" "}
                       </label>
                       <input
                         type="text"
                         required
                         onChange={(e) => handleFormData("name", e.target.value)}
                         id="name"
+                        placeholder="Enter Dealer Name"
                         value={currentData?.name}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Dealer Code{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("dealercode", e.target.value)
+                        }
+                        placeholder="Enter Dealer Code"
+                        id="dealercode"
+                        value={currentData?.dealercode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -702,6 +648,7 @@ function Dealer() {
                       </label>
                       <input
                         type="text"
+                        placeholder="Enter Dealer Email"
                         onChange={(e) =>
                           handleFormData("email", e.target.value)
                         }
@@ -711,104 +658,25 @@ function Dealer() {
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Mobile Number{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("mobilenumber", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.mobilenumber}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Branch{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={BranchData} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the branch name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="branch"
-                            label="Select Branch"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("branch", value ? value.label : "")
-                        } // Update form data
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
                       <label class="block mb-2  text-sm font-medium text-gray-900 ">
-                        State/Region{" "}
+                        State{" "}
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
-                        options={state} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
+                        options={state}
+                        placeholder="Enter Dealer State"
+                        getOptionLabel={(option) => option.label}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="region"
+                            name="state"
                             label="Select State"
                           />
                         )}
                         sx={{ width: 300 }}
                         onChange={(event, value) =>
-                          handleFormData("region", value ? value.label : "")
+                          handleFormData("state", value ? value.label : "")
                         }
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Login Expiry Date{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("loginexpirydate", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.loginexpirydate}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>{" "}
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Status
-                      </label>
-
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        defaultValue={currentData?.status || ""}
-                        onChange={(e, value) => handleFormData("status", value)}
-                      >
-                        <Option value="">Select Status</Option>
-                        <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
-                        <Option value="Inactive">Inactive</Option>
-                      </Select>
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Dealer ID{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("dealerid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.dealerid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -820,40 +688,22 @@ function Dealer() {
                         onChange={(e) =>
                           handleFormData("personresponsible", e.target.value)
                         }
-                        id="name"
+                        placeholder="Enter Person Responsible"
+                        id="personresponsible"
                         value={currentData?.personresponsible}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Country{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={country} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="country"
-                            label="Select Country"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("country", value ? value.label : "")
-                        }
-                      />
-                    </div>
+
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         City{" "}
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
-                        options={cityList} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
+                        placeholder="Enter Dealer City"
+                        options={cityList}
+                        getOptionLabel={(option) => option.label}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -873,119 +723,48 @@ function Dealer() {
                       </label>
                       <input
                         type="text"
+                        placeholder="Enter Dealer Pincode"
                         onChange={(e) =>
                           handleFormData("pincode", e.target.value)
                         }
-                        id="name"
+                        id="pincode"
                         value={currentData?.pincode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
+
+                    <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Department{" "}
+                        Status
                       </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={department} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="department"
-                            label="Select department"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("department", value ? value.label : "")
-                        }
-                      />
+
+                      <Select
+                        variant="soft"
+                        className="rounded-[4px] py-2 border"
+                        defaultValue={currentData?.status || ""}
+                        onChange={(e, value) => handleFormData("status", value)}
+                      >
+                        <Option value="">Select Status</Option>
+                        <Option value="Active">Active</Option>
+                        <Option value="Inactive">Inactive</Option>
+                      </Select>
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Password{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("password", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.password}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Manager Email{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("manageremail", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.manageremail}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Skills
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("skills", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.skills}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Profile Image{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("profileimage", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.profileimage}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Device ID{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("deviceid", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.deviceid}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Device Registered Date{" "}
-                      </label>
-                      <input
-                        type="date"
-                        onChange={(e) =>
-                          handleFormData("deviceregistereddate", e.target.value)
-                        }
-                        id="name"
-                        value={currentData?.deviceregistereddate}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
+                  </div>
+                  <div className="relative  w-full mb-5 group">
+                    <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                      Address{" "}
+                    </label>
+                    <textarea
+                      type="text"
+                      placeholder="Enter Dealer Address"
+                      onChange={(e) =>
+                        handleFormData("address", e.target.value)
+                      }
+                      rows={4}
+                      id="address"
+                      value={currentData?.address}
+                      class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-3 justify-end mt-3 rounded-b">

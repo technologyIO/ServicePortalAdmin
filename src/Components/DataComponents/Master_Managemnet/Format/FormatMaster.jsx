@@ -405,7 +405,7 @@ function FormatMaster() {
             size="lg"
           >
             <ModalDialog size="lg" className="p-2">
-              <div className="flex items-start justify-between p-2 px-5 border-b">
+              <div className="flex items-start justify-between w-[700px] p-2 px-5 border-b">
                 <h3 className="text-xl font-semibold">
                   {editModal ? "Update Record" : "Create Record"}
                 </h3>

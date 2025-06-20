@@ -634,7 +634,7 @@ function DealerStock() {
                       />
                     </div>
 
-                    <div>
+                    {/* <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Status
                       </label>
@@ -650,7 +650,7 @@ function DealerStock() {
                         <Option value="Pending">Pending</Option>
                         <Option value="Inactive">Inactive</Option>
                       </Select>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
