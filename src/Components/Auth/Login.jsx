@@ -16,7 +16,7 @@ function Login() {
 
     try {
       const response = await axios.post(
-        `${process.env.REACT_APP_BASE_URL}/collections/login`,
+        `${process.env.REACT_APP_BASE_URL}/collections/login/web`,
         {
           employeeid: employee,
           password: password,
