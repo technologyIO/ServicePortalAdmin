@@ -16,7 +16,7 @@ export default function UserManagement() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cities, setCities] = useState([]);
-  const [selectedDealer, setSelectedDealer] = useState("");
+  const [selectedDealer, setSelectedDealer] = useState(null);
   const [states, setStates] = useState([]);
   const [selectedStates, setSelectedStates] = useState([]);
   const [selectedState, setSelectedState] = useState(null);
@@ -142,11 +142,11 @@ export default function UserManagement() {
         setDealerList(res.data.dealers || []);
       } catch (err) {
         console.error(err);
+        setDealerList([]);  
       }
     };
     getDealers();
   }, []);
-
   useEffect(() => {
     if (userType === "Dealer" && dealerList.length > 0 && roles.length > 0) {
       const serviceEngineerRole = roles.find(
@@ -252,8 +252,9 @@ export default function UserManagement() {
 
     if (currentStep === 1) {
       if (!selectedRole) newErrors.role = "Role is required";
-      if (userType === "Dealer" && !selectedDealer)
+      if (userType === "Dealer" && !selectedDealer?._id) {
         newErrors.dealer = "Dealer is required";
+      }
     } else if (currentStep === 2) {
       if (!formData.firstName) newErrors.firstName = "First name is required";
       if (!formData.lastName) newErrors.lastName = "Last name is required";
@@ -358,10 +359,15 @@ export default function UserManagement() {
     window.scrollTo(0, 0);
   };
 
+  const handleDealerSelect = (value) => {
+    setSelectedDealer(value);
+    // Clear the dealer error when a dealer is selected
+    setErrors((prev) => ({ ...prev, dealer: undefined }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Only submit if we're on the final step (4)
     if (currentStep === 4) {
       if (validateCurrentStep()) {
         setIsSubmitting(true);
@@ -510,18 +516,24 @@ export default function UserManagement() {
             usertype: userType.toLowerCase(),
             skills: skillsArray,
             demographics: demographicsArray,
-          };
-
-          if (userType === "Skanray") {
-            userData.role = {
+            status: "Active",
+            // deviceregistereddate: new Date(),
+            modifiedAt: new Date(),
+            createdAt: new Date(),
+            role: {
               roleName: selectedRole?.name || "",
               roleId: selectedRole?.roleId || "",
-            };
-          } else if (userType === "Dealer") {
-            const dealer = dealerList.find((d) => d.name === selectedDealer);
+            },
+          };
+
+          // Only add dealerInfo if user is a dealer AND dealer is selected
+          if (userType.toLowerCase() === "dealer" && selectedDealer) {
             userData.dealerInfo = {
-              dealerName: selectedDealer,
-              dealerId: dealer?._id || "",
+              dealerName: selectedDealer.name,
+              dealerId: selectedDealer._id,
+              dealerEmail: selectedDealer.email,
+              dealerCode: selectedDealer.dealercode,
+              // Include any other dealer fields you need
             };
           }
 
@@ -534,6 +546,7 @@ export default function UserManagement() {
               },
             }
           );
+
           if (response.status === 201) {
             toast.success("User created successfully!");
             navigate("/user");
@@ -562,6 +575,8 @@ export default function UserManagement() {
     { id: 3, name: "Skills" },
     { id: 4, name: "Location Details" },
   ];
+
+  // Filter countries based on selected geo
   const filteredCountries = useMemo(() => {
     if (!permissions?.demographicSelections) return countries;
 
@@ -583,25 +598,119 @@ export default function UserManagement() {
       : [];
   }, [selectedGeo, selectedSingleGeo, countries, permissions]);
 
-  // Combined geo change handler
-  const handleGeoChange = (event, newValue, selection) => {
-    if (selection.selectionType === "multi") {
-      setSelectedGeo(newValue);
-    } else {
-      setSelectedSingleGeo(newValue);
-    }
+  // Filter regions based on selected countries
+  const filteredRegions = useMemo(() => {
+    if (!permissions?.demographicSelections) return regionOptions;
 
-    // Reset all dependent selections
-    setSelectedCountries([]);
-    setSelectedSingleCountry(null);
-    setSelectedStates([]);
-    setSelectedSingleState(null);
-    setSelectedCities([]);
-    setSelectedSingleCity(null);
-    setSelectedRegions([]);
-    setSelectedRegion(null);
-    setSelectedBranches([]);
-    setSelectedBranch(null);
+    const countrySelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "country"
+    );
+
+    if (!countrySelection || !countrySelection.isEnabled) return regionOptions;
+
+    const selectedCountryValues =
+      countrySelection.selectionType === "multi"
+        ? selectedCountries.map((c) => c.name)
+        : selectedSingleCountry
+        ? [selectedSingleCountry.name]
+        : [];
+
+    return selectedCountryValues.length > 0
+      ? regionOptions.filter((region) =>
+          selectedCountryValues.includes(region.country)
+        )
+      : [];
+  }, [selectedCountries, selectedSingleCountry, regionOptions, permissions]);
+
+  // Filter states based on selected regions
+  const filteredStates = useMemo(() => {
+    if (!permissions?.demographicSelections) return states;
+
+    const regionSelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "region"
+    );
+
+    if (!regionSelection || !regionSelection.isEnabled) return states;
+
+    const selectedRegionValues =
+      regionSelection.selectionType === "multi"
+        ? selectedRegions.map((r) => r.regionName)
+        : selectedRegion
+        ? [selectedRegion.regionName]
+        : [];
+
+    return selectedRegionValues.length > 0
+      ? states.filter((state) => selectedRegionValues.includes(state.region))
+      : [];
+  }, [selectedRegions, selectedRegion, states, permissions]);
+
+  // Filter cities based on selected states
+  const filteredCities = useMemo(() => {
+    if (!permissions?.demographicSelections) return cities;
+
+    const stateSelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "state"
+    );
+
+    if (!stateSelection || !stateSelection.isEnabled) return cities;
+
+    const selectedStateValues =
+      stateSelection.selectionType === "multi"
+        ? selectedStates.map((s) => s.name)
+        : selectedSingleState
+        ? [selectedSingleState.name]
+        : [];
+
+    return selectedStateValues.length > 0
+      ? cities.filter((city) => selectedStateValues.includes(city.state))
+      : [];
+  }, [selectedStates, selectedSingleState, cities, permissions]);
+
+  // Filter branches based on selected regions
+  const filteredBranches = useMemo(() => {
+    if (!permissions?.demographicSelections) return branches;
+
+    const regionSelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "region"
+    );
+
+    if (!regionSelection || !regionSelection.isEnabled) return branches;
+
+    const selectedRegionValues =
+      regionSelection.selectionType === "multi"
+        ? selectedRegions.map((r) => r.regionName)
+        : selectedRegion
+        ? [selectedRegion.regionName]
+        : [];
+
+    return selectedRegionValues.length > 0
+      ? branches.filter((branch) =>
+          selectedRegionValues.includes(branch.region)
+        )
+      : [];
+  }, [selectedRegions, selectedRegion, branches, permissions]);
+
+  // Helper to pluralize properly
+  const pluralize = (word) => {
+    if (!word) return "";
+    const lower = word.toLowerCase();
+
+    switch (lower) {
+      case "country":
+        return "countries";
+      case "city":
+        return "cities";
+      case "branch":
+        return "branches";
+      case "geo":
+        return "geos";
+      case "region":
+        return "regions";
+      case "state":
+        return "states";
+      default:
+        return word + "s";
+    }
   };
 
   const renderLocationControls = () => {
@@ -614,7 +723,6 @@ export default function UserManagement() {
       let isDisabled = false;
       let dependsOn = null;
 
-      // Configure each field type
       switch (selection.name.toLowerCase()) {
         case "geo":
           options = geoOptions;
@@ -628,7 +736,6 @@ export default function UserManagement() {
             } else {
               setSelectedSingleGeo(newValue);
             }
-            // Reset all dependent fields when geo changes
             setSelectedCountries([]);
             setSelectedSingleCountry(null);
             setSelectedRegions([]);
@@ -654,17 +761,20 @@ export default function UserManagement() {
             } else {
               setSelectedSingleCountry(newValue);
             }
-            // Reset dependent fields
+            setSelectedRegions([]);
+            setSelectedRegion(null);
             setSelectedStates([]);
             setSelectedSingleState(null);
             setSelectedCities([]);
             setSelectedSingleCity(null);
+            setSelectedBranches([]);
+            setSelectedBranch(null);
           };
           dependsOn = "geo";
           break;
 
         case "region":
-          options = regionOptions;
+          options = filteredRegions;
           selectedValue =
             selection.selectionType === "multi"
               ? selectedRegions
@@ -675,11 +785,18 @@ export default function UserManagement() {
             } else {
               setSelectedRegion(newValue);
             }
+            setSelectedStates([]);
+            setSelectedSingleState(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
+            setSelectedBranches([]);
+            setSelectedBranch(null);
           };
+          dependsOn = "country";
           break;
 
         case "state":
-          options = states;
+          options = filteredStates;
           selectedValue =
             selection.selectionType === "multi"
               ? selectedStates
@@ -690,15 +807,14 @@ export default function UserManagement() {
             } else {
               setSelectedSingleState(newValue);
             }
-            // Reset cities when state changes
             setSelectedCities([]);
             setSelectedSingleCity(null);
           };
-          dependsOn = "country";
+          dependsOn = "region";
           break;
 
         case "city":
-          options = cities;
+          options = filteredCities;
           selectedValue =
             selection.selectionType === "multi"
               ? selectedCities
@@ -714,7 +830,7 @@ export default function UserManagement() {
           break;
 
         case "branch":
-          options = branches;
+          options = filteredBranches;
           selectedValue =
             selection.selectionType === "multi"
               ? selectedBranches
@@ -726,13 +842,14 @@ export default function UserManagement() {
               setSelectedBranch(newValue);
             }
           };
+          dependsOn = "region";
           break;
 
         default:
           return null;
       }
 
-      // Determine if field should be disabled based on dependency
+      // Handle disable based on dependency
       if (dependsOn) {
         const dependency = permissions.demographicSelections.find(
           (s) => s.name.toLowerCase() === dependsOn
@@ -745,6 +862,8 @@ export default function UserManagement() {
                 ? selectedGeo.length === 0
                 : dependsOn === "country"
                 ? selectedCountries.length === 0
+                : dependsOn === "region"
+                ? selectedRegions.length === 0
                 : selectedStates.length === 0;
           } else {
             isDisabled =
@@ -752,6 +871,8 @@ export default function UserManagement() {
                 ? !selectedSingleGeo
                 : dependsOn === "country"
                 ? !selectedSingleCountry
+                : dependsOn === "region"
+                ? !selectedRegion
                 : !selectedSingleState;
           }
         }
@@ -761,7 +882,7 @@ export default function UserManagement() {
         <div key={selection.name} className="mb-8">
           <label className="block text-sm font-medium text-blue-800 mb-2">
             {selection.selectionType === "multi"
-              ? `Select Multiple ${selection.name}s`
+              ? `Select Multiple ${pluralize(selection.name)}`
               : `Select a ${selection.name}`}
           </label>
 
@@ -770,7 +891,7 @@ export default function UserManagement() {
             options={options}
             getOptionLabel={(option) => {
               if (selection.name.toLowerCase() === "branch") {
-                return `${option.name} (${option.branchShortCode}) - ${option.city}, ${option.state}`;
+                return `${option.name} (${option.branchShortCode})  - ${option.region}`;
               }
               return option.name || option.geoName || option.regionName;
             }}
@@ -784,12 +905,19 @@ export default function UserManagement() {
                 variant="outlined"
                 placeholder={
                   selection.selectionType === "multi"
-                    ? `Search and select ${selection.name.toLowerCase()}s`
+                    ? `Search and select ${pluralize(
+                        selection.name.toLowerCase()
+                      )}`
                     : `Search and select a ${selection.name.toLowerCase()}`
                 }
               />
             )}
           />
+          {errors[selection.name] && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors[selection.name]}
+            </p>
+          )}
         </div>
       );
     });
@@ -819,7 +947,7 @@ export default function UserManagement() {
                 userType={userType}
                 setUserType={setUserType}
                 selectedDealer={selectedDealer}
-                setSelectedDealer={setSelectedDealer}
+                setSelectedDealer={handleDealerSelect}
                 dealerList={dealerList}
                 roles={roles}
                 selectedRole={selectedRole}

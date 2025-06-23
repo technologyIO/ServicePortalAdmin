@@ -241,6 +241,19 @@ export default function Step2UserDetails({
             <p className="mt-1 text-sm text-red-700">{errors.zipCode}</p>
           )}
         </div>
+        <div>
+          <label className="block text-sm font-medium text-blue-800 mb-2">
+            Department
+          </label>
+          <input
+            type="text"
+            name="department"
+            value={formData.department}
+            onChange={handleInputChange}
+            className={`w-full px-4 py-3 border  rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+            placeholder="Enter Department"
+          />
+        </div>
         <div className="md:col-span-3">
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Address

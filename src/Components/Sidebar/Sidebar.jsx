@@ -501,6 +501,18 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/admin-geo");
+                    handleItemClick("/admin-geo");
+                  }}
+                  sx={{ mt: 0.5 }}
+                >
+                  <ListItemButton selected={selectedItem === "/admin-geo"}>
+                    Geo
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/admin-country");
                     handleItemClick("/admin-country");
                   }}
@@ -513,14 +525,26 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/admin-region");
+                    handleItemClick("/admin-region");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/admin-region"}>
+                    Region
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/admin-state");
                     handleItemClick("/admin-state");
                   }}
                 >
                   <ListItemButton selected={selectedItem === "/admin-state"}>
-                    State/Region
+                    State
                   </ListItemButton>
                 </ListItem>
+
                 <ListItem
                   nested
                   onClick={() => {
@@ -756,7 +780,7 @@ export default function Sidebar({ onSidebarItemClick }) {
           </ListItem>
         </List>
 
-        <List
+        {/* <List
           size="sm"
           className="mx-1"
           sx={{
@@ -794,6 +818,29 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
+                    navigate("/user-login");
+                    handleItemClick("/user-login");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/user-login"}>
+                    User Login
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/new-customer");
+                    handleItemClick("/new-customer");
+                  }}
+                >
+                  <ListItemButton selected={selectedItem === "/new-customer"}>
+                    New Customer
+                  </ListItemButton>
+                </ListItem>
+
+                <ListItem
+                  nested
+                  onClick={() => {
                     navigate("/complaint-create");
                     handleItemClick("/complaint-create");
                   }}
@@ -803,19 +850,6 @@ export default function Sidebar({ onSidebarItemClick }) {
                     selected={selectedItem === "/complaint-create"}
                   >
                     Complaint Create
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/complaint-create-close");
-                    handleItemClick("/complaint-create-close");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/complaint-create-close"}
-                  >
-                    Complaint-Create-Close
                   </ListItemButton>
                 </ListItem>
                 <ListItem
@@ -847,29 +881,20 @@ export default function Sidebar({ onSidebarItemClick }) {
                 <ListItem
                   nested
                   onClick={() => {
-                    navigate("/new-customer");
-                    handleItemClick("/new-customer");
+                    navigate("/complaint-create-close");
+                    handleItemClick("/complaint-create-close");
                   }}
                 >
-                  <ListItemButton selected={selectedItem === "/new-customer"}>
-                    New Customer
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/user-login");
-                    handleItemClick("/user-login");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/user-login"}>
-                    User Login
+                  <ListItemButton
+                    selected={selectedItem === "/complaint-create-close"}
+                  >
+                    Complaint-Create-Close
                   </ListItemButton>
                 </ListItem>
               </List>
             </Toggler>
           </ListItem>
-        </List>
+        </List> */}
         {/* <List
           size="sm"
           sx={{

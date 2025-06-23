@@ -71,6 +71,8 @@ const UserData = () => {
         `${process.env.REACT_APP_BASE_URL}/collections/search?q=${searchQuery}`
       );
       setData(response.data);
+
+      console.log("response.data", response.data);
       setLoader(false);
     } catch (error) {
       console.error("Error searching users:", error);
@@ -88,6 +90,7 @@ const UserData = () => {
       .then((res) => {
         setLoader(false);
         setData(res.data.users);
+        console.log("res.data.users", res.data.users);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -247,138 +250,152 @@ const UserData = () => {
                   <th className="px-4 text-left font-medium">Country</th>
                   <th className="px-4 text-left font-medium">Region</th>
                   <th className="px-4 text-left font-medium">City</th>
-                  {/* <th className="px-4 text-left font-medium">Department</th> */}
-                  <th className="px-4 text-left font-medium">Created Date</th>
-                  <th className="px-4 text-left font-medium">Modified Date</th>
+                  <th className="px-4 text-left font-medium">Department</th>
+
                   <th className="px-4 text-left font-medium">Manager Email</th>
+                  <th className="px-4 text-left font-medium">Dealer </th>
+                  <th className="px-4 text-left font-medium">Dealer Code</th>
+                  <th className="px-4 text-left font-medium">Dealer Email</th>
                   <th className="px-4 text-left font-medium">Skills</th>
                   <th className="px-4 text-left font-medium">Device ID</th>
                   <th className="px-4 text-left font-medium">
                     Device Reg Date
                   </th>
+                  <th className="px-4 text-left font-medium">Created Date</th>
+                  <th className="px-4 text-left font-medium">Modified Date</th>
                   <th className="px-4 text-left font-medium">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {data?.map((item, index) => (
-                  <tr key={item?._id} className="border-b">
-                    <th scope="row" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(item?._id)}
-                          onChange={() => handleRowSelect(item?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-                    <td className="p-4 capitalize">{item?.firstname}</td>
-                    <td className="p-4 capitalize">{item?.lastname}</td>
-                    <td className="p-4 capitalize">{item?.role?.roleName}</td>
-                    <td className="p-4">{item?.email}</td>
-                    <td className="p-4">{item?.mobilenumber}</td>
-                    <td className="p-4">
-                      {Array.isArray(item?.branch)
-                        ? item?.branch.join(", ")
-                        : item?.branch}
-                    </td>
-                    <td className="p-4">
-                      {moment(item?.loginexpirydate).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                          item?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800 border-red-400"
-                            : "bg-orange-100 text-orange-800 border-orange-400"
-                        }`}
-                      >
-                        {item?.status}
-                      </span>
-                    </td>
-                    <td className="p-4">{item?.employeeid}</td>
-                    <td className="p-4">{getDemographicNames(item, "geo")}</td>
-                    <td className="p-4">
-                      {getDemographicNames(item, "region")}
-                    </td>
-                    <td className="p-4">
-                      {getDemographicNames(item, "country")}
-                    </td>
-                    <td className="p-4">
-                      {getDemographicNames(item, "state")}
-                    </td>
-                    <td className="p-4">{getDemographicNames(item, "city")}</td>
-
-                    {/* <td className="p-4">{item?.department}</td> */}
-                    <td className="p-4">
-                      {moment(item?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4">
-                      {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4">{item?.manageremail}</td>
-                    <td className="p-4">{formatSkills(item?.skills)}</td>
-                    <td className="p-4 flex flex-col">
-                      {item?.deviceid}{" "}
-                      <button
-                        onClick={() => handleRemoveDevice(item._id)}
-                        className="border p-2 bg-red-600 text-xs text-white rounded hover:bg-red-400"
-                      >
-                        Remove Device
-                      </button>
-                    </td>
-                    <td className="p-4">
-                      {moment(item?.deviceregistereddate).format(
-                        "MMM D, YYYY [at] h:mm A"
-                      )}{" "}
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex gap-4">
-                        <button className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
+                {data?.map((item, index) => {
+                  console.log("item", item);
+                  return (
+                    <tr key={item?._id} className="border-b">
+                      <th scope="row" className="p-4">
+                        <div className="flex items-center">
+                          <input
+                            id={`checkbox-${index}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                            checked={selectedRows?.includes(item?._id)}
+                            onChange={() => handleRowSelect(item?._id)}
+                          />
+                          <label
+                            htmlFor={`checkbox-${index}`}
+                            className="sr-only"
                           >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fillRule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                            />
-                          </svg>
-                        </button>
+                            checkbox
+                          </label>
+                        </div>
+                      </th>
+                      <td className="p-4 capitalize">{item?.firstname}</td>
+                      <td className="p-4 capitalize">{item?.lastname}</td>
+                      <td className="p-4 capitalize">{item?.role?.roleName}</td>
+                      <td className="p-4">{item?.email}</td>
+                      <td className="p-4">{item?.mobilenumber}</td>
+                      <td className="p-4">
+                        {Array.isArray(item?.branch)
+                          ? item?.branch.join(", ")
+                          : item?.branch}
+                      </td>
+                      <td className="p-4">
+                        {moment(item?.loginexpirydate).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                            item?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : item?.status === "Inactive"
+                              ? "bg-red-100 text-red-800 border-red-400"
+                              : "bg-orange-100 text-orange-800 border-orange-400"
+                          }`}
+                        >
+                          {item?.status}
+                        </span>
+                      </td>
+                      <td className="p-4">{item?.employeeid}</td>
+                      <td className="p-4">
+                        {getDemographicNames(item, "geo")}
+                      </td>
+                      <td className="p-4">
+                        {getDemographicNames(item, "region")}
+                      </td>
+                      <td className="p-4">
+                        {getDemographicNames(item, "country")}
+                      </td>
+                      <td className="p-4">
+                        {getDemographicNames(item, "state")}
+                      </td>
+                      <td className="p-4">
+                        {getDemographicNames(item, "city")}
+                      </td>
+
+                      <td className="p-4">{item?.department}</td>
+
+                      <td className="p-4">{item?.manageremail}</td>
+                      <td className="p-4">{item?.dealerInfo?.dealerName}</td>
+                      <td className="p-4">{item?.dealerInfo?.dealerEmail}</td>
+                      <td className="p-4">{item?.dealerInfo?.dealerCode}</td>
+                      <td className="p-4">{formatSkills(item?.skills)}</td>
+                      <td className="p-4 flex flex-col">
+                        {item?.deviceid}{" "}
                         <button
-                          onClick={() => handleDelete(item?._id)}
-                          className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
+                          onClick={() => handleRemoveDevice(item._id)}
+                          className="border p-2 bg-red-600 text-xs text-white rounded hover:bg-red-400"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
-                          >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
+                          Remove Device
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4">
+                        {item?.deviceregistereddate && moment(item?.deviceregistereddate).format(
+                          "MMM D, YYYY [at] h:mm A"
+                        )}{" "}
+                      </td>
+                      <td className="p-4">
+                        {moment(item?.createdAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4">
+                        {moment(item?.modifiedAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-4">
+                          <button className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-pencil-square"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                              <path
+                                fillRule="evenodd"
+                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item?._id)}
+                            className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-trash3-fill"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

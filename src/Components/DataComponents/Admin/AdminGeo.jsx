@@ -21,15 +21,6 @@ import BlockIcon from "@mui/icons-material/Block";
 import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import {
   Autocomplete,
-  Box,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Dropdown,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
   Modal,
   ModalClose,
   ModalDialog,
@@ -41,7 +32,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 
-const AdminState = () => {
+function AdminGeo() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
@@ -88,11 +79,11 @@ const AdminState = () => {
     setShowModal(true);
   };
 
-  const handleFormData = (name, value) => {
+  const handleFormData = (geoName, value) => {
     setCurrentData((prev) => {
       return {
         ...prev,
-        [name]: value,
+        [geoName]: value,
       };
     });
   };
@@ -109,7 +100,7 @@ const AdminState = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(`${process.env.REACT_APP_BASE_URL}/collections/state/${id}`)
+          .delete(`${process.env.REACT_APP_BASE_URL}/collections/api/geo/${id}`)
           .then((res) => {
             Swal.fire("Deleted!", "Regions has been deleted.", "success");
           })
@@ -123,25 +114,33 @@ const AdminState = () => {
     });
   };
   const handleSearch = async () => {
-    if (!searchQuery) {
-      return;
-    }
+    if (!searchQuery) return;
 
     setLoader(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchState?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/api/searchgeo?keyword=${searchQuery}`
       );
-      setData(response.data);
-      setLoader(false);
+
+      const geoArray = response.data?.data?.geoDropdown || [];
+
+      setData({
+        GeoEntries: geoArray,
+        totalPages: 1,
+        totalGeoEntries: geoArray.length,
+      });
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching geo:", error);
+    } finally {
       setLoader(false);
     }
   };
+
+  const geoArray = data?.GeoEntries || [];
+
   const getAllCountries = () => {
     axios
-      .get(`${process.env.REACT_APP_BASE_URL}/collections/api/region`)
+      .get(`${process.env.REACT_APP_BASE_URL}/collections/api/geo`)
       .then((res) => {
         const dropdownData =
           res.data.data.regionDropdown?.map((item) => ({
@@ -162,11 +161,11 @@ const AdminState = () => {
     setSearchQuery("");
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/state?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/api/pagegeo?page=${page}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.states);
+        setData(res.data);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -193,7 +192,10 @@ const AdminState = () => {
 
   const handleAddData = () => {
     axios
-      .post(`${process.env.REACT_APP_BASE_URL}/collections/state`, currentData)
+      .post(
+        `${process.env.REACT_APP_BASE_URL}/collections/api/geo`,
+        currentData
+      )
       .then((res) => {
         getAllData();
       })
@@ -204,8 +206,8 @@ const AdminState = () => {
 
   const handleEditData = (id) => {
     axios
-      .patch(
-        `${process.env.REACT_APP_BASE_URL}/collections/state/${id}`,
+      .put(
+        `${process.env.REACT_APP_BASE_URL}/collections/api/geo/${id}`,
         currentData
       )
       .then((res) => {
@@ -287,14 +289,9 @@ const AdminState = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State Name
+                    Geo Name
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State ID
-                  </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Region
-                  </th>
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
@@ -310,99 +307,107 @@ const AdminState = () => {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((i, index) => (
-                  <tr
-                    key={i._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(i?._id)}
-                          onChange={() => handleRowSelect(i?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
-                      {i?.name}
-                    </td>
-                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
-                      {i?.stateId}
-                    </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.region}
-                    </td>
-                    <td>
-                      <span
-                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                          i?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : i?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
-                        }`}
+                <>
+                  {geoArray.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="text-center text-gray-500 py-4"
                       >
-                        {i?.status}
-                      </span>
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(i?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(i?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
-                        <button
-                          onClick={() => {
-                            handleOpenModal(i);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
-                          >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                        No data found.
+                      </td>
+                    </tr>
+                  ) : (
+                    geoArray.map((i, index) => (
+                      <tr
+                        key={i._id}
+                        className="border-b transition-colors  data-[state=selected]:bg-muted"
+                      >
+                        <th scope="col" className="p-4">
+                          <div className="flex items-center">
+                            <input
+                              id={`checkbox-${index}`}
+                              type="checkbox"
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                              checked={selectedRows?.includes(i?._id)}
+                              onChange={() => handleRowSelect(i?._id)}
                             />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(i?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
+                            <label
+                              htmlFor={`checkbox-${index}`}
+                              className="sr-only"
+                            >
+                              checkbox
+                            </label>
+                          </div>
+                        </th>
+                        <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                          {i?.geoName}
+                        </td>
+
+                        <td>
+                          <span
+                            className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                              i?.status === "Active"
+                                ? "bg-green-100 text-green-800 border-green-400"
+                                : i?.status === "Inactive"
+                                ? "bg-red-100 text-red-800  border-red-400"
+                                : "bg-orange-100 text-orange-800  border-orange-400"
+                            }`}
                           >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                            {i?.status}
+                          </span>
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          {moment(i?.createdAt).format("MMM D, YYYY")}
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          {moment(i?.modifiedAt).format("MMM D, YYYY")}
+                        </td>
+
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          <div className="flex gap-4 ">
+                            <button
+                              onClick={() => {
+                                handleOpenModal(i);
+                              }}
+                              className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                className="bi bi-pencil-square"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                                <path
+                                  fill-rule="evenodd"
+                                  d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(i?._id)}
+                              className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                className="bi bi-trash3-fill"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </>
               </tbody>
             </table>
           </div>
@@ -497,36 +502,22 @@ const AdminState = () => {
                   <div class="grid md:grid-cols-2 md:gap-6">
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
-                        State Name
-                      </label>
-                      <input
-                        onChange={(e) => handleFormData("name", e.target.value)}
-                        type="text"
-                        name="name"
-                        id="name"
-                        value={currentData?.name}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                        placeholder="Enter State Name "
-                        required
-                      />
-                    </div>
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
-                        State Id
+                        Geo Name
                       </label>
                       <input
                         onChange={(e) =>
-                          handleFormData("stateId", e.target.value)
+                          handleFormData("geoName", e.target.value)
                         }
                         type="text"
-                        name="stateId"
-                        id="stateId"
-                        value={currentData?.stateId}
+                        name="geoName"
+                        id="geoName"
+                        value={currentData?.geoName}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                        placeholder="Enter State ID "
+                        placeholder="Enter Geo Name "
                         required
                       />
                     </div>
+
                     <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900">
                         Select Status
@@ -543,27 +534,6 @@ const AdminState = () => {
                         <Option value="Pending">Pending</Option>
                         <Option value="Inactive">Inactive</Option>
                       </Select>
-                    </div>
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Select Region
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={region}
-                        getOptionLabel={(option) => option.label || ""}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="region"
-                            label="Select region"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("region", value ? value.label : "")
-                        }
-                      />
                     </div>
                   </div>
                 </div>
@@ -591,6 +561,6 @@ const AdminState = () => {
       )}
     </>
   );
-};
+}
 
-export default AdminState;
+export default AdminGeo;

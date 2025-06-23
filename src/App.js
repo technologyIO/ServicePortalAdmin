@@ -65,6 +65,8 @@ import RoleManagement from './Components/DataComponents/Role/RoleManagement';
 import { PermissionProvider } from './PermissionContext';
 import ProtectedRoute from './ProtectedRoute';
 import UserManagment from './Components/DataComponents/Master_Managemnet/User/UserManagment';
+import AdminRegion from './Components/DataComponents/Admin/AdminRegion';
+import AdminGeo from './Components/DataComponents/Admin/AdminGeo';
 
 
 const PrivateRoute = ({ children }) => {
@@ -228,6 +230,16 @@ const AppContent = () => {
                 componentName="State"
                 requiredPermission="read"
               />} />
+              <Route path="/admin-region" element={<ProtectedRoute
+                component={AdminRegion}
+                componentName="Region"
+                requiredPermission="read"
+              />} />
+              <Route path="/admin-geo" element={<ProtectedRoute
+                component={AdminGeo}
+                componentName="Geo"
+                requiredPermission="read"
+              />} />
               <Route path="/admin-city" element={<ProtectedRoute
                 component={AdminCity}
                 componentName="City"
@@ -276,7 +288,7 @@ const AppContent = () => {
               />} />
               <Route path="/new-customer" element={<ProtectedRoute
                 component={NewCustomer}
-                componentName="NewCustomer"
+                componentName="New Customer"
                 requiredPermission="read"
               />} />
               <Route path="/amc-contract" element={<ProtectedRoute

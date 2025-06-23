@@ -12,8 +12,20 @@ export default function Step1RoleInfo({
   setSelectedRole,
   errors,
   setErrors,
-  fetchRolePermissions
+  fetchRolePermissions,
 }) {
+  const handleDealerChange = (e) => {
+    const dealerId = e.target.value;
+    if (dealerId === "") {
+      setSelectedDealer(null);
+    } else {
+      const dealer = dealerList.find((d) => d._id === dealerId);
+      setSelectedDealer(dealer);
+    }
+    // Clear the dealer error when a dealer is selected
+    setErrors((prev) => ({ ...prev, dealer: undefined }));
+  };
+
   return (
     <div className="h-[440px] overflow-y-auto">
       <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
@@ -51,6 +63,8 @@ export default function Step1RoleInfo({
                       } else {
                         setSelectedRole(null);
                       }
+                      setSelectedDealer(null);
+                      setErrors((prev) => ({ ...prev, dealer: undefined }));
                     }}
                     className="w-5 h-5 text-blue-700 border-blue-300 focus:ring-blue-500"
                   />
@@ -67,16 +81,16 @@ export default function Step1RoleInfo({
               </label>
               <div className="relative">
                 <select
-                  value={selectedDealer}
-                  onChange={(e) => setSelectedDealer(e.target.value)}
+                  value={selectedDealer?._id || ""}
+                  onChange={handleDealerChange}
                   className={`w-full px-4 py-3 border ${
                     errors.dealer ? "border-red-500" : "border-blue-200"
                   } rounded-lg appearance-none bg-white`}
                 >
                   <option value="">Select dealer</option>
                   {dealerList.map((dealer) => (
-                    <option key={dealer._id} value={dealer.name}>
-                      {dealer.name}
+                    <option key={dealer._id} value={dealer._id}>
+                      {dealer.name} ({dealer.city}, {dealer.state})
                     </option>
                   ))}
                 </select>
@@ -100,9 +114,7 @@ export default function Step1RoleInfo({
                     (role) => role._id === e.target.value
                   );
                   setSelectedRole(selected);
-                  if (errors.role) {
-                    setErrors({ ...errors, role: null });
-                  }
+                  setErrors((prev) => ({ ...prev, role: undefined }));
                   if (selected) {
                     fetchRolePermissions(selected.roleId);
                   }
@@ -113,14 +125,10 @@ export default function Step1RoleInfo({
                 disabled={userType === "Dealer"}
               >
                 <option value="">
-                  {userType === "Dealer"
-                    ? "Service Engineer"
-                    : "Select role"}
+                  {userType === "Dealer" ? "Service Engineer" : "Select role"}
                 </option>
                 {(userType === "Dealer"
-                  ? roles.filter(
-                      (role) => role.name === "Service Engineer"
-                    )
+                  ? roles.filter((role) => role.name === "Service Engineer")
                   : roles
                 ).map((role) => (
                   <option key={role._id} value={role._id}>
