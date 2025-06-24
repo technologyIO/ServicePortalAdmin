@@ -8,6 +8,8 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { X } from "lucide-react";
 
 const UserData = () => {
   const [data, setData] = useState([]);
@@ -62,6 +64,47 @@ const UserData = () => {
       }
     });
   };
+  const handleToggleStatus = async (user) => {
+    const newStatus = user.status === "Active" ? "Deactive" : "Active";
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/collections/user/${user._id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update user status");
+      }
+
+      const data = await response.json();
+
+      setData((prevData) =>
+        prevData.map((u) =>
+          u._id === user._id ? { ...u, status: newStatus } : u
+        )
+      );
+
+      toast.success(
+        newStatus === "Active"
+          ? "User activated successfully!"
+          : "User deactivated successfully!"
+      );
+
+      if (newStatus === "Deactive") {
+        toast("User will be logged out from all devices");
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const handleEdit = (userId) => {
     navigate(`/user-edit/${userId}`);
   };
@@ -148,7 +191,7 @@ const UserData = () => {
       );
 
       if (res.data?.message) {
-        alert(res.data.message);
+        toast.success(res.data.message);
 
         getData();
       }
@@ -352,15 +395,20 @@ const UserData = () => {
                       <td className="p-4">{item?.dealerInfo?.dealerEmail}</td>
                       <td className="p-4">{item?.dealerInfo?.dealerCode}</td>
                       <td className="p-4">{formatSkills(item?.skills)}</td>
-                      <td className="p-4 flex flex-col">
-                        {item?.deviceid}{" "}
-                        <button
-                          onClick={() => handleRemoveDevice(item._id)}
-                          className="border p-2 bg-red-600 text-xs text-white rounded hover:bg-red-400"
-                        >
-                          Remove Device
-                        </button>
+                      <td className="p-4">
+                        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 shadow-sm rounded-md w-fit min-w-[250px]">
+                          <span className="text-sm text-blue-900 font-medium">
+                            {item?.deviceid || "No Device ID"}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveDevice(item._id)}
+                            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded h-8 px-4 bg-red-700 hover:bg-red-500 text-white text-sm font-medium leading-normal w-fit"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
+
                       <td className="p-4">
                         {item?.deviceregistereddate &&
                           moment(item?.deviceregistereddate).format(
@@ -409,6 +457,20 @@ const UserData = () => {
                               <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
                             </svg>
                           </button>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={item?.status === "Active"}
+                              onChange={() => handleToggleStatus(item)}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <span className="ml-2 text-sm font-medium text-gray-900">
+                              {item?.status === "Active"
+                                ? "Active"
+                                : "Inactive"}
+                            </span>
+                          </label>
                         </div>
                       </td>
                     </tr>
