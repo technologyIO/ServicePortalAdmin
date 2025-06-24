@@ -62,7 +62,9 @@ const UserData = () => {
       }
     });
   };
-
+  const handleEdit = (userId) => {
+    navigate(`/user-edit/${userId}`);
+  };
   const handleSearch = async () => {
     if (!searchQuery) return;
     setLoader(true);
@@ -236,6 +238,7 @@ const UserData = () => {
                   </th>
                   <th className="px-4 text-left font-medium">First Name</th>
                   <th className="px-4 text-left font-medium">Last Name</th>
+                  <th className="px-4 text-left font-medium">User Type</th>
                   <th className="px-4 text-left font-medium">Role</th>
                   <th className="px-4 text-left font-medium">Email</th>
                   <th className="px-4 text-left font-medium">Mobile Number</th>
@@ -290,6 +293,17 @@ const UserData = () => {
                       </th>
                       <td className="p-4 capitalize">{item?.firstname}</td>
                       <td className="p-4 capitalize">{item?.lastname}</td>
+                      <td className="p-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
+      ${item?.usertype === "skanray" ? "bg-green-100 text-green-800" : ""}
+      ${item?.usertype === "dealer" ? "bg-yellow-100 text-yellow-800" : ""}
+    `}
+                        >
+                          {item?.usertype}
+                        </span>
+                      </td>
+
                       <td className="p-4 capitalize">{item?.role?.roleName}</td>
                       <td className="p-4">{item?.email}</td>
                       <td className="p-4">{item?.mobilenumber}</td>
@@ -348,9 +362,10 @@ const UserData = () => {
                         </button>
                       </td>
                       <td className="p-4">
-                        {item?.deviceregistereddate && moment(item?.deviceregistereddate).format(
-                          "MMM D, YYYY [at] h:mm A"
-                        )}{" "}
+                        {item?.deviceregistereddate &&
+                          moment(item?.deviceregistereddate).format(
+                            "MMM D, YYYY [at] h:mm A"
+                          )}{" "}
                       </td>
                       <td className="p-4">
                         {moment(item?.createdAt).format("MMM D, YYYY")}
@@ -360,7 +375,10 @@ const UserData = () => {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-4">
-                          <button className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500">
+                          <button
+                            onClick={() => handleEdit(item?._id)}
+                            className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
+                          >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="16"

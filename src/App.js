@@ -291,6 +291,7 @@ const AppContent = () => {
                 componentName="New Customer"
                 requiredPermission="read"
               />} />
+              <Route path="/user-edit/:userId" element={<UserManagment />} />
               <Route path="/amc-contract" element={<ProtectedRoute
                 component={AmcContract}
                 componentName="AMC Contract"

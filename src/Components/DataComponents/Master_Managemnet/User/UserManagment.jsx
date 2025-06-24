@@ -8,9 +8,12 @@ import Step3Skills from "./steps/Step3Skills";
 import Step4LocationDetails from "./steps/Step4LocationDetails";
 import { Autocomplete, TextField } from "@mui/joy";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import moment from "moment";
 
 export default function UserManagement() {
+  const { userId } = useParams();
+  const isEditMode = !!userId;
   const [currentStep, setCurrentStep] = useState(1);
   const [userType, setUserType] = useState("Skanray");
   const [errors, setErrors] = useState({});
@@ -49,21 +52,268 @@ export default function UserManagement() {
   const [selectedSingleCity, setSelectedSingleCity] = useState(null);
   const [selectedCities, setSelectedCities] = useState([]);
 
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    mobile: "",
+    startDate: "",
+    endDate: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    loginexpirydate: "",
+    employeeid: "",
+    password: "",
+    manageremail: "",
+    profileimage: "",
+    deviceid: "",
+    deviceregistereddate: "",
+    department: "",
+  });
+
+  // Fetch initial data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        // Fetch roles
+        const rolesRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/roles`
+        );
+        setRoles(rolesRes.data);
+
+        // Fetch dealers
+        const dealersRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/alldealer`
+        );
+        setDealerList(dealersRes.data.dealers || []);
+
+        // Fetch branches
+        const branchesRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/allbranch`
+        );
+        setBranches(branchesRes.data.branches || []);
+
+        // Fetch regions
+        const regionsRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/api/region`
+        );
+        setRegionOptions(regionsRes.data.data.regionDropdown || []);
+
+        // Fetch geo
+        const geoRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/api/geo`
+        );
+        setGeoOptions(geoRes.data.data.geoDropdown || []);
+
+        // Fetch countries
+        const countriesRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/allcountry`
+        );
+        setCountries(countriesRes.data.countries || []);
+
+        // Fetch states
+        const statesRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/allstate`
+        );
+        setStates(statesRes.data || []);
+
+        // Fetch cities
+        const citiesRes = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/allcity`
+        );
+        setCities(citiesRes.data || []);
+
+        // If in edit mode, fetch user data
+        if (isEditMode) {
+          const userRes = await axios.get(
+            `${process.env.REACT_APP_BASE_URL}/collections/user/${userId}`
+          );
+          const user = userRes.data;
+
+          setUserType(user.usertype === "dealer" ? "Dealer" : "Skanray");
+
+          setFormData({
+            firstName: user.firstname || "",
+            lastName: user.lastname || "",
+            email: user.email || "",
+            mobile: user.mobilenumber || "",
+            address: user.address || "",
+            city: user.city || "",
+            state: user.state || "",
+            zipCode: user.zipCode || "",
+            loginexpirydate: user.loginexpirydate
+              ? moment(user.loginexpirydate).format("YYYY-MM-DD")
+              : "",
+            employeeid: user.employeeid || "",
+            password: "",
+            manageremail: user.manageremail || "",
+            profileimage: user.profileimage || "",
+            deviceid: user.deviceid || "",
+            department: user.department || "",
+          });
+
+          // Set role
+          if (user.role) {
+            const role = rolesRes.data.find(
+              (r) => r.roleId === user.role.roleId
+            );
+            setSelectedRole(role);
+            if (role) {
+              fetchRolePermissions(role.roleId);
+            }
+          }
+
+          // Set dealer if user is dealer
+          if (user.usertype === "dealer" && user.dealerInfo) {
+            const dealer = dealersRes.data.dealers.find(
+              (d) => d._id === user.dealerInfo.dealerId
+            );
+            setSelectedDealer(dealer);
+          }
+
+          // Set skills
+          if (user.skills && Array.isArray(user.skills)) {
+            const skillsRes = await axios.get(
+              `${process.env.REACT_APP_BASE_URL}/collections/skillbyproductgroup/`
+            );
+            setSkill(skillsRes.data);
+
+            const skillsObj = {};
+            skillsRes.data.forEach((skillGroup) => {
+              skillGroup.products.forEach((product) => {
+                if (
+                  user.skills.some((s) => s.productName === product.product)
+                ) {
+                  skillsObj[product._id] = true;
+                }
+              });
+            });
+            setSelectedSkill(skillsObj);
+          }
+
+          // Set demographics
+          if (user.demographics && Array.isArray(user.demographics)) {
+            user.demographics.forEach((demo) => {
+              switch (demo.type) {
+                case "geo":
+                  if (demo.selectionType === "multiple") {
+                    const geoValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      geoName: v.name,
+                    }));
+                    setSelectedGeo(geoValues);
+                  } else {
+                    setSelectedSingleGeo({
+                      _id: demo.values[0].id,
+                      geoName: demo.values[0].name,
+                    });
+                  }
+                  break;
+                case "country":
+                  if (demo.selectionType === "multiple") {
+                    const countryValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      name: v.name,
+                    }));
+                    setSelectedCountries(countryValues);
+                  } else {
+                    setSelectedSingleCountry({
+                      _id: demo.values[0].id,
+                      name: demo.values[0].name,
+                    });
+                  }
+                  break;
+                case "region":
+                  if (demo.selectionType === "multiple") {
+                    const regionValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      regionName: v.name,
+                    }));
+                    setSelectedRegions(regionValues);
+                  } else {
+                    setSelectedRegion({
+                      _id: demo.values[0].id,
+                      regionName: demo.values[0].name,
+                    });
+                  }
+                  break;
+                case "state":
+                  if (demo.selectionType === "multiple") {
+                    const stateValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      name: v.name,
+                    }));
+                    setSelectedStates(stateValues);
+                  } else {
+                    setSelectedSingleState({
+                      _id: demo.values[0].id,
+                      name: demo.values[0].name,
+                    });
+                  }
+                  break;
+                case "city":
+                  if (demo.selectionType === "multiple") {
+                    const cityValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      name: v.name,
+                    }));
+                    setSelectedCities(cityValues);
+                  } else {
+                    setSelectedSingleCity({
+                      _id: demo.values[0].id,
+                      name: demo.values[0].name,
+                    });
+                  }
+                  break;
+                case "branch":
+                  if (demo.selectionType === "multiple") {
+                    const branchValues = demo.values.map((v) => ({
+                      _id: v.id,
+                      name: v.name.split(" (")[0],
+                      branchShortCode: v.name.match(/\(([^)]+)\)/)?.[1],
+                    }));
+                    setSelectedBranches(branchValues);
+                  } else {
+                    const branchValue = demo.values[0];
+                    setSelectedBranch({
+                      _id: branchValue.id,
+                      name: branchValue.name.split(" (")[0],
+                      branchShortCode:
+                        branchValue.name.match(/\(([^)]+)\)/)?.[1],
+                    });
+                  }
+                  break;
+                default:
+                  break;
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching initial data:", error);
+        toast.error("Failed to load initial data");
+        if (isEditMode) {
+          navigate("/user");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInitialData();
+  }, [userId, isEditMode, navigate]);
+
   const fetchRolePermissions = async (roleId) => {
     try {
       setLoading(true);
-      const response = await fetch(
+      const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/roles/by-roleid/${roleId}`
       );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch permissions: ${response.status}`);
-      }
-
-      const data = await response.json();
       setPermissions({
-        features: data.features,
-        demographicSelections: data.demographicSelections,
+        features: response.data.features,
+        demographicSelections: response.data.demographicSelections,
       });
     } catch (error) {
       console.error("Error fetching permissions:", error);
@@ -73,12 +323,6 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (selectedRole?.roleId) {
-      fetchRolePermissions(selectedRole.roleId);
-    }
-  }, [selectedRole]);
 
   useEffect(() => {
     if (currentStep === 3) {
@@ -119,133 +363,25 @@ export default function UserManagement() {
     }));
   };
 
-  const fetchParentRoles = async () => {
-    try {
-      const res = await axios.get(`${process.env.REACT_APP_BASE_URL}/roles`);
-      setRoles(res.data);
-    } catch (err) {
-      toast.error("Failed to fetch parent roles");
-      console.error(err);
-    }
-  };
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
 
-  useEffect(() => {
-    fetchParentRoles();
-  }, []);
-
-  useEffect(() => {
-    const getDealers = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/alldealer`
-        );
-        setDealerList(res.data.dealers || []);
-      } catch (err) {
-        console.error(err);
-        setDealerList([]);  
-      }
-    };
-    getDealers();
-  }, []);
-  useEffect(() => {
-    if (userType === "Dealer" && dealerList.length > 0 && roles.length > 0) {
-      const serviceEngineerRole = roles.find(
-        (role) => role.name === "Service Engineer"
-      );
-      if (serviceEngineerRole) {
-        setSelectedRole(serviceEngineerRole);
-        fetchRolePermissions(serviceEngineerRole.roleId);
-      }
-    }
-  }, [userType, dealerList, roles]);
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allbranch`)
-      .then((res) => res.json())
-      .then((data) => {
-        const cleanBranches = data.branches.map((branch) => ({
-          ...branch,
-          name: branch.name.trim(),
-          branchShortCode: branch.branchShortCode.trim(),
-        }));
-        setBranches(cleanBranches);
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: null,
       });
-  }, []);
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BASE_URL}/collections/api/region`)
-      .then((res) => res.json())
-      .then((data) => {
-        setRegionOptions(data.data.regionDropdown || []);
-      });
-  }, []);
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BASE_URL}/collections/api/geo`)
-      .then((res) => res.json())
-      .then((data) => {
-        setGeoOptions(data.data.geoDropdown || []);
-      });
-  }, []);
-
-  const handleSingleCountrySelect = (event, value) => {
-    setSelectedCountry(value);
-    if (value) {
-      setFormData((prev) => ({ ...prev, country: value.name }));
-    }
-  };
-  const handleSingleStateSelect = (event, value) => {
-    setSelectedState(value);
-    if (value) {
-      setFormData((prev) => ({ ...prev, state: value.name }));
     }
   };
 
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allcountry`)
-      .then((res) => res.json())
-      .then((data) => setCountries(data.countries || []))
-      .catch((err) => console.error("Failed to fetch countries", err));
-  }, []);
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BASE_URL}/collections/allstate`)
-      .then((res) => res.json())
-      .then((data) => setStates(data))
-      .catch((err) => console.error("Failed to load states", err));
-  }, []);
-
-  useEffect(() => {
-    axios
-      .get(`${process.env.REACT_APP_BASE_URL}/collections/allcity`)
-      .then((res) => {
-        setCities(res.data);
-      })
-      .catch((err) => console.error("Error fetching cities:", err));
-  }, []);
-
-  const handleSingleSelect = (event, newValue) => {
-    setFormData({ ...formData, city: newValue?.name || "" });
+  const handleDealerSelect = (value) => {
+    setSelectedDealer(value);
+    setErrors((prev) => ({ ...prev, dealer: undefined }));
   };
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    mobile: "",
-    startDate: "",
-    endDate: "",
-    address: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    loginexpirydate: "",
-    employeeid: "",
-    password: "",
-    manageremail: "",
-    profileimage: "",
-    deviceid: "",
-    deviceregistereddate: "",
-  });
 
   const validateCurrentStep = () => {
     const newErrors = {};
@@ -270,7 +406,8 @@ export default function UserManagement() {
       } else if (!/^\d{10,15}$/.test(formData.mobile)) {
         newErrors.mobile = "Mobile number is invalid";
       }
-      if (!formData.password) newErrors.password = "Password is required";
+      if (!isEditMode && !formData.password)
+        newErrors.password = "Password is required";
       if (!formData.manageremail)
         newErrors.manageremail = "Manager email is required";
     } else if (currentStep === 4) {
@@ -331,23 +468,10 @@ export default function UserManagement() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      });
-    }
-  };
 
   const handleNext = (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
+
     if (validateCurrentStep()) {
       setCurrentStep(currentStep + 1);
       window.scrollTo(0, 0);
@@ -359,12 +483,6 @@ export default function UserManagement() {
     window.scrollTo(0, 0);
   };
 
-  const handleDealerSelect = (value) => {
-    setSelectedDealer(value);
-    // Clear the dealer error when a dealer is selected
-    setErrors((prev) => ({ ...prev, dealer: undefined }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -373,7 +491,7 @@ export default function UserManagement() {
         setIsSubmitting(true);
 
         try {
-          if (!formData.password) {
+          if (!isEditMode && !formData.password) {
             throw new Error("Password is required");
           }
 
@@ -509,7 +627,6 @@ export default function UserManagement() {
             loginexpirydate: formData.loginexpirydate,
             employeeid: formData.employeeid,
             department: formData.department || "",
-            password: formData.password,
             manageremail: formData.manageremail,
             profileimage: formData.profileimage,
             deviceid: formData.deviceid,
@@ -517,14 +634,17 @@ export default function UserManagement() {
             skills: skillsArray,
             demographics: demographicsArray,
             status: "Active",
-            // deviceregistereddate: new Date(),
             modifiedAt: new Date(),
-            createdAt: new Date(),
             role: {
               roleName: selectedRole?.name || "",
               roleId: selectedRole?.roleId || "",
             },
           };
+
+          // Only include password if it's set (for edit) or required (for create)
+          if (formData.password) {
+            userData.password = formData.password;
+          }
 
           // Only add dealerInfo if user is a dealer AND dealer is selected
           if (userType.toLowerCase() === "dealer" && selectedDealer) {
@@ -533,32 +653,42 @@ export default function UserManagement() {
               dealerId: selectedDealer._id,
               dealerEmail: selectedDealer.email,
               dealerCode: selectedDealer.dealercode,
-              // Include any other dealer fields you need
             };
           }
 
-          const response = await axios.post(
-            `${process.env.REACT_APP_BASE_URL}/collections/user`,
-            userData,
-            {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
+          let response;
+          if (isEditMode) {
+            response = await axios.put(
+              `${process.env.REACT_APP_BASE_URL}/collections/user/${userId}`,
+              userData
+            );
+          } else {
+            response = await axios.post(
+              `${process.env.REACT_APP_BASE_URL}/collections/user`,
+              userData
+            );
+          }
 
-          if (response.status === 201) {
-            toast.success("User created successfully!");
+          if (response.status === (isEditMode ? 200 : 201)) {
+            toast.success(
+              `User ${isEditMode ? "updated" : "created"} successfully!`
+            );
             navigate("/user");
           } else {
-            throw new Error(response.data.message || "Failed to create user");
+            throw new Error(
+              response.data.message ||
+                `Failed to ${isEditMode ? "update" : "create"} user`
+            );
           }
         } catch (error) {
-          console.error("Error creating user:", error);
+          console.error(
+            `Error ${isEditMode ? "updating" : "creating"} user:`,
+            error
+          );
           toast.error(
             error.response?.data?.message ||
               error.message ||
-              "Failed to create user"
+              `Failed to ${isEditMode ? "update" : "create"} user`
           );
         } finally {
           setIsSubmitting(false);
@@ -923,13 +1053,23 @@ export default function UserManagement() {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen overflow-y-auto bg-gradient-to-br">
       <div className="bg-white shadow-sm border-b border-blue-100">
         <div className="max-w-7xl px-8">
           <div className="flex justify-between items-center py-4">
             <div>
-              <h1 className="text-2xl font-bold text-blue-900">Add New User</h1>
+              <h1 className="text-2xl font-bold text-blue-900">
+                {isEditMode ? "Edit User" : "Add New User"}
+              </h1>
             </div>
           </div>
         </div>
@@ -955,6 +1095,7 @@ export default function UserManagement() {
                 errors={errors}
                 setErrors={setErrors}
                 fetchRolePermissions={fetchRolePermissions}
+                isEditMode={isEditMode}
               />
             )}
 
@@ -964,6 +1105,7 @@ export default function UserManagement() {
                   formData={formData}
                   handleInputChange={handleInputChange}
                   errors={errors}
+                  isEditMode={isEditMode}
                 />
               )}
             </div>
@@ -1042,6 +1184,8 @@ export default function UserManagement() {
                       </svg>
                       Processing...
                     </>
+                  ) : isEditMode ? (
+                    "Update User"
                   ) : (
                     "Create User"
                   )}
