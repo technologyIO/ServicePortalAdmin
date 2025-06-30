@@ -19,7 +19,7 @@ const AdminCity = () => {
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
   const [currentData, setCurrentData] = useState({});
-  const [state, setState] = useState([]);
+  const [branch, setBranch] = useState([]);
   const limit = 10;
   const [loader, setLoader] = useState(true);
   const [page, setPage] = useState(1);
@@ -27,8 +27,9 @@ const AdminCity = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleCloseModal = () => {
-    setShowModal((prev) => !prev);
+    setShowModal(false);
     setEditModal(false);
+
     setCurrentData({});
   };
 
@@ -107,15 +108,10 @@ const AdminCity = () => {
     const getState = async () => {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allstate`
+          `${process.env.REACT_APP_BASE_URL}/collections/allbranch`
         );
-        const stateData = res.data.map((state) => ({
-          label: state.name,
-          id: state._id,
-          country: state.country,
-          status: state.status,
-        }));
-        setState(stateData);
+
+        setBranch(res.data.branches);
       } catch (err) {
         console.error(err);
       }
@@ -245,11 +241,9 @@ const AdminCity = () => {
                     City ID
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State
+                    Branch
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State ID
-                  </th>
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
@@ -292,11 +286,9 @@ const AdminCity = () => {
                       {i?.cityID}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.state}
+                      {i?.branch}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.stateId}
-                    </td>
+
                     <td>
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
@@ -362,57 +354,57 @@ const AdminCity = () => {
               </tbody>
             </table>
           </div>
-           <div
-                      className="Pagination-laptopUp"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        padding: "16px",
-                      }}
+          <div
+            className="Pagination-laptopUp"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "16px",
+            }}
+          >
+            <button
+              className={`border rounded p-1 ${
+                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              onClick={handlePreviousPage}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((p) => {
+                  // Show the first page, last page, and pages around the current page
+                  return (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 3 && p <= page + 3)
+                  );
+                })
+                .map((p, i, array) => (
+                  <React.Fragment key={p}>
+                    {/* Add ellipsis for skipped ranges */}
+                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                    <button
+                      className={`border px-3 rounded ${
+                        p === page ? "bg-blue-700 text-white" : ""
+                      }`}
+                      onClick={() => setPage(p)}
+                      disabled={p === page}
                     >
-                      <button
-                        className={`border rounded p-1 ${
-                          page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-                        } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-                        onClick={handlePreviousPage}
-                        disabled={page === 1}
-                      >
-                        Previous
-                      </button>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        {Array.from({ length: totalPages }, (_, index) => index + 1)
-                          .filter((p) => {
-                            // Show the first page, last page, and pages around the current page
-                            return (
-                              p === 1 ||
-                              p === totalPages ||
-                              (p >= page - 3 && p <= page + 3)
-                            );
-                          })
-                          .map((p, i, array) => (
-                            <React.Fragment key={p}>
-                              {/* Add ellipsis for skipped ranges */}
-                              {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                              <button
-                                className={`border px-3 rounded ${
-                                  p === page ? "bg-blue-700 text-white" : ""
-                                }`}
-                                onClick={() => setPage(p)}
-                                disabled={p === page}
-                              >
-                                {p}
-                              </button>
-                            </React.Fragment>
-                          ))}
-                      </div>
-                      <button
-                        className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-                        onClick={handleNextPage}
-                        disabled={page === totalPages}
-                      >
-                        Next
-                      </button>
-                    </div>
+                      {p}
+                    </button>
+                  </React.Fragment>
+                ))}
+            </div>
+            <button
+              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              onClick={handleNextPage}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
           <Modal
             open={showModal}
             onClose={handleCloseModal}
@@ -482,39 +474,24 @@ const AdminCity = () => {
 
                     <div className="relative  w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900 ">
-                        State{" "}
+                        Branch{" "}
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
-                        options={state}
-                        placeholder="Enter State"
-                        getOptionLabel={(option) => option.label}
+                        options={branch}
+                        placeholder="Enter Branch"
+                        getOptionLabel={(option) => option.name}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="state"
-                            label="Select State"
+                            name="branch"
+                            label="Select Branch"
                           />
                         )}
                         sx={{ width: 300 }}
                         onChange={(event, value) =>
-                          handleFormData("state", value ? value.label : "")
+                          handleFormData("branch", value ? value.name : "")
                         }
-                      />
-                    </div>
-                    <div className="relative w-full mb-5 group">
-                      <label className="block mb-2 text-sm font-medium text-gray-900">
-                        State ID
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Enter State ID"
-                        onChange={(e) =>
-                          handleFormData("stateId", e.target.value)
-                        }
-                        value={currentData?.stateId || ""}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
 

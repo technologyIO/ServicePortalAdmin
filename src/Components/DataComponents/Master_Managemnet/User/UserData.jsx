@@ -9,7 +9,7 @@ import axios from "axios";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 
 const UserData = () => {
   const [data, setData] = useState([]);
@@ -21,7 +21,7 @@ const UserData = () => {
   const limit = 10;
   const navigate = useNavigate();
   const [selectedRows, setSelectedRows] = useState([]);
-
+  const [isSpinning, setIsSpinning] = useState(false);
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -91,15 +91,15 @@ const UserData = () => {
         )
       );
 
-      toast.success(
-        newStatus === "Active"
-          ? "User activated successfully!"
-          : "User deactivated successfully!"
-      );
-
-      if (newStatus === "Deactive") {
-        toast("User will be logged out from all devices");
+      if (newStatus === "Active") {
+        toast.success("User activated successfully!");
+      } else {
+        toast.error("User deactivated successfully!");
       }
+
+      // if (newStatus === "Deactive") {
+      //   toast("User will be logged out from all devices");
+      // }
     } catch (error) {
       toast.error(error.message);
     }
@@ -201,6 +201,13 @@ const UserData = () => {
     }
   };
 
+  const refreshpage = () => {
+    setIsSpinning(true);
+    getData();
+
+    setTimeout(() => setIsSpinning(false), 1000);
+  };
+
   return (
     <>
       {loader ? (
@@ -227,6 +234,16 @@ const UserData = () => {
                 className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Search
+              </button>
+              <button
+                onClick={refreshpage}
+                type="button"
+                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2 flex items-center justify-center gap-2"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+                />
+                Refresh
               </button>
             </div>
             <div className="flex gap-3">
@@ -390,7 +407,7 @@ const UserData = () => {
 
                       <td className="p-4">{item?.department}</td>
 
-                      <td className="p-4">{item?.manageremail}</td>
+                      <td className="p-4">{item?.manageremail?.join(", ")}</td>
                       <td className="p-4">{item?.dealerInfo?.dealerName}</td>
                       <td className="p-4">{item?.dealerInfo?.dealerEmail}</td>
                       <td className="p-4">{item?.dealerInfo?.dealerCode}</td>
@@ -464,7 +481,7 @@ const UserData = () => {
                               checked={item?.status === "Active"}
                               onChange={() => handleToggleStatus(item)}
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                             <span className="ml-2 text-sm font-medium text-gray-900">
                               {item?.status === "Active"
                                 ? "Active"

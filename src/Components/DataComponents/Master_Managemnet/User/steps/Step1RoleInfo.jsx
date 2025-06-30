@@ -26,6 +26,10 @@ export default function Step1RoleInfo({
     setErrors((prev) => ({ ...prev, dealer: undefined }));
   };
 
+  // Filter roles based on type
+  const skanrayRoles = roles.filter((role) => role.roleType === "skanray");
+  const dealerRoles = roles.filter((role) => role.roleType === "dealer");
+
   return (
     <div className="h-[440px] overflow-y-auto">
       <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
@@ -52,19 +56,13 @@ export default function Step1RoleInfo({
                     checked={userType === type}
                     onChange={(e) => {
                       setUserType(e.target.value);
-                      if (e.target.value === "Dealer") {
-                        const serviceEngineerRole = roles.find(
-                          (role) => role.name === "Service Engineer"
-                        );
-                        if (serviceEngineerRole) {
-                          setSelectedRole(serviceEngineerRole);
-                          fetchRolePermissions(serviceEngineerRole.roleId);
-                        }
-                      } else {
-                        setSelectedRole(null);
-                      }
+                      setSelectedRole(null);
                       setSelectedDealer(null);
-                      setErrors((prev) => ({ ...prev, dealer: undefined }));
+                      setErrors((prev) => ({
+                        ...prev,
+                        dealer: undefined,
+                        role: undefined,
+                      }));
                     }}
                     className="w-5 h-5 text-blue-700 border-blue-300 focus:ring-blue-500"
                   />
@@ -102,46 +100,79 @@ export default function Step1RoleInfo({
             </div>
           )}
 
-          <div className="w-full">
-            <label className="block text-sm font-medium text-blue-800 mb-2">
-              Role <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={selectedRole?._id || ""}
-                onChange={(e) => {
-                  const selected = roles.find(
-                    (role) => role._id === e.target.value
-                  );
-                  setSelectedRole(selected);
-                  setErrors((prev) => ({ ...prev, role: undefined }));
-                  if (selected) {
-                    fetchRolePermissions(selected.roleId);
-                  }
-                }}
-                className={`w-full px-4 py-3 border ${
-                  errors.role ? "border-red-500" : "border-blue-200"
-                } rounded-lg appearance-none bg-white`}
-                disabled={userType === "Dealer"}
-              >
-                <option value="">
-                  {userType === "Dealer" ? "Service Engineer" : "Select role"}
-                </option>
-                {(userType === "Dealer"
-                  ? roles.filter((role) => role.name === "Service Engineer")
-                  : roles
-                ).map((role) => (
-                  <option key={role._id} value={role._id}>
-                    {role.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5 pointer-events-none" />
+          {userType === "Dealer" && (
+            <div className="w-full">
+              <label className="block text-sm font-medium text-blue-800 mb-2">
+                Dealer Role <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedRole?._id || ""}
+                  onChange={(e) => {
+                    const selected = dealerRoles.find(
+                      (role) => role._id === e.target.value
+                    );
+                    setSelectedRole(selected);
+                    setErrors((prev) => ({ ...prev, role: undefined }));
+                    if (selected) {
+                      fetchRolePermissions(selected.roleId);
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border ${
+                    errors.role ? "border-red-500" : "border-blue-200"
+                  } rounded-lg appearance-none bg-white`}
+                >
+                  <option value="">Select dealer role</option>
+                  {dealerRoles.map((role) => (
+                    <option key={role._id} value={role._id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5 pointer-events-none" />
+              </div>
+              {errors.role && (
+                <p className="mt-1 text-sm text-red-700">{errors.role}</p>
+              )}
             </div>
-            {errors.role && (
-              <p className="mt-1 text-sm text-red-700">{errors.role}</p>
-            )}
-          </div>
+          )}
+
+          {userType === "Skanray" && (
+            <div className="w-full">
+              <label className="block text-sm font-medium text-blue-800 mb-2">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedRole?._id || ""}
+                  onChange={(e) => {
+                    const selected = skanrayRoles.find(
+                      (role) => role._id === e.target.value
+                    );
+                    setSelectedRole(selected);
+                    setErrors((prev) => ({ ...prev, role: undefined }));
+                    if (selected) {
+                      fetchRolePermissions(selected.roleId);
+                    }
+                  }}
+                  className={`w-full px-4 py-3 border ${
+                    errors.role ? "border-red-500" : "border-blue-200"
+                  } rounded-lg appearance-none bg-white`}
+                >
+                  <option value="">Select role</option>
+                  {skanrayRoles.map((role) => (
+                    <option key={role._id} value={role._id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-5 h-5 pointer-events-none" />
+              </div>
+              {errors.role && (
+                <p className="mt-1 text-sm text-red-700">{errors.role}</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -65,7 +65,6 @@ export default function UserManagement() {
     zipCode: "",
     loginexpirydate: "",
     employeeid: "",
-    password: "",
     manageremail: "",
     profileimage: "",
     deviceid: "",
@@ -147,7 +146,6 @@ export default function UserManagement() {
               ? moment(user.loginexpirydate).format("YYYY-MM-DD")
               : "",
             employeeid: user.employeeid || "",
-            password: "",
             manageremail: user.manageremail || "",
             profileimage: user.profileimage || "",
             deviceid: user.deviceid || "",
@@ -272,7 +270,6 @@ export default function UserManagement() {
                     const branchValues = demo.values.map((v) => ({
                       _id: v.id,
                       name: v.name.split(" (")[0],
-                      branchShortCode: v.name.match(/\(([^)]+)\)/)?.[1],
                     }));
                     setSelectedBranches(branchValues);
                   } else {
@@ -280,8 +277,6 @@ export default function UserManagement() {
                     setSelectedBranch({
                       _id: branchValue.id,
                       name: branchValue.name.split(" (")[0],
-                      branchShortCode:
-                        branchValue.name.match(/\(([^)]+)\)/)?.[1],
                     });
                   }
                   break;
@@ -406,8 +401,7 @@ export default function UserManagement() {
       } else if (!/^\d{10,15}$/.test(formData.mobile)) {
         newErrors.mobile = "Mobile number is invalid";
       }
-      if (!isEditMode && !formData.password)
-        newErrors.password = "Password is required";
+
       if (!formData.manageremail)
         newErrors.manageremail = "Manager email is required";
     } else if (currentStep === 4) {
@@ -491,10 +485,6 @@ export default function UserManagement() {
         setIsSubmitting(true);
 
         try {
-          if (!isEditMode && !formData.password) {
-            throw new Error("Password is required");
-          }
-
           const skillsArray = [];
           Skill.forEach((skillGroup) => {
             skillGroup.products.forEach((product) => {
@@ -603,12 +593,12 @@ export default function UserManagement() {
                 selectedBranches.length > 0
                   ? selectedBranches.map((b) => ({
                       id: b._id,
-                      name: `${b.name} (${b.branchShortCode})`,
+                      name: `${b.branchShortCode}`,
                     }))
                   : [
                       {
                         id: selectedBranch._id,
-                        name: `${selectedBranch.name} (${selectedBranch.branchShortCode})`,
+                        name: `${selectedBranch.branchShortCode}`,
                       },
                     ],
             });
@@ -640,11 +630,6 @@ export default function UserManagement() {
               roleId: selectedRole?.roleId || "",
             },
           };
-
-          // Only include password if it's set (for edit) or required (for create)
-          if (formData.password) {
-            userData.password = formData.password;
-          }
 
           // Only add dealerInfo if user is a dealer AND dealer is selected
           if (userType.toLowerCase() === "dealer" && selectedDealer) {
@@ -774,15 +759,15 @@ export default function UserManagement() {
       : [];
   }, [selectedRegions, selectedRegion, states, permissions]);
 
-  // Filter cities based on selected states
-  const filteredCities = useMemo(() => {
-    if (!permissions?.demographicSelections) return cities;
+  // Filter branches based on selected states
+  const filteredBranches = useMemo(() => {
+    if (!permissions?.demographicSelections) return branches;
 
     const stateSelection = permissions.demographicSelections.find(
       (sel) => sel.name.toLowerCase() === "state"
     );
 
-    if (!stateSelection || !stateSelection.isEnabled) return cities;
+    if (!stateSelection || !stateSelection.isEnabled) return branches;
 
     const selectedStateValues =
       stateSelection.selectionType === "multi"
@@ -792,33 +777,31 @@ export default function UserManagement() {
         : [];
 
     return selectedStateValues.length > 0
-      ? cities.filter((city) => selectedStateValues.includes(city.state))
+      ? branches.filter((branch) => selectedStateValues.includes(branch.state))
       : [];
-  }, [selectedStates, selectedSingleState, cities, permissions]);
+  }, [selectedStates, selectedSingleState, branches, permissions]);
 
-  // Filter branches based on selected regions
-  const filteredBranches = useMemo(() => {
-    if (!permissions?.demographicSelections) return branches;
+  // Filter cities based on selected branches
+  const filteredCities = useMemo(() => {
+    if (!permissions?.demographicSelections) return cities;
 
-    const regionSelection = permissions.demographicSelections.find(
-      (sel) => sel.name.toLowerCase() === "region"
+    const branchSelection = permissions.demographicSelections.find(
+      (sel) => sel.name.toLowerCase() === "branch"
     );
 
-    if (!regionSelection || !regionSelection.isEnabled) return branches;
+    if (!branchSelection || !branchSelection.isEnabled) return cities;
 
-    const selectedRegionValues =
-      regionSelection.selectionType === "multi"
-        ? selectedRegions.map((r) => r.regionName)
-        : selectedRegion
-        ? [selectedRegion.regionName]
+    const selectedBranchValues =
+      branchSelection.selectionType === "multi"
+        ? selectedBranches.map((b) => b.name)
+        : selectedBranch
+        ? [selectedBranch.name]
         : [];
 
-    return selectedRegionValues.length > 0
-      ? branches.filter((branch) =>
-          selectedRegionValues.includes(branch.region)
-        )
+    return selectedBranchValues.length > 0
+      ? cities.filter((city) => selectedBranchValues.includes(city.branch))
       : [];
-  }, [selectedRegions, selectedRegion, branches, permissions]);
+  }, [selectedBranches, selectedBranch, cities, permissions]);
 
   // Helper to pluralize properly
   const pluralize = (word) => {
@@ -866,16 +849,17 @@ export default function UserManagement() {
             } else {
               setSelectedSingleGeo(newValue);
             }
+            // Reset all dependent fields
             setSelectedCountries([]);
             setSelectedSingleCountry(null);
             setSelectedRegions([]);
             setSelectedRegion(null);
             setSelectedStates([]);
             setSelectedSingleState(null);
-            setSelectedCities([]);
-            setSelectedSingleCity(null);
             setSelectedBranches([]);
             setSelectedBranch(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
           };
           break;
 
@@ -891,14 +875,15 @@ export default function UserManagement() {
             } else {
               setSelectedSingleCountry(newValue);
             }
+            // Reset dependent fields
             setSelectedRegions([]);
             setSelectedRegion(null);
             setSelectedStates([]);
             setSelectedSingleState(null);
-            setSelectedCities([]);
-            setSelectedSingleCity(null);
             setSelectedBranches([]);
             setSelectedBranch(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
           };
           dependsOn = "geo";
           break;
@@ -915,12 +900,13 @@ export default function UserManagement() {
             } else {
               setSelectedRegion(newValue);
             }
+            // Reset dependent fields
             setSelectedStates([]);
             setSelectedSingleState(null);
-            setSelectedCities([]);
-            setSelectedSingleCity(null);
             setSelectedBranches([]);
             setSelectedBranch(null);
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
           };
           dependsOn = "country";
           break;
@@ -937,10 +923,32 @@ export default function UserManagement() {
             } else {
               setSelectedSingleState(newValue);
             }
+            // Reset dependent fields
+            setSelectedBranches([]);
+            setSelectedBranch(null);
             setSelectedCities([]);
             setSelectedSingleCity(null);
           };
           dependsOn = "region";
+          break;
+
+        case "branch":
+          options = filteredBranches;
+          selectedValue =
+            selection.selectionType === "multi"
+              ? selectedBranches
+              : selectedBranch;
+          onChangeHandler = (event, newValue) => {
+            if (selection.selectionType === "multi") {
+              setSelectedBranches(newValue);
+            } else {
+              setSelectedBranch(newValue);
+            }
+            // Reset dependent fields
+            setSelectedCities([]);
+            setSelectedSingleCity(null);
+          };
+          dependsOn = "state";
           break;
 
         case "city":
@@ -956,23 +964,7 @@ export default function UserManagement() {
               setSelectedSingleCity(newValue);
             }
           };
-          dependsOn = "state";
-          break;
-
-        case "branch":
-          options = filteredBranches;
-          selectedValue =
-            selection.selectionType === "multi"
-              ? selectedBranches
-              : selectedBranch;
-          onChangeHandler = (event, newValue) => {
-            if (selection.selectionType === "multi") {
-              setSelectedBranches(newValue);
-            } else {
-              setSelectedBranch(newValue);
-            }
-          };
-          dependsOn = "region";
+          dependsOn = "branch";
           break;
 
         default:
@@ -994,7 +986,9 @@ export default function UserManagement() {
                 ? selectedCountries.length === 0
                 : dependsOn === "region"
                 ? selectedRegions.length === 0
-                : selectedStates.length === 0;
+                : dependsOn === "state"
+                ? selectedStates.length === 0
+                : selectedBranches.length === 0;
           } else {
             isDisabled =
               dependsOn === "geo"
@@ -1003,7 +997,9 @@ export default function UserManagement() {
                 ? !selectedSingleCountry
                 : dependsOn === "region"
                 ? !selectedRegion
-                : !selectedSingleState;
+                : dependsOn === "state"
+                ? !selectedSingleState
+                : !selectedBranch;
           }
         }
       }
@@ -1021,7 +1017,7 @@ export default function UserManagement() {
             options={options}
             getOptionLabel={(option) => {
               if (selection.name.toLowerCase() === "branch") {
-                return `${option.name} (${option.branchShortCode})  - ${option.region}`;
+                return `${option.name}`;
               }
               return option.name || option.geoName || option.regionName;
             }}

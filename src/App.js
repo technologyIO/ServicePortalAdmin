@@ -391,12 +391,12 @@ const AppContent = () => {
               <Route path="/user-create" element={<UserManagment />} />
               <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
               <Route path="/close-proposal" element={<CloseProposal />} />
-              <Route path="/role-manage" element={<ProtectedRoute
+              {/* <Route path="/role-manage" element={<ProtectedRoute
                 component={RoleManagement}
                 componentName="Role Manage"
                 requiredPermission="read"
-              />} />
-              {/* <Route path="/role-manage" element={<RoleManagement />} /> */}
+              />} /> */}
+              <Route path="/role-manage" element={<RoleManagement />} />
               {/* Add other protected routes here */}
             </Routes>
           </PermissionProvider>

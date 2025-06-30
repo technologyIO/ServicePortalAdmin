@@ -32,6 +32,9 @@ const RoleList = ({ roles, onEdit, onDelete }) => {
                 Role ID
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
+                Role Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">
                 Parent Role
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-blue-800 uppercase tracking-wider">
@@ -47,6 +50,16 @@ const RoleList = ({ roles, onEdit, onDelete }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">{role.roleId}</div>
+                </td>
+                <td className="p-4">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
+      ${role?.roleType === "skanray" ? "bg-green-100 text-green-800" : ""}
+      ${role?.roleType === "dealer" ? "bg-yellow-100 text-yellow-800" : ""}
+    `}
+                  >
+                    {role?.roleType}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">

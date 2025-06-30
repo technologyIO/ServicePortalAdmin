@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from "react";
 import RoleForm from "./RoleForm";
 import RoleList from "./RoleList";
-import { 
-  fetchRoles, 
-  fetchParentRoles,
-  fetchComponents
-} from "./utils";
+import { fetchRoles, fetchParentRoles, fetchComponents } from "./utils";
 import toast from "react-hot-toast";
 
 const RoleManagement = () => {
@@ -15,6 +11,7 @@ const RoleManagement = () => {
   const [loading, setLoading] = useState(false);
   const [parentRoles, setParentRoles] = useState([]);
   const [selectedParentRole, setSelectedParentRole] = useState("");
+  const [selectedRoleType, setSelectedRoleType] = useState("");
   const [availableComponents, setAvailableComponents] = useState([]);
 
   // Fetch all required data
@@ -24,9 +21,9 @@ const RoleManagement = () => {
       const [rolesData, parentRolesData, componentsData] = await Promise.all([
         fetchRoles(),
         fetchParentRoles(),
-        fetchComponents()
+        fetchComponents(),
       ]);
-      
+
       setRoles(rolesData);
       setParentRoles(parentRolesData);
       setAvailableComponents(componentsData);
@@ -69,19 +66,21 @@ const RoleManagement = () => {
         <h1 className="text-2xl font-bold text-blue-700 mb-6">
           Role Management
         </h1>
-        
-        <RoleForm 
+
+        <RoleForm
           isEditing={isEditing}
           currentRoleId={currentRoleId}
           parentRoles={parentRoles}
+          setSelectedRoleType={setSelectedRoleType}
+          selectedRoleType={selectedRoleType}
           selectedParentRole={selectedParentRole}
           setSelectedParentRole={setSelectedParentRole}
           availableComponents={availableComponents}
           onSuccess={handleRoleUpdate}
           onCancel={resetForm}
         />
-        
-        <RoleList 
+
+        <RoleList
           roles={roles}
           onEdit={handleEdit}
           onDelete={handleRoleUpdate} // Refresh after delete

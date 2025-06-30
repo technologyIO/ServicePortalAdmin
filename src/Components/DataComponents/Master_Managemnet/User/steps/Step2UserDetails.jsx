@@ -1,10 +1,51 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function Step2UserDetails({
   formData,
   handleInputChange,
   errors,
 }) {
+  const [newManagerEmail, setNewManagerEmail] = useState("");
+
+  // Ensure managerEmails is always an array
+  const managerEmails = Array.isArray(formData.manageremail)
+    ? formData.manageremail
+    : formData.manageremail
+    ? [formData.manageremail]
+    : [];
+
+  const handleAddManagerEmail = () => {
+    if (newManagerEmail && !managerEmails.includes(newManagerEmail)) {
+      const updatedEmails = [...managerEmails, newManagerEmail];
+      handleInputChange({
+        target: {
+          name: "manageremail",
+          value: updatedEmails,
+        },
+      });
+      setNewManagerEmail("");
+    }
+  };
+
+  const handleRemoveManagerEmail = (emailToRemove) => {
+    const updatedEmails = managerEmails.filter(
+      (email) => email !== emailToRemove
+    );
+    handleInputChange({
+      target: {
+        name: "manageremail",
+        value: updatedEmails,
+      },
+    });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddManagerEmail();
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
       <h2 className="text-xl font-semibold text-blue-900 mb-6">User Details</h2>
@@ -108,7 +149,7 @@ export default function Step2UserDetails({
           )}
         </div>
         {/* Password */}
-        <div>
+        {/* <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Password <span className="text-red-500">*</span>
           </label>
@@ -125,28 +166,7 @@ export default function Step2UserDetails({
           {errors.password && (
             <p className="mt-1 text-sm text-red-700">{errors.password}</p>
           )}
-        </div>
-
-        {/* Manager Email */}
-        <div>
-          <label className="block text-sm font-medium text-blue-800 mb-2">
-            Manager Email <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="manageremail"
-            value={formData.manageremail}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-3 border ${
-              errors.manageremail ? "border-red-500" : "border-blue-200"
-            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            placeholder="Enter Manager Email"
-          />
-          {errors.manageremail && (
-            <p className="mt-1 text-sm text-red-700">{errors.manageremail}</p>
-          )}
-        </div>
-
+        </div> */}
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Profile Image
@@ -165,6 +185,58 @@ export default function Step2UserDetails({
             <p className="mt-1 text-sm text-red-700">{errors.profileimage}</p>
           )}
         </div>
+
+        {/* Manager Email */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-semibold text-blue-900 mb-2">
+            Manager Email(s) <span className="text-red-500">*</span>
+          </label>
+
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="email"
+              value={newManagerEmail}
+              onChange={(e) => setNewManagerEmail(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className={`flex-1 px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 ${
+                errors.manageremail
+                  ? "border-red-500 focus:ring-red-500"
+                  : "border-gray-300 focus:ring-blue-500"
+              }`}
+              placeholder="Enter manager email"
+            />
+            <button
+              type="button"
+              onClick={handleAddManagerEmail}
+              className="px-4 py-2 bg-gray-200 text-blue-900 font-bold rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            >
+              Add Email
+            </button>
+          </div>
+
+          {errors.manageremail && (
+            <p className="mt-2 text-sm text-red-600">{errors.manageremail}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {managerEmails.map((email, index) => (
+              <div
+                key={index}
+                className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm shadow-sm"
+              >
+                {email}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveManagerEmail(email)}
+                  className="ml-2 text-blue-600 hover:text-blue-800 font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Login Expiry Date
@@ -185,44 +257,6 @@ export default function Step2UserDetails({
             </p>
           )}
         </div>
-        {/* <div>
-          <label className="block text-sm font-medium text-blue-800 mb-2">
-            Device Id
-          </label>
-          <input
-            type="text"
-            name="deviceid"
-            value={formData.deviceid}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-3 border ${
-              errors.deviceid ? "border-red-500" : "border-blue-200"
-            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            placeholder="Enter Device Id"
-          />
-          {errors.deviceid && (
-            <p className="mt-1 text-sm text-red-700">{errors.deviceid}</p>
-          )}
-        </div> */}
-        {/* <div>
-          <label className="block text-sm font-medium text-blue-800 mb-2">
-            Device Registered Date
-          </label>
-          <input
-            type="date"
-            name="deviceregistereddate"
-            value={formData.deviceregistereddate}
-            onChange={handleInputChange}
-            className={`w-full px-4 py-3 border ${
-              errors.deviceregistereddate ? "border-red-500" : "border-blue-200"
-            } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-            placeholder="Enter Manager Email"
-          />
-          {errors.deviceregistereddate && (
-            <p className="mt-1 text-sm text-red-700">
-              {errors.deviceregistereddate}
-            </p>
-          )}
-        </div> */}
         <div>
           <label className="block text-sm font-medium text-blue-800 mb-2">
             Zip Code

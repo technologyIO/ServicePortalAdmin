@@ -20,6 +20,8 @@ const RoleForm = ({
     setSelectedParentRole,
     availableComponents,
     onSuccess,
+    selectedRoleType,
+    setSelectedRoleType,
     onCancel,
 }) => {
     const {
@@ -52,7 +54,7 @@ const RoleForm = ({
                         `${process.env.REACT_APP_BASE_URL}/roles/${currentRoleId}`
                     );
                     const roleData = roleRes.data;
-
+                    setSelectedRoleType(roleData.roleType);
                     // Set initial permissions for mobile components and reports
                     const initialMobilePermissions = {};
                     const initialReportPermissions = {};
@@ -98,7 +100,7 @@ const RoleForm = ({
         };
 
         fetchInitialData();
-    }, [isEditing, currentRoleId, reset, setSelectedParentRole]);
+    }, [isEditing, currentRoleId, reset, setSelectedParentRole, setSelectedRoleType]);
 
     const onSubmit = async (data) => {
         try {
@@ -144,6 +146,7 @@ const RoleForm = ({
             const formattedData = {
                 name: data.name,
                 parentRole: data.parentRole || null,
+                roleType: selectedRoleType,
                 features: data.features || [],
                 mobileComponents: formattedMobileComponents,
                 reports: formattedReports,
@@ -177,40 +180,58 @@ const RoleForm = ({
     };
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className=" ">
                 {/* Basic Info */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Role Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        {...register("name", { required: "Role name is required" })}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                    {errors.name && (
-                        <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Role Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            {...register("name", { required: "Role name is required" })}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        />
+                        {errors.name && (
+                            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                        )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Parent Role
+                        </label>
+                        <select
+                            {...register("parentRole")}
+                            value={selectedParentRole}
+                            onChange={(e) => setSelectedParentRole(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        >
+                            <option value="">None</option>
+                            {parentRoles.map((role) => (
+                                <option key={role._id} value={role._id}>
+                                    {role.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Role Type
+                        </label>
+                        <select
+                            value={selectedRoleType}
+                            onChange={(e) => setSelectedRoleType(e.target.value)}
+                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        >
+                            <option value="">None</option>
+                            <option value="skanray">Skanray</option>
+                            <option value="dealer">Dealer</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                        Parent Role
-                    </label>
-                    <select
-                        {...register("parentRole")}
-                        value={selectedParentRole}
-                        onChange={(e) => setSelectedParentRole(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                        <option value="">None</option>
-                        {parentRoles.map((role) => (
-                            <option key={role._id} value={role._id}>
-                                {role.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
 
                 {/* Components Access */}
                 <ComponentsAccess

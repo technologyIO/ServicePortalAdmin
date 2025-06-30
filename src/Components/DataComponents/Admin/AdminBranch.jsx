@@ -61,24 +61,17 @@ const AdminBranch = () => {
     setCurrentData({});
   };
 
-  const [region, setRegion] = useState([]);
+  const [state, setState] = useState([]);
 
- 
-  // Get All State/Region
+  // Get All State
   useEffect(() => {
     const getRegions = async () => {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/api/region`
+          `${process.env.REACT_APP_BASE_URL}/collections/allstate`
         );
 
-        const regions = res.data.data.regionDropdown.map((region) => ({
-          label: region.regionName,
-          id: region._id,
-          states: region.states,
-        }));
-
-        setRegion(regions); // `setRegion` ko `setRegions` ya kuch meaningful naam dena better hoga
+        setState(res.data);  
       } catch (err) {
         console.error(err);
       }
@@ -127,7 +120,7 @@ const AdminBranch = () => {
       }
     });
   };
- 
+
   const handleSearch = async () => {
     if (!searchQuery) {
       return;
@@ -275,7 +268,7 @@ const AdminBranch = () => {
                     Name
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Region
+                    State
                   </th>
 
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -322,7 +315,7 @@ const AdminBranch = () => {
                       {i?.name}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.region}
+                      {i?.state}
                     </td>
 
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
@@ -529,47 +522,43 @@ const AdminBranch = () => {
                         required
                       />
                     </div>
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Select Status
-                      </label>
-
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        defaultValue={currentData?.status || ""}
-                        onChange={(e, value) => handleFormData("status", value)}
-                      >
-                        <Option value="">Select Status</Option>
-                        <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
-                        <Option value="Inactive">Inactive</Option>
-                      </Select>
+                    <div className="">
+                      <div>
+                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                          Select State
+                        </label>
+                        <Autocomplete
+                          className="h-10 w-full"
+                          options={state} // Data from API
+                          getOptionLabel={(option) => option.name} // Display the country name
+                          renderInput={(params) => (
+                            <TextField {...params} name="state" label="State" />
+                          )}
+                          sx={{ width: 300 }}
+                          onChange={(event, value) =>
+                            handleFormData("state", value ? value.name : "")
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Select Region
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={region} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="region"
-                            label="Region"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("region", value ? value.label : "")
-                        }
-                      />
-                    </div>
-                   
+
+                  <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-900">
+                      Select Status
+                    </label>
+
+                    <Select
+                      variant="soft"
+                      className="rounded-[4px] py-2 border"
+                      defaultValue={currentData?.status || ""}
+                      onChange={(e, value) => handleFormData("status", value)}
+                    >
+                      <Option value="">Select Status</Option>
+                      <Option value="Active">Active</Option>
+                      <Option value="Pending">Pending</Option>
+                      <Option value="Inactive">Inactive</Option>
+                    </Select>
                   </div>
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">

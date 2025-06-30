@@ -369,6 +369,13 @@ const AdminChecklist = () => {
                     Result Type
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Start Voltage
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    End Voltage
+                  </th>
+
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Action
                   </th>
                 </tr>
@@ -434,6 +441,12 @@ const AdminChecklist = () => {
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.resulttype}
+                    </td>
+                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                      {i?.startVoltage}
+                    </td>
+                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                      {i?.endVoltage}
                     </td>
 
                     <td className="p-4 align-middle whitespace-nowrap">
@@ -738,6 +751,44 @@ const AdminChecklist = () => {
                         <Option value="Remarks">Remarks</Option>
                         <Option value="OK/NOT OK">OK/NOT OK</Option>
                       </Select>
+                    </div>
+
+                    {currentData?.resulttype === "Numeric Entry" && (
+                      <div className="grid grid-cols-1   gap-6">
+                        <div className="relative z-0 w-full mb-5 group">
+                          <label className="block mb-2 text-sm font-medium text-gray-900">
+                            Start Voltage
+                          </label>
+                          <input
+                            onChange={(e) =>
+                              handleFormData("startVoltage", e.target.value)
+                            }
+                            type="text"
+                            value={currentData?.startVoltage || ""}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="Enter start voltage"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      {currentData?.resulttype === "Numeric Entry" && (
+                        <div className="relative z-0 w-full mb-5 group">
+                          <label className="block mb-2 text-sm font-medium text-gray-900">
+                            End Voltage
+                          </label>
+                          <input
+                            onChange={(e) =>
+                              handleFormData("endVoltage", e.target.value)
+                            }
+                            type="text"
+                            value={currentData?.endVoltage || ""}
+                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                            placeholder="Enter end voltage"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   {/* <div className="relative z-0 w-full mb-5 group">
