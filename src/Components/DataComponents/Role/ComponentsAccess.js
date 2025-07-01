@@ -1,33 +1,28 @@
-import React from "react";
+"use client"
 
-const ComponentsAccess = ({ 
-  availableComponents, 
-  isLoading, 
-  register, 
-  watch, 
-  setValue, 
-  getValues 
-}) => {
+const ComponentsAccess = ({ availableComponents, isLoading, register, watch, setValue, getValues }) => {
   const selectAllComponents = () => {
-    const activeComponents = availableComponents.filter(comp => comp?.isActive !== false);
-    const currentFeatures = getValues("features") || [];
-    const newFeatures = activeComponents.map(component => {
-      const existingFeature = currentFeatures.find(f => f.featuresId === component._id);
-      return existingFeature || {
-        featuresId: component._id,
-        component: component.name,
-        read: false,
-        write: false,
-        edit: false,
-        delete: false,
-      };
-    });
-    setValue("features", newFeatures);
-  };
+    const activeComponents = availableComponents.filter((comp) => comp?.isActive !== false)
+    const currentFeatures = getValues("features") || []
+    const newFeatures = activeComponents.map((component) => {
+      const existingFeature = currentFeatures.find((f) => f.featuresId === component._id)
+      return (
+        existingFeature || {
+          featuresId: component._id,
+          component: component.name,
+          read: false,
+          write: false,
+          edit: false,
+          delete: false,
+        }
+      )
+    })
+    setValue("features", newFeatures)
+  }
 
   const deselectAllComponents = () => {
-    setValue("features", []);
-  };
+    setValue("features", [])
+  }
 
   return (
     <div className="md:col-span-2">
@@ -57,10 +52,10 @@ const ComponentsAccess = ({
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4 border border-gray-200 rounded p-2">
           {availableComponents
-            .filter(c => c.isActive !== false)
+            .filter((c) => c.isActive !== false)
             .map((component) => {
-              const features = getValues("features") || [];
-              const isChecked = features.some(f => f.featuresId === component._id);
+              const features = getValues("features") || []
+              const isChecked = features.some((f) => f.featuresId === component._id)
 
               return (
                 <div key={component._id} className="flex items-center mb-2">
@@ -69,7 +64,7 @@ const ComponentsAccess = ({
                     id={`component-${component._id}`}
                     checked={isChecked}
                     onChange={(e) => {
-                      let newFeatures = [...features];
+                      let newFeatures = [...features]
                       if (e.target.checked) {
                         newFeatures.push({
                           featuresId: component._id,
@@ -78,27 +73,24 @@ const ComponentsAccess = ({
                           write: false,
                           edit: false,
                           delete: false,
-                        });
+                        })
                       } else {
-                        newFeatures = newFeatures.filter(f => f.featuresId !== component._id);
+                        newFeatures = newFeatures.filter((f) => f.featuresId !== component._id)
                       }
-                      setValue("features", newFeatures);
+                      setValue("features", newFeatures)
                     }}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label
-                    htmlFor={`component-${component._id}`}
-                    className="ml-2 text-sm text-gray-700"
-                  >
+                  <label htmlFor={`component-${component._id}`} className="ml-2 text-sm text-gray-700">
                     {component.name}
                   </label>
                 </div>
-              );
+              )
             })}
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default ComponentsAccess;
+export default ComponentsAccess

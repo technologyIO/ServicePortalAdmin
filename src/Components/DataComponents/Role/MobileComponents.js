@@ -1,48 +1,80 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+"use client"
 
-const MobileComponents = ({ watch, setValue, register }) => {
-  const [mobileComponents, setMobileComponents] = useState([]);
-  const [selectedComponents, setSelectedComponents] = useState({});
+import { useEffect, useState } from "react"
+import axios from "axios"
+
+const MobileComponents = ({ watch, setValue, register, isEditing, currentRoleData, mobileComponentsList }) => {
+  const [mobileComponents, setMobileComponents] = useState([])
+  const [selectedComponents, setSelectedComponents] = useState({})
 
   useEffect(() => {
-    axios
-      .get(`${process.env.REACT_APP_BASE_URL}/role/mobilecomponents`)
-      .then((response) => {
-        setMobileComponents(response.data);
-        const initialSelection = {};
-        response.data.forEach((item) => {
-          initialSelection[item._id] = false;
-        });
-        setSelectedComponents(initialSelection);
+    if (mobileComponentsList && mobileComponentsList.length > 0) {
+      setMobileComponents(mobileComponentsList)
+
+      // Initialize selected components
+      const initialSelection = {}
+      mobileComponentsList.forEach((item) => {
+        initialSelection[item._id] = false
       })
-      .catch((error) => {
-        console.error("Error fetching mobile components:", error);
-      });
-  }, []);
+
+      // If editing, set the pre-selected components
+      if (isEditing && currentRoleData?.mobileComponents) {
+        currentRoleData.mobileComponents.forEach((comp) => {
+          initialSelection[comp.componentId] = true
+        })
+      }
+
+      setSelectedComponents(initialSelection)
+    } else {
+      // Fallback to fetch if mobileComponentsList is not provided
+      axios
+        .get(`${process.env.REACT_APP_BASE_URL}/role/mobilecomponents`)
+        .then((response) => {
+          setMobileComponents(response.data)
+
+          // Initialize selected components
+          const initialSelection = {}
+          response.data.forEach((item) => {
+            initialSelection[item._id] = false
+          })
+
+          // If editing, set the pre-selected components
+          if (isEditing && currentRoleData?.mobileComponents) {
+            currentRoleData.mobileComponents.forEach((comp) => {
+              initialSelection[comp.componentId] = true
+            })
+          }
+
+          setSelectedComponents(initialSelection)
+        })
+        .catch((error) => {
+          console.error("Error fetching mobile components:", error)
+        })
+    }
+  }, [mobileComponentsList, isEditing, currentRoleData])
 
   const handleCheckboxChange = (id) => {
     setSelectedComponents((prev) => ({
       ...prev,
       [id]: !prev[id],
-    }));
-  };
+    }))
+  }
 
   const selectAllMobileComponents = () => {
-    const allSelected = {};
+    const allSelected = {}
     mobileComponents.forEach((comp) => {
-      allSelected[comp._id] = true;
-    });
-    setSelectedComponents(allSelected);
-  };
+      allSelected[comp._id] = true
+    })
+    setSelectedComponents(allSelected)
+  }
 
   const deselectAllMobileComponents = () => {
-    const noneSelected = {};
+    const noneSelected = {}
     mobileComponents.forEach((comp) => {
-      noneSelected[comp._id] = false;
-    });
-    setSelectedComponents(noneSelected);
-  };
+      noneSelected[comp._id] = false
+    })
+    setSelectedComponents(noneSelected)
+  }
 
   return (
     <div className="md:col-span-2">
@@ -71,10 +103,7 @@ const MobileComponents = ({ watch, setValue, register }) => {
       {/* Components List */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4 border border-gray-200 rounded p-2">
         {mobileComponents.map((component) => (
-          <div
-            key={component._id}
-            className="py-3 px-2 hover:bg-blue-50 transition"
-          >
+          <div key={component._id} className="py-3 px-2 hover:bg-blue-50 transition">
             <div className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -91,67 +120,57 @@ const MobileComponents = ({ watch, setValue, register }) => {
       {/* Permissions Rendered Separately */}
       {mobileComponents
         .filter((comp) => selectedComponents[comp._id])
-        .map((component) => (
-          <div
-            key={component._id}
-            className="bg-gray-50 p-3 rounded-md mb-2"
-          >
-
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-semibold text-blue-800">
-                Permissions for: {component.name}
-              </h3>
-              <div className="flex space-x-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    ["read", "write", "edit", "delete"].forEach((perm) =>
-                      setValue(`mobilePermissions.${component._id}.${perm}`, true)
-                    );
-                  }}
-                  className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    ["read", "write", "edit", "delete"].forEach((perm) =>
-                      setValue(`mobilePermissions.${component._id}.${perm}`, false)
-                    );
-                  }}
-                  className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
-                >
-                  None
-                </button>
+        .map((component) => {
+          const componentName = component.name || component._id
+          return (
+            <div key={component._id} className="bg-gray-50 p-3 rounded-md mb-2">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-semibold text-blue-800">Permissions for: {componentName}</h3>
+                <div className="flex space-x-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      ;["read", "write", "edit", "delete"].forEach((perm) =>
+                        setValue(`mobilePermissions.${component._id}.${perm}`, true),
+                      )
+                    }}
+                    className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      ;["read", "write", "edit", "delete"].forEach((perm) =>
+                        setValue(`mobilePermissions.${component._id}.${perm}`, false),
+                      )
+                    }}
+                    className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {["read", "write", "edit", "delete"].map((permission) => (
+                  <div key={permission} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`mobile-${permission}-${component._id}`}
+                      {...register(`mobilePermissions.${component._id}.${permission}`)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor={`mobile-${permission}-${component._id}`} className="ml-1 text-sm text-gray-700">
+                      {permission.charAt(0).toUpperCase() + permission.slice(1)}
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
-
-            <div className="flex flex-wrap gap-4">
-
-              {["read", "write", "edit", "delete"].map((permission) => (
-                <div key={permission} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`mobile-${permission}-${component._id}`}
-                    {...register(
-                      `mobilePermissions.${component._id}.${permission}`
-                    )}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label
-                    htmlFor={`mobile-${permission}-${component._id}`}
-                    className="ml-1 text-sm text-gray-700"
-                  >
-                    {permission.charAt(0).toUpperCase() + permission.slice(1)}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
     </div>
-  );
-};
+  )
+}
 
-export default MobileComponents;
+export default MobileComponents

@@ -23,7 +23,6 @@ const RoleManagement = () => {
         fetchParentRoles(),
         fetchComponents(),
       ]);
-
       setRoles(rolesData);
       setParentRoles(parentRolesData);
       setAvailableComponents(componentsData);
@@ -54,6 +53,7 @@ const RoleManagement = () => {
     setIsEditing(false);
     setCurrentRoleId(null);
     setSelectedParentRole("");
+    setSelectedRoleType("");
   };
 
   if (loading) {
@@ -66,7 +66,6 @@ const RoleManagement = () => {
         <h1 className="text-2xl font-bold text-blue-700 mb-6">
           Role Management
         </h1>
-
         <RoleForm
           isEditing={isEditing}
           currentRoleId={currentRoleId}
@@ -79,7 +78,6 @@ const RoleManagement = () => {
           onSuccess={handleRoleUpdate}
           onCancel={resetForm}
         />
-
         <RoleList
           roles={roles}
           onEdit={handleEdit}

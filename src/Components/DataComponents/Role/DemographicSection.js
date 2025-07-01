@@ -1,6 +1,4 @@
-import React from "react";
-
-const DEMOGRAPHIC_FIELDS = ["GEO", "Country", "Region", "State", "Branch", "City"];
+const DEMOGRAPHIC_FIELDS = ["GEO", "Country", "Region", "State", "Branch", "City"]
 
 const DemographicSection = ({ register, watch }) => {
   return (
@@ -10,8 +8,8 @@ const DemographicSection = ({ register, watch }) => {
       </label>
       <div className="grid grid-cols-2 gap-2 mb-4 border border-gray-200 rounded p-2">
         {DEMOGRAPHIC_FIELDS.map((item) => {
-          const isChecked = watch(`demographic.${item}.enabled`, true);
-          const selectedType = watch(`demographic.${item}.type`, "single");
+          const isChecked = watch(`demographic.${item}.enabled`, true)
+          const selectedType = watch(`demographic.${item}.type`, "single")
 
           return (
             <div className="flex items-center justify-start gap-10 py-2" key={item}>
@@ -49,11 +47,11 @@ const DemographicSection = ({ register, watch }) => {
                 </label>
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DemographicSection;
+export default DemographicSection

@@ -39,6 +39,43 @@ function Dealer() {
   const [state, setstate] = useState([]);
   const [country, setCountry] = useState([]);
   const [cityList, setCityList] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [selectedPersons, setSelectedPersons] = useState([]);
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/collections/alluser");
+      let users = res.data.users || res.data; // Try both possibilities
+
+      // Ensure we have an array
+      if (!Array.isArray(users)) {
+        // If users is an object, convert it to an array of its values
+        if (users && typeof users === "object") {
+          users = Object.values(users);
+        } else {
+          users = []; // Fallback to empty array
+        }
+      }
+
+      // Filter out any non-user objects
+      users = users.filter(
+        (user) =>
+          user &&
+          typeof user === "object" &&
+          user.firstname &&
+          user.lastname &&
+          user.employeeid
+      );
+
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      setAllUsers([]); // Set to empty array on error
+    }
+  };
 
   // Get All City
   useEffect(() => {
@@ -82,6 +119,30 @@ function Dealer() {
 
     getState();
   }, []);
+  const handlePersonToggle = (user) => {
+    const exists = selectedPersons.some(
+      (p) => p.employeeid === user.employeeid
+    );
+
+    let updatedPersons;
+    if (exists) {
+      updatedPersons = selectedPersons.filter(
+        (p) => p.employeeid !== user.employeeid
+      );
+    } else {
+      updatedPersons = [
+        ...selectedPersons,
+        {
+          name: `${user.firstname} ${user.lastname}`,
+          employeeid: user.employeeid,
+        },
+      ];
+    }
+
+    setSelectedPersons(updatedPersons);
+    handleFormData("personresponsible", updatedPersons);
+  };
+
   //Get All country
   useEffect(() => {
     const getCountry = async () => {
@@ -459,7 +520,9 @@ function Dealer() {
                       {item?.dealercode}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.personresponsible}
+                      {Array.isArray(item?.personresponsible)
+                        ? item.personresponsible.map((p) => p.name).join(", ")
+                        : item?.personresponsible}
                     </td>
 
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
@@ -679,20 +742,35 @@ function Dealer() {
                         }
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Person Responsible{" "}
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Person Responsible
                       </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("personresponsible", e.target.value)
-                        }
-                        placeholder="Enter Person Responsible"
-                        id="personresponsible"
-                        value={currentData?.personresponsible}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
+
+                      <div className="border rounded p-2 max-h-[200px] overflow-y-auto bg-white shadow">
+                        {allUsers.map((user) => {
+                          const fullName = `${user.firstname} ${user.lastname}`;
+                          const isChecked = selectedPersons.some(
+                            (p) => p.employeeid === user.employeeid
+                          );
+
+                          return (
+                            <div
+                              key={user._id}
+                              className="flex items-center gap-2 mb-2"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handlePersonToggle(user)}
+                              />
+                              <span className="text-sm">
+                                {fullName} ({user.employeeid})
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     <div className="relative  w-full mb-5 group">

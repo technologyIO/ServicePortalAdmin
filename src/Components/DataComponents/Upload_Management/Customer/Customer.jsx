@@ -31,6 +31,7 @@ function Customer() {
 
   const [BranchData, setBranchData] = useState([]);
   const [state, setstate] = useState([]);
+  const [region, setregion] = useState([]);
   const [country, setCountry] = useState([]);
   const [cityList, setCityList] = useState([]);
 
@@ -75,6 +76,26 @@ function Customer() {
     };
 
     getState();
+  }, []);
+  useEffect(() => {
+    const getRegion = async () => {
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/api/allregion`
+        );
+        const Region = res.data.regions.map((regions) => ({
+          label: regions.regionName,
+          id: regions._id,
+          country: regions.country,
+          status: regions.status,
+        }));
+        setregion(Region);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    getRegion();
   }, []);
   //Get All country
   useEffect(() => {
@@ -380,6 +401,9 @@ function Customer() {
                     State
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Region
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Country
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -457,6 +481,9 @@ function Customer() {
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.state}
+                    </td>
+                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                      {item?.region}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.country}
@@ -757,6 +784,23 @@ function Customer() {
                         sx={{ width: 300 }}
                         onChange={(event, value) =>
                           handleFormData("state", value ? value.label : "")
+                        }
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Region{" "}
+                      </label>
+                      <Autocomplete
+                        className="h-10 w-full"
+                        options={region} // Data from API
+                        getOptionLabel={(option) => option.label} // Display the country name
+                        renderInput={(params) => (
+                          <TextField {...params} name="region" label="region" />
+                        )}
+                        sx={{ width: 300 }}
+                        onChange={(event, value) =>
+                          handleFormData("region", value ? value.label : "")
                         }
                       />
                     </div>
