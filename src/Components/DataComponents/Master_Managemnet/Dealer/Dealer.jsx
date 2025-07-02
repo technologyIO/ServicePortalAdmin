@@ -47,7 +47,9 @@ function Dealer() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/collections/alluser");
+      const res = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/alluser`
+      );
       let users = res.data.users || res.data; // Try both possibilities
 
       // Ensure we have an array
