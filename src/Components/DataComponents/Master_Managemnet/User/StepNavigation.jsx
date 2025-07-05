@@ -1,43 +1,63 @@
-import React from "react";
+"use client"
 
-const steps = [
-  { id: 1, name: "Role Information" },
-  { id: 2, name: "User Details" },
-  { id: 3, name: "Skills" },
-  { id: 4, name: "Location Details" },
-];
-
-export default function StepNavigation({ currentStep }) {
+export default function StepNavigation({ currentStep, steps }) {
   return (
-    <nav className="flex items-center justify-center" aria-label="Progress">
-      <ol className="flex items-center space-x-8 w-full">
-        {steps.map((step) => (
-          <li key={step.name} className="flex-1">
-            {step.id < currentStep ? (
-              <div className="group flex flex-col border-t-4 border-blue-700 pt-4 pb-2">
-                <span className="text-sm font-medium text-blue-700">
-                  {step.name}
-                </span>
-              </div>
-            ) : step.id === currentStep ? (
+    <div className="w-full">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex items-center flex-1">
+            {/* Step Circle */}
+            <div className="flex items-center">
               <div
-                className="flex flex-col border-t-4 border-blue-700 pt-4 pb-2"
-                aria-current="step"
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 ${
+                  step.id === currentStep
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg scale-110"
+                    : step.id < currentStep
+                      ? "bg-green-500 text-white shadow-md"
+                      : "bg-gray-200 text-gray-500"
+                }`}
               >
-                <span className="text-sm font-medium text-blue-700">
-                  {step.name}
-                </span>
+                {step.id < currentStep ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  step.id
+                )}
               </div>
-            ) : (
-              <div className="group flex flex-col border-t-4 border-gray-200 pt-4 pb-2">
-                <span className="text-sm font-medium text-gray-500">
+              <div className="ml-3 hidden sm:block">
+                <p
+                  className={`text-sm font-medium transition-colors duration-300 ${
+                    step.id === currentStep
+                      ? "text-blue-600"
+                      : step.id < currentStep
+                        ? "text-green-600"
+                        : "text-gray-500"
+                  }`}
+                >
                   {step.name}
-                </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Connector Line */}
+            {index < steps.length - 1 && (
+              <div className="flex-1 mx-4">
+                <div
+                  className={`h-1 rounded-full transition-all duration-300 ${
+                    step.id < currentStep ? "bg-green-500" : "bg-gray-200"
+                  }`}
+                />
               </div>
             )}
-          </li>
+          </div>
         ))}
-      </ol>
-    </nav>
-  );
+      </div>
+
+      {/* Mobile Step Names */}
+      <div className="sm:hidden mt-4 text-center">
+        <p className="text-sm font-medium text-blue-600">{steps.find((s) => s.id === currentStep)?.name}</p>
+      </div>
+    </div>
+  )
 }
