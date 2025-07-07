@@ -466,7 +466,6 @@ const AdminCity = () => {
                       </label>
                       <input
                         type="text"
-                        required
                         placeholder="Enter City ID"
                         onChange={(e) =>
                           handleFormData("cityID", e.target.value)
