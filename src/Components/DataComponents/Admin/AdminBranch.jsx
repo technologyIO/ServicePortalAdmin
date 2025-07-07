@@ -71,7 +71,7 @@ const AdminBranch = () => {
           `${process.env.REACT_APP_BASE_URL}/collections/allstate`
         );
 
-        setState(res.data);  
+        setState(res.data);
       } catch (err) {
         console.error(err);
       }
@@ -175,9 +175,18 @@ const AdminBranch = () => {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/branch`, currentData)
       .then((res) => {
         getAllData();
+        Swal.fire("Success!", "Branch added successfully.", "success");
       })
       .catch((error) => {
         console.log(error);
+        Swal.fire({
+          icon: "error",
+          title: "Error!",
+          text:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Something went wrong",
+        });
       });
   };
 

@@ -144,7 +144,14 @@ const AdminCity = () => {
       })
       .catch((error) => {
         console.log(error.response?.data?.message || error.message);
-        Swal.fire(error.response?.data?.message || error.message);
+        Swal.fire({
+          icon: "error",
+          title: "Error!",
+          text:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Something went wrong",
+        });
       });
   };
 
