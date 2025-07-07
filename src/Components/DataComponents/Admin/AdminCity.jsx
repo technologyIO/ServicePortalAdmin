@@ -203,7 +203,11 @@ const AdminCity = () => {
 
             <div className="flex gap-3 ">
               <button
-                onClick={handleCloseModal}
+                onClick={() => {
+                  setCurrentData({}); // Reset current data
+                  setEditModal(false); // Set to create mode
+                  setShowModal(true); // Open modal
+                }}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
