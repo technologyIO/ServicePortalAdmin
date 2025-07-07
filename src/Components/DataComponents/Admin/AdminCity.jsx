@@ -144,7 +144,7 @@ const AdminCity = () => {
       })
       .catch((error) => {
         console.log(error.response?.data?.message || error.message);
-        Swal.fire("Error!", "Failed to add city.", "error");
+        Swal.fire(error.response?.data?.message || error.message);
       });
   };
 
