@@ -18,6 +18,7 @@ function CmcNcmcDiscount() {
   const [currentData, setCurrentData] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [filteredData, setFilteredData] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
   const limit = 10;
@@ -109,22 +110,20 @@ function CmcNcmcDiscount() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.discount?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setLoader(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const getData = () => {
@@ -137,6 +136,7 @@ function CmcNcmcDiscount() {
       .then((res) => {
         setLoader(false);
         setData(res.data);
+        setFilteredData(res.data);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -173,7 +173,10 @@ function CmcNcmcDiscount() {
 
   const handleEditCountry = (id) => {
     axios
-      .put(`${process.env.REACT_APP_BASE_URL}/admin/discount/${id}`, currentData)
+      .put(
+        `${process.env.REACT_APP_BASE_URL}/admin/discount/${id}`,
+        currentData
+      )
       .then((res) => {
         getData();
       })
@@ -268,9 +271,9 @@ function CmcNcmcDiscount() {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Discount
+                    Discount
                   </th>
-                  
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
@@ -286,7 +289,7 @@ function CmcNcmcDiscount() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
+                {filteredData?.map((item, index) => (
                   <tr
                     key={item?._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"
@@ -311,7 +314,7 @@ function CmcNcmcDiscount() {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.discount}
                     </td>
-              
+
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
@@ -483,17 +486,18 @@ function CmcNcmcDiscount() {
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                      Discount
+                        Discount
                       </label>
                       <input
                         type="text"
-                        onChange={(e) => handleFormData("discount", e.target.value)}
+                        onChange={(e) =>
+                          handleFormData("discount", e.target.value)
+                        }
                         id="discount"
                         value={currentData?.discount}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                     
 
                     <div>
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">

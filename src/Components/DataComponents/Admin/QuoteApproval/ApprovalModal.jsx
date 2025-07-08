@@ -38,6 +38,11 @@ const ApprovalModal = ({
   const [rejectLoading, setRejectLoading] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   //   const [proposal, setProposal] = useState(initialProposal);
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.details?.role?.roleName;
+  console.log(currentUserRole, "currentUserRole");
+
   const handleApprove = async (approvalType, itemId = null) => {
     if (!userId) {
       Swal.fire("Error!", "User ID not found. Please login again.", "error");
@@ -312,60 +317,50 @@ const ApprovalModal = ({
                       </td>
                       <td>
                         <Box display="flex" gap={1} flexDirection="column">
-                          {!item.RSHApproval?.approved && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove("RSH", item._id)}
-                              disabled={approvalLoading}
-                              loading={approvalLoading}
-                              fullWidth
-                            >
-                              Approve RSH
-                            </Button>
-                          )}
-                          {!item.NSHApproval?.approved && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleApprove("NSH", item._id)}
-                              disabled={approvalLoading}
-                              loading={approvalLoading}
-                              fullWidth
-                            >
-                              Approve NSH
-                            </Button>
-                          )}
+                          {currentUserRole === "RSH" &&
+                            !item.RSHApproval?.approved && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove("RSH", item._id)}
+                                disabled={approvalLoading}
+                                loading={approvalLoading}
+                                fullWidth
+                              >
+                                Approve RSH
+                              </Button>
+                            )}
+
+                          {currentUserRole === "NSH" &&
+                            !item.NSHApproval?.approved && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleApprove("NSH", item._id)}
+                                disabled={approvalLoading}
+                                loading={approvalLoading}
+                                fullWidth
+                              >
+                                Approve NSH
+                              </Button>
+                            )}
                         </Box>
                       </td>
                       <td>
-                        <div className="flex items-center gap-3 ">
+                        <div className="flex items-center gap-3">
                           <input
                             size="sm"
                             placeholder="Reason"
-                            className="w-[200px] h-8 p-2 bg-gray-100 rounded "
+                            className="w-[200px] h-8 p-2 bg-gray-100 rounded"
                             value={item.rejectReason || ""}
                             onChange={(e) =>
                               handleRejectReasonChange(item._id, e.target.value)
                             }
-                            sx={{ mb: 1 }}
                           />
-                          <Button
-                            size="sm"
-                            color="danger"
-                            onClick={() => handleReject("RSH", item._id)}
-                            disabled={
-                              !item.rejectReason?.trim() || rejectLoading
-                            }
-                            loading={rejectLoading}
-                            fullWidth
-                            className="text-nowrap"
-                          >
-                            Reject (RSH)
-                          </Button>
-                          {proposal?.discountPercentage > 10 && (
+
+                          {currentUserRole === "RSH" && (
                             <Button
                               size="sm"
                               color="danger"
-                              onClick={() => handleReject("NSH", item._id)}
+                              onClick={() => handleReject("RSH", item._id)}
                               disabled={
                                 !item.rejectReason?.trim() || rejectLoading
                               }
@@ -373,9 +368,26 @@ const ApprovalModal = ({
                               fullWidth
                               className="text-nowrap"
                             >
-                              Reject (NSH)
+                              Reject (RSH)
                             </Button>
                           )}
+
+                          {currentUserRole === "NSH" &&
+                            proposal?.discountPercentage > 10 && (
+                              <Button
+                                size="sm"
+                                color="danger"
+                                onClick={() => handleReject("NSH", item._id)}
+                                disabled={
+                                  !item.rejectReason?.trim() || rejectLoading
+                                }
+                                loading={rejectLoading}
+                                fullWidth
+                                className="text-nowrap"
+                              >
+                                Reject (NSH)
+                              </Button>
+                            )}
                         </div>
                       </td>
                     </tr>

@@ -309,9 +309,9 @@ const UserData = () => {
                   <th className="px-4 text-left font-medium">Status</th>
                   <th className="px-4 text-left font-medium">Employee ID</th>
                   <th className="px-4 text-left font-medium">Geo</th>
-                  <th className="px-4 text-left font-medium">State</th>
-                  <th className="px-4 text-left font-medium">Country</th>
                   <th className="px-4 text-left font-medium">Region</th>
+                  <th className="px-4 text-left font-medium">Country</th>
+                  <th className="px-4 text-left font-medium">State</th>
                   <th className="px-4 text-left font-medium">City</th>
                   <th className="px-4 text-left font-medium">Department</th>
 

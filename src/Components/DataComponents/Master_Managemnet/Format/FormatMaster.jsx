@@ -107,7 +107,7 @@ function FormatMaster() {
     try {
       // Assuming your search endpoint for FormatMaster records exists at this URL
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/master/format/search?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/master/searchformat?q=${searchQuery}`
       );
       setData(response.data);
       setLoader(false);

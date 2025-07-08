@@ -2,16 +2,14 @@ import React, { useEffect, useState } from "react";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import { Box, Button, Divider, Stack, Typography } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
+import moment from "moment";
 import ApprovalModal from "./ApprovalModal";
 import ViewModal from "./ViewModal";
-import ProposalsTable from "./ProposalsTable";
-import { getStatusChip } from "./utils";
 
 const api = axios.create({
-  baseURL:process.env.REACT_APP_BASE_URL,
+  baseURL: process.env.REACT_APP_BASE_URL,
   headers: {
     "Content-Type": "application/json",
     Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -22,6 +20,7 @@ function QuoteApproval() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [proposals, setProposals] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [displayProposals, setDisplayProposals] = useState([]);
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [selectedRevision, setSelectedRevision] = useState(null);
@@ -45,7 +44,7 @@ function QuoteApproval() {
       }
     }
   }, []);
-  console.log("userId", userId);
+
   const fetchProposals = async () => {
     setLoading(true);
     try {
@@ -54,6 +53,7 @@ function QuoteApproval() {
         (proposal) => proposal.discountPercentage > 5
       );
       setProposals(filteredProposals);
+      setFilteredData(filteredProposals);
       setDisplayProposals(processProposals(filteredProposals));
       setTotalPages(Math.ceil(filteredProposals.length / limit));
     } catch (error) {
@@ -104,30 +104,22 @@ function QuoteApproval() {
     fetchProposals();
   }, [page]);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      fetchProposals();
+  const handleSearch = () => {
+    if (!searchQuery) {
+      setFilteredData(proposals);
       return;
     }
 
-    setLoading(true);
-    try {
-      const response = await api.get(`/phone/proposal/search?q=${searchQuery}`);
-      const filteredProposals = response.data.filter(
-        (proposal) => proposal.discountPercentage > 5
+    const filtered = proposals.filter((item) => {
+      return (
+        item.cnoteNumber?.toString().includes(searchQuery) ||
+        item.proposalNumber?.toString().includes(searchQuery) ||
+        item.customer.customername?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setProposals(filteredProposals);
-      setDisplayProposals(processProposals(filteredProposals));
-    } catch (error) {
-      console.error("Search error:", error);
-      Swal.fire(
-        "Error!",
-        error.response?.data?.message || "Search failed",
-        "error"
-      );
-    } finally {
-      setLoading(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const handleOpenApprovalModal = (proposal) => {
@@ -164,90 +156,236 @@ function QuoteApproval() {
 
   if (loading) {
     return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        height="60vh"
-      >
+      <div className="flex items-center justify-center h-[60vh]">
         <span className="CustomLoader"></span>
-      </Box>
+      </div>
     );
   }
 
   return (
-    <Box>
-      {/* Search Bar */}
-      <div className="flex gap-3 items-center">
-        <FormControl sx={{ flex: 1 }}>
-          <Input
-            placeholder="Search proposals"
-            startDecorator={<SearchIcon />}
-            value={searchQuery}
-            className="h-8"
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-          />
-        </FormControl>
-        <button
-          className="text-white col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2"
-          onClick={handleSearch}
-        >
-          Search
-        </button>
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-3 justify-center">
+          <FormControl sx={{ flex: 1 }} size="sm">
+            <Input
+              size="sm"
+              placeholder="Search"
+              startDecorator={<SearchIcon />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </FormControl>
+          <button
+            onClick={handleSearch}
+            type="button"
+            className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+          >
+            Search
+          </button>
+        </div>
+
+        <div className="flex gap-3 ">
+          <button
+            type="button"
+            className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+          >
+            Filter
+          </button>
+        </div>
       </div>
 
-      {/* Proposals Table */}
-      <ProposalsTable
-        proposals={displayProposals}
-        onView={handleOpenViewModal}
-        onEdit={handleOpenApprovalModal}
-        getStatusChip={getStatusChip}
-      />
+      <div className="relative w-full overflow-x-auto">
+        <table className="w-full border min-w-max caption-bottom text-sm">
+          <thead className="[&amp;_tr]:border-b bg-blue-700 ">
+            <tr className="border-b transition-colors text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <th scope="col" className="p-4">
+                <div className="flex items-center">
+                  <input
+                    id="checkbox-all-search"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                  />
+                  <label htmlFor="checkbox-all-search" className="sr-only">
+                    checkbox
+                  </label>
+                </div>
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Proposal #
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Revision
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Customer
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Discount
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Final Amount
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Status
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Created Date
+              </th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="[&amp;_tr:last-child]:border-0">
+            {filteredData
+              .filter((proposal) => proposal.discountPercentage > 5)
+              .sort((a, b) => {
+                const dateA = new Date(
+                  a.revisionData?.revisionDate || a.createdAt
+                );
+                const dateB = new Date(
+                  b.revisionData?.revisionDate || b.createdAt
+                );
+                return dateB - dateA;
+              })
+              .map((proposal) => (
+                <tr
+                  key={`${proposal._id}-${
+                    proposal.revisionData?.revisionNumber || 0
+                  }`}
+                  className="border-b transition-colors data-[state=selected]:bg-muted"
+                >
+                  <th scope="col" className="p-4">
+                    <div className="flex items-center">
+                      <input
+                        id={`checkbox-${proposal._id}`}
+                        type="checkbox"
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor={`checkbox-${proposal._id}`}
+                        className="sr-only"
+                      >
+                        checkbox
+                      </label>
+                    </div>
+                  </th>
+                  <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                    {proposal.proposalNumber}
+                  </td>
+                  <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
+                    {proposal.revisionData?.revisionNumber > 0 ? (
+                      <>
+                        Rev. {proposal.revisionData.revisionNumber}
+                        {proposal.isCurrentRevision && (
+                          <span className="ml-2 px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
+                            Current
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      "Original"
+                    )}
+                  </td>
+                  <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
+                    {proposal.customer?.customername}
+                  </td>
+                  <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
+                    {proposal.discountPercentage}%
+                  </td>
+                  <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
+                    ₹{proposal.finalAmount?.toFixed(2)}
+                  </td>
+                  <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 rounded text-xs ${
+                        proposal.status === "approved"
+                          ? "bg-green-100 text-green-800"
+                          : proposal.status === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {proposal.status}
+                    </span>
+                  </td>
+                  <td className="p-4 align-middle whitespace-nowrap">
+                    {moment(
+                      proposal.revisionData?.revisionDate || proposal.createdAt
+                    ).format("MMM D, YYYY")}
+                  </td>
+                  <td className="p-4 align-middle whitespace-nowrap">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => handleOpenViewModal(proposal)}
+                        className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                      >
+                        View
+                      </button>
+                      {proposal.isCurrentRevision && (
+                        <button
+                          onClick={() => handleOpenApprovalModal(proposal)}
+                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Pagination */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mt={2}
+      <div
+        className="Pagination-laptopUp"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          padding: "16px",
+        }}
       >
-        <Button
-          variant="outlined"
+        <button
+          className={`border rounded p-1 ${
+            page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+          } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
           onClick={() => page > 1 && setPage(page - 1)}
           disabled={page === 1}
         >
           Previous
-        </Button>
-
-        <Box display="flex" gap={1}>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(
-              (p) =>
-                p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)
-            )
-            .map((p) => (
-              <button
-                className="text-white col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2"
-                key={p}
-                variant={p === page ? "solid" : "outlined"}
-                onClick={() => setPage(p)}
-              >
-                {p}
-              </button>
+        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {Array.from({ length: totalPages }, (_, index) => index + 1)
+            .filter((p) => {
+              return (
+                p === 1 || p === totalPages || (p >= page - 3 && p <= page + 3)
+              );
+            })
+            .map((p, i, array) => (
+              <React.Fragment key={p}>
+                {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                <button
+                  className={`border px-3 rounded ${
+                    p === page ? "bg-blue-700 text-white" : ""
+                  }`}
+                  onClick={() => setPage(p)}
+                  disabled={p === page}
+                >
+                  {p}
+                </button>
+              </React.Fragment>
             ))}
-        </Box>
-
-        <Button
-          variant="outlined"
+        </div>
+        <button
+          className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
           onClick={() => page < totalPages && setPage(page + 1)}
           disabled={page === totalPages}
         >
           Next
-        </Button>
-      </Box>
+        </button>
+      </div>
 
-      {/* Modals */}
       <ApprovalModal
         open={showApprovalModal}
         onClose={handleCloseModal}
@@ -263,7 +401,7 @@ function QuoteApproval() {
         proposal={selectedProposal}
         revision={selectedRevision}
       />
-    </Box>
+    </>
   );
 }
 

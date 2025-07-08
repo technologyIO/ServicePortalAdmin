@@ -21,6 +21,7 @@ function CNoteDelete() {
   const [state, setState] = useState([]);
   const limit = 10;
   const [loader, setLoader] = useState(true);
+  const [filteredData, setFilteredData] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -50,23 +51,22 @@ function CNoteDelete() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
-      getAllData();
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchCity?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.cnoteNumber?.toString().includes(searchQuery) ||
+        item.proposalNumber?.toString().includes(searchQuery) ||
+        item.customer.customername?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching cities:", error);
-      setLoader(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const getAllData = useCallback(() => {
@@ -78,6 +78,7 @@ function CNoteDelete() {
       .then((res) => {
         setLoader(false);
         setData(res.data);
+        setFilteredData(res.data);
         setTotalPages(res.data.totalpages);
       })
       .catch((error) => {
@@ -179,7 +180,7 @@ function CNoteDelete() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((i, index) => (
+                {filteredData?.map((i, index) => (
                   <tr
                     key={i._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"

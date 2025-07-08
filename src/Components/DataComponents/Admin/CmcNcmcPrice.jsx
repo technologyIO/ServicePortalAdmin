@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-
 import SearchIcon from "@mui/icons-material/Search";
-
 import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -16,6 +12,7 @@ function CmcNcmcPrice() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [currentData, setCurrentData] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -45,20 +42,16 @@ function CmcNcmcPrice() {
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(filteredData?.map((country) => country._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
 
   const handleRowSelect = (countryId) => {
     if (selectedRows.includes(countryId)) {
-      // Deselect the row
       setSelectedRows(selectedRows.filter((id) => id !== countryId));
     } else {
-      // Select the row
       setSelectedRows([...selectedRows, countryId]);
     }
   };
@@ -110,22 +103,26 @@ function CmcNcmcPrice() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.partNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.product?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.cmcPriceWithGst?.toString().includes(searchQuery) ||
+        item.ncmcPriceWithGst?.toString().includes(searchQuery) ||
+        item.serviceTax?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.remarks?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setLoader(false);
-    }
+    });
+    
+    setFilteredData(filtered);
   };
 
   const getData = () => {
@@ -138,6 +135,7 @@ function CmcNcmcPrice() {
       .then((res) => {
         setLoader(false);
         setData(res.data.records);
+        setFilteredData(res.data.records);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -145,6 +143,7 @@ function CmcNcmcPrice() {
         console.log(error);
       });
   };
+
   useEffect(() => {
     getData();
   }, []);
@@ -193,6 +192,7 @@ function CmcNcmcPrice() {
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
   };
+
   return (
     <>
       {loader ? (
@@ -210,6 +210,11 @@ function CmcNcmcPrice() {
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
                 />
               </FormControl>
               <button
@@ -307,7 +312,7 @@ function CmcNcmcPrice() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
+                {filteredData?.map((item, index) => (
                   <tr
                     key={item?._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"
@@ -437,7 +442,6 @@ function CmcNcmcPrice() {
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
                   return (
                     p === 1 ||
                     p === totalPages ||
@@ -446,7 +450,6 @@ function CmcNcmcPrice() {
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
@@ -470,8 +473,6 @@ function CmcNcmcPrice() {
           </div>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
               <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
                 <button
                   onClick={closeModal}

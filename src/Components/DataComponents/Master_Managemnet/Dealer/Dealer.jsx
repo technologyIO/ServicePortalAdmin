@@ -288,6 +288,7 @@ function Dealer() {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/collections/searchdealer?q=${searchQuery}`
       );
+
       setData(response.data);
       setLoader(false);
     } catch (error) {

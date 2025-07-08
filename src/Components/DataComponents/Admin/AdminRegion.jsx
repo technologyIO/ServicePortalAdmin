@@ -103,7 +103,7 @@ function AdminRegion() {
     setLoader(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/api/searchRegion?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchregion?q=${searchQuery}`
       );
       setData(response.data);
       setLoader(false);

@@ -21,6 +21,7 @@ function CmcNcmcGst() {
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
   const limit = 10;
+  const [filteredData, setFilteredData] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
@@ -109,22 +110,21 @@ function CmcNcmcGst() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.gst?.toString().includes(searchQuery) ||
+        item.role?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setLoader(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const getData = () => {
@@ -137,6 +137,7 @@ function CmcNcmcGst() {
       .then((res) => {
         setLoader(false);
         setData(res.data.records);
+        setFilteredData(res.data.records);
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -289,7 +290,7 @@ function CmcNcmcGst() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
+                {filteredData?.map((item, index) => (
                   <tr
                     key={item?._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"

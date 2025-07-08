@@ -27,7 +27,7 @@ function CmcNcmcWYears() {
   const closeModal = () => setIsOpen(false);
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
-
+  const [filteredData, setFilteredData] = useState([]);
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -44,10 +44,8 @@ function CmcNcmcWYears() {
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(filteredData?.map((country) => country._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
@@ -95,9 +93,7 @@ function CmcNcmcWYears() {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(
-            `${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear/${id}`
-          )
+          .delete(`${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear/${id}`)
           .then((res) => {
             Swal.fire("Deleted!", "Countrys has been deleted.", "success");
           })
@@ -111,22 +107,20 @@ function CmcNcmcWYears() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.year?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setLoader(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const getData = () => {
@@ -138,8 +132,9 @@ function CmcNcmcWYears() {
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.data);
-        setTotalPages(res.data.totalPages);
+        setData(res.data.data); // Assuming the response has data array
+        setFilteredData(res.data.data); // Set filteredData to the same as data initially
+        setTotalPages(res.data.totalPages || 1); // Fallback to 1 if totalPages is undefined
       })
       .catch((error) => {
         setLoader(false);
@@ -164,10 +159,7 @@ function CmcNcmcWYears() {
 
   const handleCreate = () => {
     axios
-      .post(
-        `${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear`,
-        currentData
-      )
+      .post(`${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear`, currentData)
       .then((res) => {
         getData();
       })
@@ -214,6 +206,11 @@ function CmcNcmcWYears() {
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
                 />
               </FormControl>
               <button
@@ -224,7 +221,7 @@ function CmcNcmcWYears() {
                 Search
               </button>
             </div>
-            <div className="flex gap-3">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={openModal}
                 type="button"
@@ -275,8 +272,7 @@ function CmcNcmcWYears() {
                       </label>
                     </div>
                   </th>
-                  
-                  
+
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Years
                   </th>
@@ -295,7 +291,7 @@ function CmcNcmcWYears() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
+                {filteredData?.map((item, index) => (
                   <tr
                     key={item?._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"
@@ -317,7 +313,7 @@ function CmcNcmcWYears() {
                         </label>
                       </div>
                     </th>
-                   
+
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.year}
                     </td>
@@ -491,16 +487,13 @@ function CmcNcmcWYears() {
               >
                 <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                   
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Years
                       </label>
                       <input
                         type="text"
-                        onChange={(e) =>
-                          handleFormData("year", e.target.value)
-                        }
+                        onChange={(e) => handleFormData("year", e.target.value)}
                         id="year"
                         value={currentData?.year}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "

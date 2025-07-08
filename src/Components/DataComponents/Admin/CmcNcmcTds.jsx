@@ -17,6 +17,7 @@ function CmcNcmcTds() {
   const [data, setData] = useState([]);
   const [currentData, setCurrentData] = useState({});
   const [page, setPage] = useState(1);
+  const [filteredData, setFilteredData] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
@@ -109,22 +110,21 @@ function CmcNcmcTds() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery) {
+      setFilteredData(data);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+    const filtered = data.filter((item) => {
+      return (
+        item.tds?.toString().includes(searchQuery) ||
+        item.role?.toString().includes(searchQuery) ||
+        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setData(response.data);
-      setLoader(false);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      setLoader(false);
-    }
+    });
+
+    setFilteredData(filtered);
   };
 
   const getData = () => {
@@ -137,6 +137,8 @@ function CmcNcmcTds() {
       .then((res) => {
         setLoader(false);
         setData(res.data.records);
+        setFilteredData(res.data.records);
+
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -291,7 +293,7 @@ function CmcNcmcTds() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
+                {filteredData?.map((item, index) => (
                   <tr
                     key={item?._id}
                     className="border-b transition-colors  data-[state=selected]:bg-muted"
@@ -319,8 +321,6 @@ function CmcNcmcTds() {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.role}
                     </td>
-                     
-                 
 
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span

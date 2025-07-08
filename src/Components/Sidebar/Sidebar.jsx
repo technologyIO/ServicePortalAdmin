@@ -71,6 +71,7 @@ export default function Sidebar({ onSidebarItemClick }) {
   const userName = user?.details?.firstname || "Default Name"; // First name fallback
   const userId = user?.details?.employeeid || "Default ID"; // Corrected key for employee ID
   const userRole = user?.details?.role?.roleName || "User"; // Ensure role is fetched correctly
+  const department = user?.details?.department || "None"; // Ensure role is fetched correctly
 
   const handleLogout = () => {
     localStorage.removeItem("user"); // Clear user data
@@ -1201,33 +1202,51 @@ export default function Sidebar({ onSidebarItemClick }) {
             </Toggler>
           </ListItem>
         </List> */}
-        {/* <div className="flex my-3 border mx-1 bg-gray-100 gap-1 items-center rounded pl-1 py-1">
+        <div className="flex  mx-1 bg-gradient-to-r from-slate-50 to-gray-50 gap-3 items-center rounded-xl pl-3 py-3 border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300/60">
           <Avatar
             variant="outlined"
             size="sm"
-            src={avatarImage}  
+            src={`${process.env.REACT_APP_BASE_URL || ""}${avatarImage}`}
+            className="ring-2 ring-white shadow-sm"
           />
+
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography level="title-sm" className="text-xs font-bold">
-              {userName}
-            </Typography>
-            <div className="flex gap-2 mt-1">
-              <Typography level="body-xs" className="text-xs font-bold">
-                Id - {userId}
+            <div className="flex items-center justify-between pr-2">
+              <Typography
+                level="title-sm"
+                className="text-sm font-semibold text-gray-800 mb-1"
+              >
+                {userName}
               </Typography>
               <Typography
                 level="body-xs"
-                className="text-xs border px-1 bg-yellow-500 rounded-[3px] text-black font-bold"
+                className="text-xs text-gray-600 font-medium"
               >
-                {userRole}
+                Role ID: {userId}
               </Typography>
             </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex gap-1.5">
+                <Typography
+                  level="body-xs"
+                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full text-black font-semibold shadow-sm"
+                >
+                  {userRole}
+                </Typography>
+                <Typography
+                  level="body-xs"
+                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full text-white font-medium shadow-sm"
+                >
+                  {department}
+                </Typography>
+              </div>
+            </div>
           </Box>
-        </div> */}
+        </div>
         <div className="mx-1">
           <IconButton
             size="sm"
-            className="flex gap-5 mb-3 h-10 text-lg items-center mt-5 justify-between px-3 bg-gray-200 w-full"
+            className="flex gap-5 mb-3 h-10 text-lg items-center mt-2 justify-between px-3 bg-gray-200 w-full"
             variant="plain"
             color="neutral"
             onClick={() => setIsModalOpen(true)} // Open the modal

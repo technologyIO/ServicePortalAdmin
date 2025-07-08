@@ -113,6 +113,7 @@ function Product() {
 
   const handleSearch = async () => {
     if (!searchQuery) {
+      getData(); // Reset to normal data if search is empty
       return;
     }
 
@@ -121,10 +122,11 @@ function Product() {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/collections/searchProduct?q=${searchQuery}`
       );
-      setData(response.data);
+      // Make sure to set the data properly
+      setData(response.data); // or response.data.product depending on your API response
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching products:", error);
       setLoader(false);
     }
   };
@@ -134,11 +136,11 @@ function Product() {
     setSearchQuery("");
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/product?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/productbypage?page=${page}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data);
+        setData(res.data.product); // Change this line
         setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
@@ -438,7 +440,7 @@ function Product() {
           >
             <button
               className={`border rounded p-1 ${
-                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+                page === 1 ? "cursor-not-allowed opacity-50" : "cursor-pointer"
               } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
               onClick={handlePreviousPage}
               disabled={page === 1}
@@ -448,23 +450,28 @@ function Product() {
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
+                  // Show first 3 pages, last 3 pages, and pages around current page
                   return (
                     p === 1 ||
+                    p === 2 ||
+                    p === 3 ||
                     p === totalPages ||
-                    (p >= page - 3 && p <= page + 3)
+                    p === totalPages - 1 ||
+                    p === totalPages - 2 ||
+                    Math.abs(p - page) <= 1
                   );
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
-                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                    {/* Add ellipsis when there's a gap */}
+                    {i > 0 && p - 1 !== array[i - 1] && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
-                        p === page ? "bg-blue-700 text-white" : ""
+                        p === page
+                          ? "bg-blue-700 text-white"
+                          : "hover:bg-gray-200"
                       }`}
                       onClick={() => setPage(p)}
-                      disabled={p === page}
                     >
                       {p}
                     </button>
@@ -472,7 +479,11 @@ function Product() {
                 ))}
             </div>
             <button
-              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              className={`border rounded p-1 ${
+                page === totalPages
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer"
+              } hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold`}
               onClick={handleNextPage}
               disabled={page === totalPages}
             >
