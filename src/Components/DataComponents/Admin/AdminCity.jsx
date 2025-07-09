@@ -13,6 +13,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 const AdminCity = () => {
   const [showModal, setShowModal] = useState(false);
@@ -140,18 +141,15 @@ const AdminCity = () => {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/city`, currentData)
       .then(() => {
         getAllData();
-        Swal.fire("Success!", "City added successfully.", "success");
+        toast.success("City added successfully!");
       })
       .catch((error) => {
-        console.log(error.response?.data?.message || error.message);
-        Swal.fire({
-          icon: "error",
-          title: "Error!",
-          text:
-            error?.response?.data?.message ||
-            error?.message ||
-            "Something went wrong",
-        });
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to add city.";
+        console.error(errorMsg);
+        toast.error(errorMsg);
       });
   };
 
@@ -161,14 +159,18 @@ const AdminCity = () => {
         `${process.env.REACT_APP_BASE_URL}/collections/city/${id}`,
         currentData
       )
-      .then((res) => {
+      .then(() => {
         getAllData();
         handleCloseModal();
-        Swal.fire("Success!", "City updated successfully.", "success");
+        toast.success("City updated successfully!");
       })
       .catch((error) => {
-        console.log(error);
-        Swal.fire("Error!", "Failed to update city.", "error");
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Failed to update city.";
+        console.error(errorMsg);
+        toast.error(errorMsg);
       });
   };
 

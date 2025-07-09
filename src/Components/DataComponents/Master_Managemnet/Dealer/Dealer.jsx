@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import FormControl from "@mui/joy/FormControl";
 
@@ -40,11 +40,24 @@ function Dealer() {
   const [country, setCountry] = useState([]);
   const [cityList, setCityList] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const [selectedPersons, setSelectedPersons] = useState([]);
   useEffect(() => {
     fetchUsers();
   }, []);
+  const [selectedPersons, setSelectedPersons] = useState([]);
+  const [personSearchQuery, setpersonSearchQuery] = useState("");
 
+  // Filter users based on search
+  const filteredUsers = useMemo(() => {
+    if (!personSearchQuery.trim()) return allUsers;
+    const query = personSearchQuery.toLowerCase();
+    return allUsers.filter((user) => {
+      const fullName = `${user.firstname} ${user.lastname}`.toLowerCase();
+      return (
+        fullName.includes(query) ||
+        user.employeeid.toLowerCase().includes(query)
+      );
+    });
+  }, [allUsers, personSearchQuery]);
   const fetchUsers = async () => {
     try {
       const res = await axios.get(
@@ -122,27 +135,21 @@ function Dealer() {
     getState();
   }, []);
   const handlePersonToggle = (user) => {
-    const exists = selectedPersons.some(
-      (p) => p.employeeid === user.employeeid
-    );
+    setSelectedPersons((prev) => {
+      const isSelected = prev.some((p) => p.employeeid === user.employeeid);
+      const updatedPersons = isSelected
+        ? prev.filter((p) => p.employeeid !== user.employeeid)
+        : [
+            ...prev,
+            {
+              name: `${user.firstname} ${user.lastname}`,
+              employeeid: user.employeeid,
+            },
+          ];
 
-    let updatedPersons;
-    if (exists) {
-      updatedPersons = selectedPersons.filter(
-        (p) => p.employeeid !== user.employeeid
-      );
-    } else {
-      updatedPersons = [
-        ...selectedPersons,
-        {
-          name: `${user.firstname} ${user.lastname}`,
-          employeeid: user.employeeid,
-        },
-      ];
-    }
-
-    setSelectedPersons(updatedPersons);
-    handleFormData("personresponsible", updatedPersons);
+      handleFormData("personresponsible", updatedPersons);
+      return updatedPersons;
+    });
   };
 
   //Get All country
@@ -745,34 +752,63 @@ function Dealer() {
                         }
                       />
                     </div>
-                    <div className="relative w-full mb-5 group">
+                    <div className="w-full mb-5">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
                         Person Responsible
                       </label>
 
-                      <div className="border rounded p-2 max-h-[200px] overflow-y-auto bg-white shadow">
-                        {allUsers.map((user) => {
-                          const fullName = `${user.firstname} ${user.lastname}`;
-                          const isChecked = selectedPersons.some(
-                            (p) => p.employeeid === user.employeeid
-                          );
+                      {/* Search Input - Changed from searchQuery to personSearchQuery */}
+                      <input
+                        type="text"
+                        placeholder="Search by name or ID..."
+                        value={personSearchQuery}
+                        onChange={(e) => setpersonSearchQuery(e.target.value)}
+                        className="w-full p-2 mb-3 border h-10 border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
 
-                          return (
-                            <div
-                              key={user._id}
-                              className="flex items-center gap-2 mb-2"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handlePersonToggle(user)}
-                              />
-                              <span className="text-sm">
-                                {fullName} ({user.employeeid})
-                              </span>
-                            </div>
-                          );
-                        })}
+                      {/* Selected Count */}
+                      {selectedPersons.length > 0 && (
+                        <div className="mb-2 text-xs text-blue-600">
+                          {selectedPersons.length} person(s) selected
+                        </div>
+                      )}
+
+                      {/* Users List */}
+                      <div className="border border-gray-300 rounded-md p-2 max-h-48 overflow-y-auto bg-white">
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map((user) => {
+                            const fullName = `${user.firstname} ${user.lastname}`;
+                            const isChecked = selectedPersons.some(
+                              (p) => p.employeeid === user.employeeid
+                            );
+
+                            return (
+                              <div
+                                key={user._id}
+                                className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handlePersonToggle(user)}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                />
+                                <span className="text-sm text-gray-700">
+                                  {fullName}{" "}
+                                  <span className="text-gray-500">
+                                    ({user.employeeid})
+                                  </span>
+                                </span>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 text-sm">
+                            {personSearchQuery
+                              ? "No users found"
+                              : "No users available"}
+                          </div>
+                        )}
                       </div>
                     </div>
 

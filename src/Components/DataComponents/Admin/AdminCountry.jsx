@@ -17,6 +17,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 const AdminCountry = () => {
   const [showModal, setShowModal] = useState(false);
@@ -167,7 +168,7 @@ const AdminCountry = () => {
   const handleAddCountry = () => {
     const countryData = {
       ...currentCountry,
-      geo: selectedGeo?.geoName || "", // ✅ Send geo name instead of _id
+      geo: selectedGeo?.geoName || "",
     };
 
     axios
@@ -177,16 +178,22 @@ const AdminCountry = () => {
       )
       .then((res) => {
         getAllCountries();
+        toast.success("Country added successfully");
       })
       .catch((error) => {
-        console.log(error);
+        if (error.response?.status === 409) {
+          toast.error("Country name already exists");
+        } else {
+          toast.error("Failed to add country");
+        }
+        console.error(error);
       });
   };
 
   const handleEditCountry = (id) => {
     const countryData = {
       ...currentCountry,
-      geo: selectedGeo?.geoName || "", // ✅ Send geo name instead of _id
+      geo: selectedGeo?.geoName || "",
     };
 
     axios
@@ -196,9 +203,15 @@ const AdminCountry = () => {
       )
       .then((res) => {
         getAllCountries();
+        toast.success("Country updated successfully");
       })
       .catch((error) => {
-        console.log(error);
+        if (error.response?.status === 409) {
+          toast.error("Country name already exists");
+        } else {
+          toast.error("Failed to update country");
+        }
+        console.error(error);
       });
   };
 

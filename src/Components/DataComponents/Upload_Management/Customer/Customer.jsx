@@ -10,8 +10,8 @@ import { Modal, ModalDialog, Option, Select, TextField } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
-import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import { Autocomplete } from "@mui/joy";
+import CustomerBulk from "./CustomerBulk";
 
 function Customer() {
   const [showModal, setShowModal] = useState(false);
@@ -937,15 +937,8 @@ function Customer() {
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}
-
-              <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <BulkModal />
+              <div className=" ">
+                <CustomerBulk isOpen={isOpen} onClose={closeModal} />
               </div>
             </div>
           )}

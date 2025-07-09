@@ -13,6 +13,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 function AdminRegion() {
   const [showModal, setShowModal] = useState(false);
@@ -155,11 +156,13 @@ function AdminRegion() {
       )
       .then(() => {
         getAllData();
-        Swal.fire("Success!", "Region added successfully.", "success");
+        toast.success("Region added successfully!");
       })
       .catch((error) => {
-        console.log(error.response?.data?.message || error.message);
-        Swal.fire("Error!", "Failed to add region.", "error");
+        const errorMsg =
+          error.response?.data?.message || "Failed to add region.";
+        console.error(errorMsg);
+        toast.error(errorMsg);
       });
   };
 
@@ -169,14 +172,16 @@ function AdminRegion() {
         `${process.env.REACT_APP_BASE_URL}/collections/api/region/${id}`,
         currentData
       )
-      .then((res) => {
+      .then(() => {
         getAllData();
         handleCloseModal();
-        Swal.fire("Success!", "Region updated successfully.", "success");
+        toast.success("Region updated successfully!");
       })
       .catch((error) => {
-        console.log(error);
-        Swal.fire("Error!", "Failed to update region.", "error");
+        const errorMsg =
+          error.response?.data?.message || "Failed to update region.";
+        console.error(errorMsg);
+        toast.error(errorMsg);
       });
   };
 

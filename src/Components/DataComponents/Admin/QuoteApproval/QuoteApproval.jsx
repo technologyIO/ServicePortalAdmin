@@ -20,7 +20,7 @@ function QuoteApproval() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [proposals, setProposals] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
+  const [filteredProposals, setFilteredProposals] = useState([]);
   const [displayProposals, setDisplayProposals] = useState([]);
   const [selectedProposal, setSelectedProposal] = useState(null);
   const [selectedRevision, setSelectedRevision] = useState(null);
@@ -53,7 +53,7 @@ function QuoteApproval() {
         (proposal) => proposal.discountPercentage > 5
       );
       setProposals(filteredProposals);
-      setFilteredData(filteredProposals);
+      setFilteredProposals(filteredProposals);
       setDisplayProposals(processProposals(filteredProposals));
       setTotalPages(Math.ceil(filteredProposals.length / limit));
     } catch (error) {
@@ -105,21 +105,31 @@ function QuoteApproval() {
   }, [page]);
 
   const handleSearch = () => {
-    if (!searchQuery) {
-      setFilteredData(proposals);
+    if (!searchQuery.trim()) {
+      setFilteredProposals(proposals);
+      setDisplayProposals(processProposals(proposals));
       return;
     }
 
+    const query = searchQuery.toLowerCase().trim();
     const filtered = proposals.filter((item) => {
       return (
-        item.cnoteNumber?.toString().includes(searchQuery) ||
-        item.proposalNumber?.toString().includes(searchQuery) ||
-        item.customer.customername?.toString().includes(searchQuery) ||
-        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
+        item.cnoteNumber?.toString().toLowerCase().includes(query) ||
+        item.proposalNumber?.toString().toLowerCase().includes(query) ||
+        item.customer.customername?.toString().toLowerCase().includes(query) ||
+        item.status?.toLowerCase().includes(query)
       );
     });
 
-    setFilteredData(filtered);
+    setFilteredProposals(filtered);
+    setDisplayProposals(processProposals(filtered));
+  };
+
+  // Add this to handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const handleOpenApprovalModal = (proposal) => {
@@ -173,6 +183,7 @@ function QuoteApproval() {
               startDecorator={<SearchIcon />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleKeyPress}
             />
           </FormControl>
           <button
@@ -237,8 +248,7 @@ function QuoteApproval() {
             </tr>
           </thead>
           <tbody className="[&amp;_tr:last-child]:border-0">
-            {filteredData
-              .filter((proposal) => proposal.discountPercentage > 5)
+            {displayProposals
               .sort((a, b) => {
                 const dateA = new Date(
                   a.revisionData?.revisionDate || a.createdAt

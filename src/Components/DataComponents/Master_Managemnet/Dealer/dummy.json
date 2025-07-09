@@ -1,0 +1,95 @@
+[
+  {
+    "role": {
+      "roleName": "Super Admin",
+      "roleId": "S1"
+    },
+    "_id": "684c09fd69746be7bce2232f",
+    "firstname": "Mohit",
+    "lastname": "K",
+    "email": "mohit.k@gmail.com",
+    "mobilenumber": "6394507918",
+    "status": "Active",
+    "createdAt": "2025-06-13T11:22:37.318Z",
+    "modifiedAt": "2025-07-08T07:24:06.978Z",
+    "loginexpirydate": "2028-11-22T00:00:00.000Z",
+    "deviceregistereddate": null,
+    "zipCode": "570002",
+    "employeeid": "EMP1",
+    "department": "Developer",
+    "manageremail": ["sony.ponnanna@skanray.com"],
+    "profileimage": "/uploads/b4ab79bb-c174-482c-96fd-169fd19577fd.jpg",
+    "deviceid": "",
+    "usertype": "skanray",
+    "skills": [],
+    "password": "$2a$10$KVRWKqy8RncSq6bYjTqMuuoD2/Qpl4rBriSriY9yNjNvCbkY2o.yq",
+    "demographics": [],
+    "branch": ["VIZ", "HYD", "JSR", "BBS", "GAU", "PAT", "CAL", "BHO", "CHD"],
+    "location": ["2B, Shakti Khand III, Indirapuram,"],
+    "__v": 10
+  },
+  {
+    "role": {
+      "roleName": "Super Admin",
+      "roleId": "S1"
+    },
+    "_id": "684ff97a8445b6ef2a18ecc1",
+    "firstname": "Mohiyuddin ",
+    "lastname": "Shariff",
+    "email": "ftshivamtiwari222+1@gmail.com",
+    "mobilenumber": "9108544427",
+    "status": "Active",
+    "createdAt": "2025-06-16T11:01:14.357Z",
+    "modifiedAt": "2025-06-26T10:04:06.359Z",
+    "loginexpirydate": "1995-03-31T00:00:00.000Z",
+    "deviceregistereddate": null,
+    "zipCode": "570021",
+    "employeeid": "4145242",
+    "department": "",
+    "manageremail": [
+      "lkjh@gmail.com",
+      "fojila5330@niback.com",
+      "fojila533xc0@niback.com"
+    ],
+    "profileimage": "https://static.toiimg.com/thumb/msid-121314443,width-1280,height-720,resizemode-4/121314443.jpg",
+    "usertype": "skanray",
+    "skills": [],
+    "password": "$2a$10$3HB6rFC0rcYllGvCsrvxLeoiDQtN.gMnn/wwUCdaIWzVV3gDLiBV.",
+    "demographics": [],
+    "branch": ["Lucknow Medical Care Hospital (UP-LU)"],
+    "location": ["JP Nagar Bengaluru"],
+    "__v": 3,
+    "deviceid": ""
+  },
+  {
+    "role": {
+      "roleName": "NSH",
+      "roleId": "N1"
+    },
+    "_id": "68500156e94d1981de3de03d",
+    "firstname": "SAHIL",
+    "lastname": "GAGAN",
+    "email": "ftshivamtiwari222@gmail.com",
+    "mobilenumber": "08726490079",
+    "status": "Active",
+    "createdAt": "2025-06-16T11:34:46.436Z",
+    "modifiedAt": "2025-07-08T06:54:15.325Z",
+    "loginexpirydate": null,
+    "deviceid": "",
+    "deviceregistereddate": null,
+    "zipCode": "570002",
+    "employeeid": "EMP0",
+    "department": "",
+    "manageremail": ["shivamt2023@gmail.com", "fojila5330@niback.com"],
+    "profileimage": "",
+    "usertype": "skanray",
+    "skills": [],
+    "password": "$2a$10$asuX8vptVvfm9Ug/zHFuwudDd/GQ4zgbUoEcqqS3G8udrZi5Fim/6",
+    "demographics": [],
+    "branch": ["LKO", "KNP", "NDA"],
+    "location": [
+      "InsideOut DGA | Desiadda , gokulam road , vani vilas mohalla , Mysuru , Karnataka 570002 India\nInsideOut DGA | Desiadda , gokulam road , vani vilas mohalla , Mysuru , Karnataka 570002 India"
+    ],
+    "__v": 9
+  }
+]

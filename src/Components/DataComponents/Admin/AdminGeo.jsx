@@ -31,6 +31,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 function AdminGeo() {
   const [showModal, setShowModal] = useState(false);
@@ -198,9 +199,14 @@ function AdminGeo() {
       )
       .then((res) => {
         getAllData();
+        toast.success("Geo added successfully");
       })
       .catch((error) => {
-        console.log(error);
+        if (error.response?.status === 409) {
+          toast.error("Geo name already exists");
+        } else {
+          toast.error("Failed to add geo");
+        }
       });
   };
 
@@ -212,11 +218,17 @@ function AdminGeo() {
       )
       .then((res) => {
         getAllData();
+        toast.success("Geo updated successfully");
       })
       .catch((error) => {
-        console.log(error);
+        if (error.response?.status === 409) {
+          toast.error("Geo name already exists");
+        } else {
+          toast.error("Failed to update geo");
+        }
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
   };

@@ -40,6 +40,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import toast from "react-hot-toast";
 
 const AdminState = () => {
   const [showModal, setShowModal] = useState(false);
@@ -196,9 +197,12 @@ const AdminState = () => {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/state`, currentData)
       .then((res) => {
         getAllData();
+        toast.success("State added successfully!");
       })
       .catch((error) => {
-        console.log(error);
+        const errMsg = error.response?.data?.message || "Failed to add state.";
+        console.error(errMsg);
+        toast.error(errMsg);
       });
   };
 
@@ -210,11 +214,16 @@ const AdminState = () => {
       )
       .then((res) => {
         getAllData();
+        toast.success("State updated successfully!");
       })
       .catch((error) => {
-        console.log(error);
+        const errMsg =
+          error.response?.data?.message || "Failed to update state.";
+        console.error(errMsg);
+        toast.error(errMsg);
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
   };
