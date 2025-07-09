@@ -397,9 +397,9 @@ function Customer() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     District
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     State
-                  </th>
+                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Region
                   </th>
@@ -479,9 +479,9 @@ function Customer() {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.district}
                     </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.state}
-                    </td>
+                    </td> */}
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.region}
                     </td>
@@ -766,7 +766,7 @@ function Customer() {
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
+                    {/* <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         State{" "}
                       </label>
@@ -786,7 +786,7 @@ function Customer() {
                           handleFormData("state", value ? value.label : "")
                         }
                       />
-                    </div>
+                    </div> */}
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Region{" "}
