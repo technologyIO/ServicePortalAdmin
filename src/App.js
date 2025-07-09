@@ -67,6 +67,10 @@ import ProtectedRoute from './ProtectedRoute';
 import UserManagment from './Components/DataComponents/Master_Managemnet/User/UserManagment';
 import AdminRegion from './Components/DataComponents/Admin/AdminRegion';
 import AdminGeo from './Components/DataComponents/Admin/AdminGeo';
+import ResetPassword from './Components/Auth/ResetPassword';
+import ForgotPassword from './Components/Auth/ForgotPassword';
+import OTPVerification from './Components/Auth/OTPVerification';
+import ResetPasswordOtp from './Components/Auth/ResetPasswordOtp';
 
 
 const PrivateRoute = ({ children }) => {
@@ -96,6 +100,11 @@ const App = () => {
             )
           }
         />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-otp" element={<OTPVerification />} />
+        <Route path="/reset-password-otp" element={<ResetPasswordOtp />} />
+
 
         {/* Protected routes */}
         <Route

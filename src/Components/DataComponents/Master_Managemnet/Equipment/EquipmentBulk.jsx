@@ -1,8 +1,9 @@
 "use client";
 
+import { Download, Users, X } from "lucide-react";
 import { useState } from "react";
 
-export default function EquipmentBulk() {
+export default function EquipmentBulk({ onClose }) {
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -374,43 +375,45 @@ EQID-003,Equipment C,"Heavy-duty equipment for construction sites",SN-003,MAT333
   };
 
   return (
-    <div className="container mx-auto ">
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full max-w-6xl mx-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-black">
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">
-                Equipment Bulk Upload
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Users size={24} />
+                </div>
+                Bulk Customer Upload
               </h2>
-              <p className="text-gray-600 text-sm mt-1">
-                Upload multiple equipment records at once
+              <p className="text-gray-500 mt-1">
+                Import and manage customer data efficiently
               </p>
             </div>
             <button
-              onClick={handleDownload}
-              className="flex items-center text-sm gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors self-start"
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              Download Template
+              <X size={24} />
             </button>
           </div>
         </div>
-
+        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <div>
+            <h3 className="font-semibold text-blue-900">Need a template?</h3>
+            <p className="text-sm text-blue-700">
+              Download our Excel template with the required format
+            </p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download size={16} />
+            Download Template
+          </button>
+        </div>
         {/* Content */}
         <div className="p-6">
           {/* Tabs */}

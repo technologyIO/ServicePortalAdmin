@@ -534,14 +534,8 @@ const UserData = () => {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}
 
-              <div className="bg-white rounded-lg w-[120vh]   relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-0 text-3xl right-1 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <EquipmentBulk />
+              <div className=" ">
+                <EquipmentBulk isOpen={isOpen} onClose={closeModal} />
               </div>
             </div>
           )}

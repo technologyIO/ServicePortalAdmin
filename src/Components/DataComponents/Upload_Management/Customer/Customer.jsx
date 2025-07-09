@@ -898,19 +898,22 @@ function Customer() {
                         <Option value="Inactive">Inactive</Option>
                       </Select>
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Customer Type{" "}
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Customer Type
                       </label>
-                      <input
-                        type="text"
+                      <select
+                        id="customertype"
+                        value={currentData?.customertype}
                         onChange={(e) =>
                           handleFormData("customertype", e.target.value)
                         }
-                        id="customertype"
-                        value={currentData?.customertype}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      >
+                        <option value="">Select Customer Type </option>
+                        <option value="Government">Government</option>
+                        <option value="Private">Private</option>
+                      </select>
                     </div>
                   </div>
                 </div>
