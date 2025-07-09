@@ -71,14 +71,22 @@ export default function CustomerBulk({ isOpen, onClose }) {
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFile = e.dataTransfer.files[0];
+      const validTypes = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+        "text/csv",
+        "application/csv",
+      ];
+      const validExtensions = [".xlsx", ".xls", ".csv"];
+      const fileName = droppedFile.name.toLowerCase();
+
       if (
-        droppedFile.type ===
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-        droppedFile.type === "application/vnd.ms-excel"
+        validTypes.includes(droppedFile.type) ||
+        validExtensions.some((ext) => fileName.endsWith(ext))
       ) {
         setFile(droppedFile);
       } else {
-        alert("Please upload an Excel file (.xlsx or .xls)");
+        alert("Please upload an Excel (.xlsx, .xls) or CSV file");
       }
     }
   };
@@ -356,7 +364,7 @@ export default function CustomerBulk({ isOpen, onClose }) {
         className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200"
       >
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-black">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
@@ -365,7 +373,7 @@ export default function CustomerBulk({ isOpen, onClose }) {
                 </div>
                 Bulk Customer Upload
               </h2>
-              <p className="text-blue-100 mt-1">
+              <p className="text-gray-500 mt-1">
                 Import and manage customer data efficiently
               </p>
             </div>
@@ -419,7 +427,7 @@ export default function CustomerBulk({ isOpen, onClose }) {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.csv"
                   className="hidden"
                 />
                 {file ? (
@@ -448,7 +456,10 @@ export default function CustomerBulk({ isOpen, onClose }) {
                     </button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div
+                    className="space-y-4 cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
                     <div className="flex justify-center">
                       <div className="p-4 bg-gray-100 rounded-full">
                         <Upload className="h-12 w-12 text-gray-400" />
@@ -468,7 +479,7 @@ export default function CustomerBulk({ isOpen, onClose }) {
                         </button>
                       </p>
                       <p className="text-xs text-gray-400 mt-2">
-                        Supports .xlsx and .xls files up to 10MB
+                        Supports .xlsx, .xls, and .csv files up to 10MB
                       </p>
                     </div>
                   </div>
@@ -1247,7 +1258,7 @@ export default function CustomerBulk({ isOpen, onClose }) {
               <button
                 onClick={handleUpload}
                 disabled={!file || isUploading}
-                className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+                className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700    disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
               >
                 {isUploading ? (
                   <>
