@@ -197,6 +197,11 @@ function CheckPointType() {
                   placeholder="Search"
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </FormControl>

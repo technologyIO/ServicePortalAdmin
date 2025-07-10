@@ -228,6 +228,11 @@ const AdminBranch = () => {
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
                 />
               </FormControl>
               <button

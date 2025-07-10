@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import toast from "react-hot-toast";
 function Aerb() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -96,20 +97,19 @@ function Aerb() {
       if (result.isConfirmed) {
         axios
           .delete(`${process.env.REACT_APP_BASE_URL}/collections/aerb/${id}`)
-          .then((res) => {
-            Swal.fire("Deleted!", "Countrys has been deleted.", "success");
-          })
-          .then((res) => {
+          .then(() => {
+            Swal.fire("Deleted!", "Entry has been deleted.", "success");
             getData();
           })
-          .catch((error) => {
-            console.log(error);
-          });
+          .catch(console.error);
       }
     });
   };
+
+  // Updated handleSearch function
   const handleSearch = async () => {
-    if (!searchQuery) {
+    if (!searchQuery.trim()) {
+      getData();
       return;
     }
 
@@ -118,34 +118,60 @@ function Aerb() {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/collections/searchaerb?q=${searchQuery}`
       );
-      setData(response.data);
-      setLoader(false);
+
+      // Handle both array and object response formats
+      let searchData = [];
+      if (Array.isArray(response.data)) {
+        searchData = response.data;
+      } else if (response.data.aerbEntries) {
+        searchData = response.data.aerbEntries;
+      } else if (Array.isArray(response.data.results)) {
+        searchData = response.data.results;
+      } else if (response.data.message === "No results found") {
+        searchData = [];
+      } else {
+        // Handle single object response by putting it in an array
+        if (response.data._id) {
+          searchData = [response.data];
+        }
+      }
+
+      setData(searchData);
+      setTotalPages(1);
+      setPage(1);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Search error:", error);
+      setData([]);
+    } finally {
       setLoader(false);
     }
   };
 
   const getData = () => {
     setLoader(true);
-    setSearchQuery("");
     axios
       .get(
         `${process.env.REACT_APP_BASE_URL}/collections/aerb?page=${page}&limit=${limit}`
       )
       .then((res) => {
-        setLoader(false);
-        setData(res.data.aerbEntries);
-        setTotalPages(res.data.totalPages);
+        setData(res.data.aerbEntries || []);
+        setTotalPages(res.data.totalPages || 1);
       })
       .catch((error) => {
+        console.error("Data fetch error:", error);
+        setData([]);
+      })
+      .finally(() => {
         setLoader(false);
-        console.log(error);
       });
   };
+
+  // Add this useEffect to handle clearing search
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();
@@ -164,6 +190,7 @@ function Aerb() {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/aerb`, currentData)
       .then((res) => {
         getData();
+        toast.success("Aerb added successfully!");
       })
       .catch((error) => {
         console.log(error);
@@ -178,9 +205,11 @@ function Aerb() {
       )
       .then((res) => {
         getData();
+        toast.success("Aerb updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(error);
       });
   };
 
@@ -207,7 +236,17 @@ function Aerb() {
                   placeholder="Search"
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (!e.target.value) {
+                      getData(); // Refresh data when search is cleared
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch();
+                    }
+                  }}
                 />
               </FormControl>
               <button
@@ -289,154 +328,158 @@ function Aerb() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
-                  <tr
-                    key={item?._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(item?._id)}
-                          onChange={() => handleRowSelect(item?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.materialcode}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.materialdescription}
-                    </td>
-
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                          item?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
-                        }`}
-                      >
-                        {item?.status}
-                      </span>
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
-                        <button
-                          onClick={() => {
-                            handleOpenModal(item);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
-                          >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
-                          >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
-                        </button>
-                      </div>
+              <tbody className="[&_tr:last-child]:border-0">
+                {loader ? (
+                  <tr>
+                    <td colSpan="7" className="text-center py-4">
+                      <span className="CustomLoader"></span>
                     </td>
                   </tr>
-                ))}
+                ) : data.length > 0 ? (
+                  data.map((item, index) => (
+                    <tr
+                      key={item?._id}
+                      className="border-b transition-colors data-[state=selected]:bg-muted"
+                    >
+                      <th scope="col" className="p-4">
+                        <div className="flex items-center">
+                          <input
+                            id={`checkbox-${index}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                            checked={selectedRows?.includes(item?._id)}
+                            onChange={() => handleRowSelect(item?._id)}
+                          />
+                          <label
+                            htmlFor={`checkbox-${index}`}
+                            className="sr-only"
+                          >
+                            checkbox
+                          </label>
+                        </div>
+                      </th>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.materialcode}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.materialdescription}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                            item?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : item?.status === "Inactive"
+                              ? "bg-red-100 text-red-800 border-red-400"
+                              : "bg-orange-100 text-orange-800 border-orange-400"
+                          }`}
+                        >
+                          {item?.status}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.createdAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.modifiedAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <div className="flex gap-4">
+                          <button
+                            onClick={() => handleOpenModal(item)}
+                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-pencil-square"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                              <path
+                                fillRule="evenodd"
+                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item?._id)}
+                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-trash3-fill"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center py-4 text-gray-500">
+                      {searchQuery
+                        ? "No matching records found"
+                        : "No data available"}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-         <div
-                    className="Pagination-laptopUp"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                    }}
-                  >
-                    <button
-                      className={`border rounded p-1 ${
-                        page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-                      } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </button>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      {Array.from({ length: totalPages }, (_, index) => index + 1)
-                        .filter((p) => {
-                          // Show the first page, last page, and pages around the current page
-                          return (
-                            p === 1 ||
-                            p === totalPages ||
-                            (p >= page - 3 && p <= page + 3)
-                          );
-                        })
-                        .map((p, i, array) => (
-                          <React.Fragment key={p}>
-                            {/* Add ellipsis for skipped ranges */}
-                            {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                            <button
-                              className={`border px-3 rounded ${
-                                p === page ? "bg-blue-700 text-white" : ""
-                              }`}
-                              onClick={() => setPage(p)}
-                              disabled={p === page}
-                            >
-                              {p}
-                            </button>
-                          </React.Fragment>
-                        ))}
-                    </div>
-                    <button
-                      className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-                      onClick={handleNextPage}
-                      disabled={page === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
 
+          {!searchQuery && totalPages > 1 && (
+            <div className="Pagination-laptopUp flex justify-between p-4">
+              <button
+                className={`border rounded p-1 ${
+                  page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+                } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+                onClick={handlePreviousPage}
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <div className="flex gap-2">
+                {Array.from({ length: totalPages }, (_, index) => index + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= page - 2 && p <= page + 2)
+                  )
+                  .map((p, i, array) => (
+                    <React.Fragment key={p}>
+                      {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                      <button
+                        className={`border px-3 rounded ${
+                          p === page ? "bg-blue-700 text-white" : ""
+                        }`}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  ))}
+              </div>
+              <button
+                className={`border rounded p-1 ${
+                  page === totalPages ? "cursor-not-allowed" : "cursor-pointer"
+                } w-[100px] hover:bg-blue-500 px-2 bg-blue-700 text-white font-semibold`}
+                onClick={handleNextPage}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
           <Modal
             open={showModal}
             onClose={handleCloseModal}
@@ -445,7 +488,7 @@ function Aerb() {
           >
             <ModalDialog size="lg" className="p-2  thin-scroll">
               <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
-               <h3 className="text-xl font-semibold">
+                <h3 className="text-xl font-semibold">
                   {editModal ? "Update Aerb" : "Create Aerb"}
                 </h3>
                 <div
@@ -537,7 +580,7 @@ function Aerb() {
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                     {editModal ? "Update Aerb" : "Create Aerb"}
+                    {editModal ? "Update Aerb" : "Create Aerb"}
                   </button>
                 </div>
               </form>

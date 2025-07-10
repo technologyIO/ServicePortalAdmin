@@ -205,12 +205,13 @@ function CmcNcmcWYears() {
                   placeholder="Search"
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleSearch();
                     }
                   }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  
                 />
               </FormControl>
               <button
