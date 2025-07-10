@@ -279,7 +279,7 @@ const AdminBranch = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Name
+                   Branch Name
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     State
