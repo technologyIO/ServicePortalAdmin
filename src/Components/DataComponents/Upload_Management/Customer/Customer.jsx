@@ -12,6 +12,7 @@ import axios from "axios";
 import moment from "moment";
 import { Autocomplete } from "@mui/joy";
 import CustomerBulk from "./CustomerBulk";
+import toast from "react-hot-toast";
 
 function Customer() {
   const [showModal, setShowModal] = useState(false);
@@ -270,13 +271,16 @@ function Customer() {
         currentData
       )
       .then((res) => {
+        toast.success("Customer created successfully!");
         getData();
       })
       .catch((error) => {
-        console.log(error);
+        console.error(error);
+        const message =
+          error.response?.data?.message || "Failed to create customer.";
+        toast.error(message);
       });
   };
-
   const handleEditCountry = (id) => {
     axios
       .put(
@@ -284,10 +288,14 @@ function Customer() {
         currentData
       )
       .then((res) => {
+        toast.success("Customer updated successfully!");
         getData();
       })
       .catch((error) => {
-        console.log(error);
+        console.error(error);
+        const message =
+          error.response?.data?.message || "Failed to update customer.";
+        toast.error(message);
       });
   };
 
