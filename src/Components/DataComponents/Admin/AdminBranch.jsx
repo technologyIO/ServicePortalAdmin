@@ -18,6 +18,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../BulkUpload.jsx/BulkModal";
+import toast from "react-hot-toast";
 
 const AdminBranch = () => {
   const [showModal, setShowModal] = useState(false);
@@ -169,24 +170,20 @@ const AdminBranch = () => {
       handleAddData();
     }
   };
-
   const handleAddData = () => {
     axios
       .post(`${process.env.REACT_APP_BASE_URL}/collections/branch`, currentData)
       .then((res) => {
         getAllData();
-        Swal.fire("Success!", "Branch added successfully.", "success");
+        toast.success("Branch added successfully");
       })
       .catch((error) => {
         console.log(error);
-        Swal.fire({
-          icon: "error",
-          title: "Error!",
-          text:
-            error?.response?.data?.message ||
+        toast.error(
+          error?.response?.data?.message ||
             error?.message ||
-            "Something went wrong",
-        });
+            "Something went wrong"
+        );
       });
   };
 
@@ -198,9 +195,15 @@ const AdminBranch = () => {
       )
       .then((res) => {
         getAllData();
+        toast.success("Branch updated successfully");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Something went wrong"
+        );
       });
   };
   const handlePreviousPage = () => {
@@ -279,7 +282,7 @@ const AdminBranch = () => {
                     </div>
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                   Branch Name
+                    Branch Name
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     State
@@ -505,23 +508,25 @@ const AdminBranch = () => {
                 <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
                   <div class="relative z-0 w-full mb-5 group">
                     <label class="block mb-2 text-sm font-medium text-gray-900">
-                      Branch Name
+                      Branch Name{" "}
+                      <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <input
                       onChange={(e) => handleFormData("name", e.target.value)}
                       type="text"
+                      required
                       name="name"
                       id="name"
                       value={currentData?.name}
                       class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       placeholder=" "
-                      required
                     />
                   </div>
                   <div class="grid md:grid-cols-2 md:gap-6">
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Branch Short Code
+                        Branch Short Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         onChange={(e) =>
@@ -539,10 +544,12 @@ const AdminBranch = () => {
                     <div className="">
                       <div>
                         <label class="block mb-2 text-sm font-medium text-gray-900">
-                          Select State
+                          Select State{" "}
+                          <span className="text-red-500 text-lg ml-1">*</span>
                         </label>
                         <Autocomplete
                           className="h-10 w-full"
+                          required
                           options={state} // Data from API
                           getOptionLabel={(option) => option.name} // Display the country name
                           renderInput={(params) => (

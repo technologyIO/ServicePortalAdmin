@@ -694,6 +694,7 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Dealer Name{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -708,9 +709,11 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Dealer Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("dealercode", e.target.value)
                         }
@@ -723,9 +726,11 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Email{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         placeholder="Enter Dealer Email"
                         onChange={(e) =>
                           handleFormData("email", e.target.value)
@@ -738,9 +743,11 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2  text-sm font-medium text-gray-900 ">
                         State{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
+                        required
                         options={state}
                         placeholder="Enter Dealer State"
                         getOptionLabel={(option) => option.label}
@@ -759,7 +766,8 @@ function Dealer() {
                     </div>
                     <div className="w-full mb-5">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Person Responsible
+                        Person Responsible{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
 
                       {/* Search Input - Changed from searchQuery to personSearchQuery */}
@@ -794,6 +802,7 @@ function Dealer() {
                               >
                                 <input
                                   type="checkbox"
+                                  required
                                   checked={isChecked}
                                   onChange={() => handlePersonToggle(user)}
                                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
@@ -820,9 +829,11 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         City{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
+                        required
                         placeholder="Enter Dealer City"
                         options={cityList}
                         getOptionLabel={(option) => option.label}
@@ -842,9 +853,11 @@ function Dealer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Pincode{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         placeholder="Enter Dealer Pincode"
                         onChange={(e) =>
                           handleFormData("pincode", e.target.value)
@@ -874,10 +887,11 @@ function Dealer() {
                   </div>
                   <div className="relative  w-full mb-5 group">
                     <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                      Address{" "}
+                      Address{" "}  <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <textarea
                       type="text"
+                      required
                       placeholder="Enter Dealer Address"
                       onChange={(e) =>
                         handleFormData("address", e.target.value)

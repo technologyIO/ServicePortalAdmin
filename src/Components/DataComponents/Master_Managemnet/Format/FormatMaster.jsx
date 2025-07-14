@@ -440,7 +440,8 @@ function FormatMaster() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="relative">
                     <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Product Group
+                      Product Group{" "}
+                      <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <input
                       type="text"
@@ -454,7 +455,8 @@ function FormatMaster() {
                   </div>
                   <div className="relative">
                     <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Chl No
+                      Chl No{" "}
+                      <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <input
                       type="text"
@@ -466,7 +468,8 @@ function FormatMaster() {
                   </div>
                   <div className="relative">
                     <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Rev No
+                      Rev No{" "}
+                      <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <input
                       type="number"
@@ -478,7 +481,7 @@ function FormatMaster() {
                   </div>
                   <div className="relative">
                     <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Type
+                      Type <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <input
                       type="text"

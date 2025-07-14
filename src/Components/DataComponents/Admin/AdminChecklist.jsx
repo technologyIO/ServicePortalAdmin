@@ -591,8 +591,10 @@ const AdminChecklist = () => {
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
                         Checklist Type{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Select
+                        required
                         className="rounded-[4px] py-2 border"
                         value={currentData?.checklisttype || ""}
                         onChange={(e, newValue) =>
@@ -610,8 +612,10 @@ const AdminChecklist = () => {
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
                         Checkpoint Type{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Select
+                        required
                         className="rounded-[4px] py-2 border"
                         value={currentData?.checkpointtype || ""}
                         onChange={(e, newValue) =>
@@ -628,7 +632,8 @@ const AdminChecklist = () => {
                     </div>
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
-                        Checkpoint
+                        Checkpoint{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Select
                         variant="soft"
@@ -704,9 +709,11 @@ const AdminChecklist = () => {
                     </div>
                     <div class="relative z-0 w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900">
-                        ProdGroup
+                        ProdGroup{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Select
+                        required
                         className="rounded-[4px] py-2 border"
                         value={currentData?.prodGroup || ""}
                         onChange={(e, newValue) =>
@@ -740,10 +747,12 @@ const AdminChecklist = () => {
                     </div>
                     <div className="relative z-0 w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Result Type
+                        Result Type{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <Select
                         variant="soft"
+                        required
                         className="rounded-[4px] py-2 border"
                         defaultValue={currentData?.resulttype || ""}
                         onChange={(e, value) =>

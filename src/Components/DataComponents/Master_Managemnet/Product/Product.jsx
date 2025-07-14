@@ -550,6 +550,7 @@ function Product() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Part No{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -564,10 +565,12 @@ function Product() {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Product
+                        Product{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("product", e.target.value)
                         }
@@ -578,10 +581,12 @@ function Product() {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Product Group
+                        Product Group{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("productgroup", e.target.value)
                         }
@@ -592,10 +597,12 @@ function Product() {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Sub_GRp
+                        Sub_GRp{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("subgrp", e.target.value)
                         }
@@ -607,10 +614,12 @@ function Product() {
 
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2  text-sm font-medium text-gray-900 ">
-                        Frequency
+                        Frequency{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("frequency", e.target.value)
                         }

@@ -583,10 +583,12 @@ const UserData = () => {
                   <div class="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Equipment (ID)
+                        Equipment (ID){" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("equipmentid", e.target.value)
                         }
@@ -597,10 +599,12 @@ const UserData = () => {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Material Code
+                        Material Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("materialcode", e.target.value)
                         }
@@ -612,10 +616,12 @@ const UserData = () => {
 
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Material Description
+                        Material Description{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("materialdescription", e.target.value)
                         }
@@ -628,9 +634,11 @@ const UserData = () => {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2  text-sm font-medium text-gray-900 ">
                         Serial Number{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("serialnumber", e.target.value)
                         }
@@ -641,10 +649,12 @@ const UserData = () => {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Current Customer
+                        Current Customer{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("currentcustomer", e.target.value)
                         }
@@ -655,10 +665,12 @@ const UserData = () => {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        End Customer
+                        End Customer{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("endcustomer", e.target.value)
                         }
@@ -670,9 +682,11 @@ const UserData = () => {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Cust Warranty Start{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="date"
+                        required
                         onChange={(e) =>
                           handleFormData(
                             "custWarrantystartdate",
@@ -689,9 +703,11 @@ const UserData = () => {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Cust Warranty End{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="date"
+                        required
                         onChange={(e) =>
                           handleFormData("custWarrantyenddate", e.target.value)
                         }
@@ -740,10 +756,12 @@ const UserData = () => {
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Dealer
+                        Dealer{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("dealer", e.target.value)
                         }

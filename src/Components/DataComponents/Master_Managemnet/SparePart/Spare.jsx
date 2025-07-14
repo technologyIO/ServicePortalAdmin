@@ -486,7 +486,8 @@ function Spare() {
                   <div className="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Sub Group
+                        Sub Group{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -500,7 +501,8 @@ function Spare() {
                     </div>
                     <div className="relative w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Part Number
+                        Part Number{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -518,7 +520,6 @@ function Spare() {
                       </label>
                       <input
                         type="text"
-                        required
                         onChange={(e) =>
                           handleFormData("Description", e.target.value)
                         }
@@ -532,7 +533,6 @@ function Spare() {
                       </label>
                       <input
                         type="text"
-                        required
                         onChange={(e) => handleFormData("Type", e.target.value)}
                         value={currentData?.Type || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
@@ -544,7 +544,6 @@ function Spare() {
                       </label>
                       <input
                         type="number"
-                        required
                         onChange={(e) => handleFormData("Rate", e.target.value)}
                         value={currentData?.Rate || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
@@ -556,7 +555,6 @@ function Spare() {
                       </label>
                       <input
                         type="number"
-                        required
                         onChange={(e) => handleFormData("DP", e.target.value)}
                         value={currentData?.DP || ""}
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
@@ -568,7 +566,6 @@ function Spare() {
                       </label>
                       <input
                         type="number"
-                        required
                         onChange={(e) =>
                           handleFormData("Charges", e.target.value)
                         }
@@ -606,7 +603,7 @@ function Spare() {
                 >
                   &times;
                 </button>
-                <SpareMasterBulk getData={getData}  closeModal={closeModal}/>
+                <SpareMasterBulk getData={getData} closeModal={closeModal} />
               </div>
             </div>
           )}

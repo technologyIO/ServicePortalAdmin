@@ -520,6 +520,7 @@ function Aerb() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -535,9 +536,11 @@ function Aerb() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Material Description{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("materialdescription", e.target.value)
                         }
