@@ -321,6 +321,12 @@ function PendingComplaint() {
                     PartnerResp
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Spare Request
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Remark
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     BreakDown
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -398,6 +404,12 @@ function PendingComplaint() {
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.partnerresp}
+                    </td>
+                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                      {item?.sparerequest}
+                    </td>
+                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                      {item?.remark}
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.breakdown}
@@ -584,7 +596,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("notificationtype", e.target.value)
                         }
-                        id="name"
+                        id="notificationtype"
                         value={currentData?.notificationtype}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -601,7 +613,7 @@ function PendingComplaint() {
                             e.target.value
                           )
                         }
-                        id="name"
+                        id="notification_complaintid"
                         value={currentData?.notification_complaintid}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -615,7 +627,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("notificationdate", e.target.value)
                         }
-                        id="name"
+                        id="notificationdate"
                         value={currentData?.notificationdate}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -629,7 +641,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("userstatus", e.target.value)
                         }
-                        id="name"
+                        id="userstatus"
                         value={currentData?.userstatus}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -644,7 +656,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("materialdescription", e.target.value)
                         }
-                        id="name"
+                        id="materialdescription"
                         value={currentData?.materialdescription}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -658,7 +670,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("serialnumber", e.target.value)
                         }
-                        id="name"
+                        id="serialnumber"
                         value={currentData?.serialnumber}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -672,7 +684,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("devicedata", e.target.value)
                         }
-                        id="name"
+                        id="devicedata"
                         value={currentData?.devicedata}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -686,7 +698,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("salesoffice", e.target.value)
                         }
-                        id="name"
+                        id="salesoffice"
                         value={currentData?.salesoffice}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -700,7 +712,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("materialcode", e.target.value)
                         }
-                        id="name"
+                        id="materialcode"
                         value={currentData?.materialcode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -714,7 +726,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("reportedproblem", e.target.value)
                         }
-                        id="name"
+                        id="reportedproblem"
                         value={currentData?.reportedproblem}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -728,7 +740,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("dealercode", e.target.value)
                         }
-                        id="name"
+                        id="dealercode"
                         value={currentData?.dealercode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -742,7 +754,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("customercode", e.target.value)
                         }
-                        id="name"
+                        id="customercode"
                         value={currentData?.customercode}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -756,7 +768,7 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("partnerresp", e.target.value)
                         }
-                        id="name"
+                        id="partnerresp"
                         value={currentData?.partnerresp}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
@@ -770,8 +782,36 @@ function PendingComplaint() {
                         onChange={(e) =>
                           handleFormData("breakdown", e.target.value)
                         }
-                        id="name"
+                        id="breakdown"
                         value={currentData?.breakdown}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Spare Request
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("sparerequest", e.target.value)
+                        }
+                        id="sparerequest"
+                        value={currentData?.sparerequest}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Spare Request Remark
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("remark", e.target.value)
+                        }
+                        id="remark"
+                        value={currentData?.remark}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
