@@ -292,9 +292,9 @@ function HubStock() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Storage Location
                   </th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
-                  </th>
+                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Created Date
                   </th>
@@ -342,7 +342,7 @@ function HubStock() {
                       {item?.storagelocation}
                     </td>
 
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
                           item?.status === "Active"
@@ -354,7 +354,7 @@ function HubStock() {
                       >
                         {item?.status}
                       </span>
-                    </td>
+                    </td> */}
 
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
