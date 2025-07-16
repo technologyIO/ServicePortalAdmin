@@ -37,7 +37,7 @@ function Login() {
       setEmployee("");
       setPassword("");
 
-      window.location.href = "/";
+      window.location.href = "/service-manage";
     } catch (error) {
       toast.error(
         error.response?.data?.message ||

@@ -180,17 +180,7 @@ export default function Sidebar({ onSidebarItemClick }) {
   const handleItemClick = (item) => {
     setSelectedItem(item);
   };
-  const { ready } = usePermissions();
-
-  if (!ready) {
-    return (
-      <Sheet className="Sidebar">
-        <Box sx={{ display: "flex", justifyContent: "center", pt: 4 }}>
-          <CircularProgress />
-        </Box>
-      </Sheet>
-    );
-  }
+ 
   return (
     <Sheet
       className="Sidebar"
