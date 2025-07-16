@@ -674,22 +674,15 @@ function Product() {
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Ex-support avlb
                       </label>
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        defaultValue={
-                          currentData?.exsupportavlb === true
-                            ? "true"
-                            : "false" || ""
+                      <input
+                        type="date"
+                        onChange={(e) =>
+                          handleFormData("exsupportavlb", e.target.value)
                         }
-                        onChange={(e, value) =>
-                          handleFormData("exsupportavlb", value)
-                        }
-                      >
-                        <Option value="">Select </Option>
-                        <Option value="true">True</Option>
-                        <Option value="false">False</Option>
-                      </Select>
+                        id="exsupportavlb"
+                        value={currentData?.exsupportavlb?.split("T")[0]}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
