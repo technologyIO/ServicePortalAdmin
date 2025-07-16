@@ -11,15 +11,14 @@ import ListItemContent from "@mui/joy/ListItemContent";
 import Typography from "@mui/joy/Typography";
 import Sheet from "@mui/joy/Sheet";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-
 import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import SummarizeIcon from "@mui/icons-material/Summarize";
-// import ColorSchemeToggle from '../ColorToggle/ColorSchemeToggle';
 import { closeSidebar } from "./utils";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, Modal } from "@mui/joy";
+import { Button, CircularProgress, Modal } from "@mui/joy";
+import { usePermissions } from "../../PermissionContext";
 
 function Toggler({
   defaultExpanded = false,
@@ -32,7 +31,6 @@ function Toggler({
     storedState !== null ? JSON.parse(storedState) : defaultExpanded;
   const [open, setOpen] = useState(initialState);
 
-  // Save the state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(open));
   }, [open, storageKey]);
@@ -62,33 +60,137 @@ export default function Sidebar({ onSidebarItemClick }) {
   const [selectedItem, setSelectedItem] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const user = JSON.parse(localStorage.getItem("user")) || {};
+  const { hasPermission } = usePermissions();
 
-  // Use correct key names from the user data
-  const avatarImage =
-    user?.details?.profileimage || // Correct field name
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
-
-  const userName = user?.details?.firstname || "Default Name"; // First name fallback
-  const userId = user?.details?.employeeid || "Default ID"; // Corrected key for employee ID
-  const userRole = user?.details?.role?.roleName || "User"; // Ensure role is fetched correctly
-  const department = user?.details?.department || "None"; // Ensure role is fetched correctly
-
-  const handleLogout = () => {
-    localStorage.removeItem("user"); // Clear user data
-    window.location.reload(); // Refresh the page
+  const canAccess = (componentName, action = "read") => {
+    return hasPermission(componentName, action);
   };
 
-  console.log({ avatarImage, userName, userId, userRole });
+  // Helper function to check if any item in a section has permission
+  const hasAnyPermissionInSection = (sectionItems) => {
+    return sectionItems.some((item) => canAccess(item.component));
+  };
+
+  // Define sidebar sections and their items
+  const sidebarSections = [
+    {
+      title: "Master Management",
+      icon: <DashboardRoundedIcon />,
+      storageKey: "masterManagementTogglerState",
+      items: [
+        { component: "User", path: "/user" },
+        { component: "AERB", path: "/aerb" },
+        { component: "Dealer", path: "/dealer" },
+        { component: "Branch", path: "/branch" },
+        { component: "Product", path: "/product" },
+        { component: "Checklist", path: "/admin-checklist" },
+        { component: "Equipment", path: "/equipment" },
+        { component: "Spare Master", path: "/spare" },
+        { component: "Format Master", path: "/formatmaster" },
+        { component: "Warranty Code", path: "/warrenty-code" },
+        { component: "Reported Problem", path: "/reported-problem" },
+        { component: "Replaced Part Code", path: "/replaced-part-code" },
+        {
+          component: "Preventive Maintenance",
+          path: "/preventive-maintenance",
+        },
+      ],
+    },
+    {
+      title: "Upload Management",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          style={{ color: "#636b74" }}
+          height="16"
+          fill="currentColor"
+          className="bi bi-cloud-arrow-up-fill"
+          viewBox="0 0 16 16"
+        >
+          <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z" />
+        </svg>
+      ),
+      storageKey: "uploadManagementTogglerState",
+      items: [
+        { component: "Customer", path: "/customer" },
+        { component: "Hub Stock", path: "/hub-stock" },
+        { component: "Dealer Stock", path: "/dealer-stock" },
+        { component: "AMC Contract", path: "/amc-contract" },
+        { component: "Pending Complaint", path: "/pending-complaint" },
+        { component: "Pending Installation", path: "/pending-installation" },
+      ],
+    },
+    {
+      title: "Admin",
+      icon: <SettingsRoundedIcon />,
+      storageKey: "adminTogglerState",
+      items: [
+        { component: "Geo", path: "/admin-geo" },
+        { component: "Country", path: "/admin-country" },
+        { component: "Region", path: "/admin-region" },
+        { component: "State", path: "/admin-state" },
+        { component: "City", path: "/admin-city" },
+        { component: "CheckListType", path: "/checklist-type" },
+        { component: "CheckPointType", path: "/checkpoint-type" },
+        { component: "Role Manage", path: "/role-manage" },
+        { component: "User Type", path: "/admin-user-type" },
+        { component: "Department", path: "/admin-department" },
+        { component: "Product Group", path: "/admin-product-group" },
+        { component: "PM Master", path: "/admin-pm-master" },
+        { component: "CMC/NCMC Years", path: "/cmc-ncmc-years" },
+        { component: "CMC/NCMC Price", path: "/cmc-ncmc-price" },
+        { component: "CMC/NCMC TDS", path: "/cmc-ncmc-tds" },
+        { component: "CMC/NCMC Gst", path: "/cmc-ncmc-gst" },
+        { component: "CMC/NCMC Discount", path: "/cmc-ncmc-discount" },
+        { component: "Quote Approval", path: "/quote-approval" },
+        { component: "CNote Delete", path: "/cnote-delete" },
+      ],
+    },
+    {
+      title: "Close Order",
+      icon: <SummarizeIcon />,
+      storageKey: "closeOrderTogglerState",
+      items: [
+        { component: "Open Proposal", path: "/open-proposal" },
+        { component: "Close Proposal", path: "/close-proposal" },
+      ],
+    },
+  ];
+
+  const avatarImage =
+    user?.details?.profileimage ||
+    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
+
+  const userName = user?.details?.firstname || "Default Name";
+  const userId = user?.details?.employeeid || "Default ID";
+  const userRole = user?.details?.role?.roleName || "User";
+  const department = user?.details?.department || "None";
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("permissions");
+    window.location.reload();
+  };
 
   useEffect(() => {
-    // Set the selected item based on the current route
     setSelectedItem(location.pathname);
   }, [location.pathname]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
   };
+  const { ready } = usePermissions();
 
+  if (!ready) {
+    return (
+      <Sheet className="Sidebar">
+        <Box sx={{ display: "flex", justifyContent: "center", pt: 4 }}>
+          <CircularProgress />
+        </Box>
+      </Sheet>
+    );
+  }
   return (
     <Sheet
       className="Sidebar"
@@ -148,19 +250,12 @@ export default function Sidebar({ onSidebarItemClick }) {
           alt=""
         />
         <Typography level="title-lg">Service Portal</Typography>
-        {/* <ColorSchemeToggle sx={{ ml: 'auto' }} /> */}
       </Box>
-      {/* <Input
-        size="sm"
-        startDecorator={<SearchRoundedIcon />}
-        placeholder="Search"
-      /> */}
       <Box
         sx={{
           minHeight: 0,
           overflow: "hidden auto",
           flexGrow: 1,
-          //   display: "grid",
           flexDirection: "column",
           [`& .${listItemButtonClasses.root}`]: {
             gap: 1.5,
@@ -176,612 +271,210 @@ export default function Sidebar({ onSidebarItemClick }) {
             "--ListItem-radius": "3px",
           }}
         >
-          <ListItem nested>
-            <Toggler
-              storageKey="masterManagementTogglerState" // Unique key for Master Management toggler state
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <DashboardRoundedIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Master Management</Typography>
-                  </ListItemContent>
+          {/* Render only sections where user has at least one permission */}
+          {sidebarSections.map((section) => {
+            if (!hasAnyPermissionInSection(section.items)) {
+              return null;
+            }
 
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/user");
-                    handleItemClick("/user");
-                  }}
-                  sx={{ mt: 0.5 }}
+            return (
+              <ListItem nested key={section.title}>
+                <Toggler
+                  storageKey={section.storageKey}
+                  renderToggle={({ open, setOpen }) => (
+                    <ListItemButton onClick={() => setOpen(!open)}>
+                      {section.icon}
+                      <ListItemContent>
+                        <Typography level="title-sm">
+                          {section.title}
+                        </Typography>
+                      </ListItemContent>
+                      <KeyboardArrowDownIcon
+                        sx={{ transform: open ? "rotate(180deg)" : "none" }}
+                      />
+                    </ListItemButton>
+                  )}
                 >
-                  <ListItemButton selected={selectedItem === "/user"}>
-                    User
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/aerb");
-                    handleItemClick("/aerb");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/aerb"}>
-                    AERB
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/dealer");
-                    handleItemClick("/dealer");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/dealer"}>
-                    Dealer
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/branch");
-                    handleItemClick("/branch");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/branch"}>
-                    Branch
-                  </ListItemButton>
-                </ListItem>
+                  <List sx={{ gap: 0.5 }}>
+                    {section.items.map((item) => {
+                      if (!canAccess(item.component)) {
+                        return null;
+                      }
 
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/product");
-                    handleItemClick("/product");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/product"}>
-                    Product
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-checklist");
-                    handleItemClick("/admin-checklist");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/admin-checklist"}
-                  >
-                    Checklist
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/equipment");
-                    handleItemClick("/equipment");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/equipment"}>
-                    Equipment
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/spare");
-                    handleItemClick("/spare");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/spare"}>
-                    Spare Master
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/formatmaster");
-                    handleItemClick("/formatmaster");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/formatmaster"}>
-                    Format Master
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/warrenty-code");
-                    handleItemClick("/warrenty-code");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/warrenty-code"}>
-                    Warranty Code
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/reported-problem");
-                    handleItemClick("/reported-problem");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/reported-problem"}
-                  >
-                    Reported Problem
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/replaced-part-code");
-                    handleItemClick("/replaced-part-code");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/replaced-part-code"}
-                  >
-                    Replaced Part Code
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/preventive-maintenance");
-                    handleItemClick("/preventive-maintenance");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/preventive-maintenance"}
-                  >
-                    Preventive Maintenance
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-
-          <ListItem nested>
-            <Toggler
-              storageKey="uploadManagementTogglerState" // Unique key for Upload Management toggler state
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    style={{ color: "#636b74" }}
-                    height="16"
-                    fill="currentColor"
-                    className="bi bi-cloud-arrow-up-fill"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z" />
-                  </svg>
-                  <ListItemContent>
-                    <Typography level="title-sm">Upload Management</Typography>
-                  </ListItemContent>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/customer");
-                    handleItemClick("/customer");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/customer"}>
-                    Customer
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/hub-stock");
-                    handleItemClick("/hub-stock");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/hub-stock"}>
-                    Hub Stock
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/dealer-stock");
-                    handleItemClick("/dealer-stock");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/dealer-stock"}>
-                    Dealer Stock
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/amc-contract");
-                    handleItemClick("/amc-contract");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/amc-contract"}>
-                    AMC Contract
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/pending-complaint");
-                    handleItemClick("/pending-complaint");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/pending-complaint"}
-                  >
-                    Pending Complaint
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/pending-installation");
-                    handleItemClick("/pending-installation");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/pending-installation"}
-                  >
-                    Pending Installation
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SummarizeIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Admin</Typography>
-                  </ListItemContent>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-geo");
-                    handleItemClick("/admin-geo");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-geo"}>
-                    Geo
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-country");
-                    handleItemClick("/admin-country");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-country"}>
-                    Country
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-region");
-                    handleItemClick("/admin-region");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-region"}>
-                    Region
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-state");
-                    handleItemClick("/admin-state");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-state"}>
-                    State
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-city");
-                    handleItemClick("/admin-city");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/admin-city"}>
-                    City
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/checklist-type");
-                    handleItemClick("/checklist-type");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/checklist-type"}>
-                    CheckListType
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/checkpoint-type");
-                    handleItemClick("/checkpoint-type");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/checkpoint-type"}
-                  >
-                    CheckPointType
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/role-manage");
-                    handleItemClick("/role-manage");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/role-manage"}>
-                    Role Manage
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-user-type");
-                    handleItemClick("/admin-user-type");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/admin-user-type"}
-                  >
-                    User Type
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-department");
-                    handleItemClick("/admin-department");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/admin-department"}
-                  >
-                    Department
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-product-group");
-                    handleItemClick("/admin-product-group");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/admin-product-group"}
-                  >
-                    Product Group
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/admin-pm-master");
-                    handleItemClick("/admin-pm-master");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/admin-pm-master"}
-                  >
-                    PM Master
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cmc-ncmc-years");
-                    handleItemClick("/cmc-ncmc-years");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/cmc-ncmc-years"}>
-                    CMC/NCMC Years
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cmc-ncmc-price");
-                    handleItemClick("/cmc-ncmc-price");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/cmc-ncmc-price"}>
-                    CMC/NCMC Price
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cmc-ncmc-tds");
-                    handleItemClick("/cmc-ncmc-tds");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/cmc-ncmc-tds"}>
-                    CMC/NCMC TDS
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cmc-ncmc-gst");
-                    handleItemClick("/cmc-ncmc-gst");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/cmc-ncmc-gst"}>
-                    CMC/NCMC Gst
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cmc-ncmc-discount");
-                    handleItemClick("/cmc-ncmc-discount");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/cmc-ncmc-discount"}
-                  >
-                    CMC/NCMC Discount
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/quote-approval");
-                    handleItemClick("/quote-approval");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/quote-approval"}>
-                    Quote Approval
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/cnote-delete");
-                    handleItemClick("/cnote-delete");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/cnote-delete"}>
-                    CNote Delete
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SummarizeIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Close Order</Typography>
-                  </ListItemContent>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/open-proposal");
-                    handleItemClick("/open-proposal");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/open-proposal"}>
-                    Open
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/close-proposal");
-                    handleItemClick("/close-proposal");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/close-proposal"}>
-                    Close
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
+                      return (
+                        <ListItem
+                          nested
+                          key={item.path}
+                          onClick={() => {
+                            navigate(item.path);
+                            handleItemClick(item.path);
+                          }}
+                        >
+                          <ListItemButton selected={selectedItem === item.path}>
+                            {item.component}
+                          </ListItemButton>
+                        </ListItem>
+                      );
+                    })}
+                  </List>
+                </Toggler>
+              </ListItem>
+            );
+          })}
         </List>
+      </Box>
 
-        {/* <List
+      <Box sx={{ width: "100%" }}>
+        <div className="flex mx-1 bg-gradient-to-r from-slate-50 to-gray-50 gap-3 items-center rounded-xl pl-3 py-3 border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300/60">
+          <Avatar
+            variant="outlined"
+            size="sm"
+            src={`${process.env.REACT_APP_BASE_URL || ""}${avatarImage}`}
+            className="ring-2 ring-white shadow-sm"
+          />
+
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <div className="flex items-center justify-between pr-2">
+              <Typography
+                level="title-sm"
+                className="text-sm font-semibold text-gray-800 mb-1"
+              >
+                {userName}
+              </Typography>
+              <Typography
+                level="body-xs"
+                className="text-xs text-gray-600 font-medium"
+              >
+                Role ID: {userId}
+              </Typography>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="flex gap-1.5">
+                <Typography
+                  level="body-xs"
+                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full text-black font-semibold shadow-sm"
+                >
+                  {userRole}
+                </Typography>
+                <Typography
+                  level="body-xs"
+                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full text-white font-medium shadow-sm"
+                >
+                  {department}
+                </Typography>
+              </div>
+            </div>
+          </Box>
+        </div>
+        <div className="mx-1">
+          <IconButton
+            size="sm"
+            className="flex gap-5 mb-3 h-10 text-lg items-center mt-2 justify-between px-3 bg-gray-200 w-full"
+            variant="plain"
+            color="neutral"
+            onClick={() => setIsModalOpen(true)}
+          >
+            LogOut <LogoutRoundedIcon />
+          </IconButton>
+
+          <LogoutModal
+            open={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onConfirm={handleLogout}
+          />
+        </div>
+      </Box>
+    </Sheet>
+  );
+}
+
+const LogoutModal = ({ open, onClose, onConfirm }) => {
+  return (
+    <Modal open={open} onClose={onClose}>
+      <div
+        className="p-5 bg-white rounded-md shadow-lg w-80"
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
+        }}
+      >
+        <h2 className="text-xl font-semibold mb-4">Confirm Logout</h2>
+        <p className="mb-6">Are you sure you want to log out?</p>
+        <div className="flex justify-end gap-4">
+          <Button variant="plain" color="neutral" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="solid" color="danger" onClick={onConfirm}>
+            Log Out
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+{
+  /* <List
+          size="sm"
+          sx={{
+            gap: 1,
+            "--List-nestedInsetStart": "30px",
+            "--ListItem-radius": (theme) => theme.vars.radius.sm,
+          }}
+        >
+          <ListItem nested className="mx-1">
+            <Toggler
+              renderToggle={({ open, setOpen }) => (
+                <ListItemButton onClick={() => setOpen(!open)}>
+                  <SettingsRoundedIcon />
+                  <ListItemContent>
+                    <Typography level="title-sm">Settings</Typography>
+                  </ListItemContent>
+
+                  <KeyboardArrowDownIcon
+                    sx={{ transform: open ? "rotate(180deg)" : "none" }}
+                  />
+                </ListItemButton>
+              )}
+            >
+              <List sx={{ gap: 0.5 }}>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/profile");
+                    handleItemClick("/profile");
+                  }}
+                  sx={{ mt: 0.5 }}
+                >
+                  <ListItemButton selected={selectedItem === "/profile"}>
+                    My profile
+                  </ListItemButton>
+                </ListItem>
+                <ListItem
+                  nested
+                  onClick={() => {
+                    navigate("/change-password");
+                    handleItemClick("/change-password");
+                  }}
+                >
+                  <ListItemButton
+                    selected={selectedItem === "/change-password"}
+                  >
+                    Change password
+                  </ListItemButton>
+                </ListItem>
+         
+              </List>
+            </Toggler>
+          </ListItem>
+        </List> */
+}
+
+{
+  /* <List
           size="sm"
           className="mx-1"
           sx={{
@@ -895,400 +588,5 @@ export default function Sidebar({ onSidebarItemClick }) {
               </List>
             </Toggler>
           </ListItem>
-        </List> */}
-        {/* <List
-          size="sm"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": (theme) => theme.vars.radius.sm,
-          }}
-        >
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <DashboardRoundedIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Master Management</Typography>
-                  </ListItemContent>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/user");
-                    handleItemClick("user");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "user"}>
-                    User
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/equipment");
-                    handleItemClick("equipment");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "equipment"}>
-                    Equipment
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/product")}>
-                    Product
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/reported-problem")}>
-                    Reported Problem
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/warrenty-code")}>
-                    Warranty Code
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton
-                    onClick={() => navigate("/replaced-part-code")}
-                  >
-                    Replaced Part Code
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("aerb")}>
-                    AERB
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/dealer")}>
-                    Dealer
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    style={{ color: "#636b74" }}
-                    height="16"
-                    fill="currentColor"
-                    className="bi bi-cloud-arrow-up-fill"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z" />
-                  </svg>
-                  <ListItemContent>
-                    <Typography level="title-sm">Upload Management</Typography>
-                  </ListItemContent>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem sx={{ mt: 0.5 }}>
-                  <ListItemButton onClick={() => navigate("/amc-contract")}>
-                    AMC Contract
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/customer")}>
-                    Customer
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/dealer-stock")}>
-                    Dealer Stock
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/hub-stock")}>
-                    Hub Stock
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton
-                    onClick={() => navigate("/pending-installation")}
-                  >
-                    Pending Installation
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton
-                    onClick={() => navigate("/pending-complaint")}
-                  >
-                    Pending Complaint
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SummarizeIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Admin</Typography>
-                  </ListItemContent>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem sx={{ mt: 0.5 }}>
-                  <ListItemButton onClick={() => navigate("/admin-country")}>
-                    Country
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-state")}>
-                    State/Region
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-city")}>
-                    City
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/branch")}>
-                    Branch
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/Roles")}>
-                    Roles
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-user-type")}>
-                    User Type
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-department")}>
-                    Department
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton
-                    onClick={() => navigate("/admin-product-group")}
-                  >
-                    Product Group
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-checklist")}>
-                    Checklist
-                  </ListItemButton>
-                </ListItem>
-                <ListItem>
-                  <ListItemButton onClick={() => navigate("/admin-pm-master")}>
-                    PM Master
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-        </List> */}
-      </Box>
-
-      {/* <Divider /> */}
-      <Box sx={{ width: "100%" }}>
-        {/* <List
-          size="sm"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": (theme) => theme.vars.radius.sm,
-          }}
-        >
-          <ListItem nested className="mx-1">
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SettingsRoundedIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Settings</Typography>
-                  </ListItemContent>
-
-                  <KeyboardArrowDownIcon
-                    sx={{ transform: open ? "rotate(180deg)" : "none" }}
-                  />
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/profile");
-                    handleItemClick("/profile");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/profile"}>
-                    My profile
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/change-password");
-                    handleItemClick("/change-password");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/change-password"}
-                  >
-                    Change password
-                  </ListItemButton>
-                </ListItem>
-         
-              </List>
-            </Toggler>
-          </ListItem>
-        </List> */}
-        <div className="flex  mx-1 bg-gradient-to-r from-slate-50 to-gray-50 gap-3 items-center rounded-xl pl-3 py-3 border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300/60">
-          <Avatar
-            variant="outlined"
-            size="sm"
-            src={`${process.env.REACT_APP_BASE_URL || ""}${avatarImage}`}
-            className="ring-2 ring-white shadow-sm"
-          />
-
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <div className="flex items-center justify-between pr-2">
-              <Typography
-                level="title-sm"
-                className="text-sm font-semibold text-gray-800 mb-1"
-              >
-                {userName}
-              </Typography>
-              <Typography
-                level="body-xs"
-                className="text-xs text-gray-600 font-medium"
-              >
-                Role ID: {userId}
-              </Typography>
-            </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex gap-1.5">
-                <Typography
-                  level="body-xs"
-                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full text-black font-semibold shadow-sm"
-                >
-                  {userRole}
-                </Typography>
-                <Typography
-                  level="body-xs"
-                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full text-white font-medium shadow-sm"
-                >
-                  {department}
-                </Typography>
-              </div>
-            </div>
-          </Box>
-        </div>
-        <div className="mx-1">
-          <IconButton
-            size="sm"
-            className="flex gap-5 mb-3 h-10 text-lg items-center mt-2 justify-between px-3 bg-gray-200 w-full"
-            variant="plain"
-            color="neutral"
-            onClick={() => setIsModalOpen(true)} // Open the modal
-          >
-            LogOut <LogoutRoundedIcon />
-          </IconButton>
-
-          <LogoutModal
-            open={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onConfirm={handleLogout}
-          />
-        </div>
-      </Box>
-    </Sheet>
-  );
+        </List> */
 }
-
-const LogoutModal = ({ open, onClose, onConfirm }) => {
-  return (
-    <Modal open={open} onClose={onClose}>
-      <div
-        className="p-5 bg-white rounded-md shadow-lg w-80"
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
-        }}
-      >
-        <h2 className="text-xl font-semibold mb-4">Confirm Logout</h2>
-        <p className="mb-6">Are you sure you want to log out?</p>
-        <div className="flex justify-end gap-4">
-          <Button variant="plain" color="neutral" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" color="danger" onClick={onConfirm}>
-            Log Out
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-};

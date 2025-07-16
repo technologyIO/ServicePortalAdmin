@@ -37,7 +37,7 @@ function Login() {
       setEmployee("");
       setPassword("");
 
-      navigate("/user");
+      window.location.href = "/";
     } catch (error) {
       toast.error(
         error.response?.data?.message ||

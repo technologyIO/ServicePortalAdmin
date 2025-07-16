@@ -1,4 +1,3 @@
-// src/context/PermissionContext.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const PermissionContext = createContext();
@@ -7,35 +6,53 @@ export const PermissionProvider = ({ children }) => {
     const [permissions, setPermissions] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [ready, setReady] = useState(false); // New ready state
 
     useEffect(() => {
         const fetchPermissions = async () => {
             try {
                 const user = JSON.parse(localStorage.getItem('user'));
                 
-                // Check if user exists and has nested roleId
-                if (user?.details?.role?.roleId) {
-                    console.log("Fetching permissions for roleId:", user.details.role.roleId);
-                    
-                    const response = await fetch(`${process.env.REACT_APP_BASE_URL}/roles/by-roleid/${user.details.role.roleId}`);
+                // Check for cached permissions first
+                const cachedPermissions = localStorage.getItem('permissions');
+                if (cachedPermissions && user?.token) {
+                    const parsed = JSON.parse(cachedPermissions);
+                    if (parsed.roleId === user?.details?.role?.roleId) {
+                        setPermissions(parsed.features);
+                        setLoading(false);
+                        setReady(true);
+                        return;
+                    }
+                }
+
+                if (user?.token && user?.details?.role?.roleId) {
+                    const response = await fetch(
+                        `${process.env.REACT_APP_BASE_URL}/roles/by-roleid/${user.details.role.roleId}`
+                    );
                     
                     if (!response.ok) {
                         throw new Error(`Failed to fetch permissions: ${response.status}`);
                     }
                     
                     const data = await response.json();
-                    console.log("Received permissions:", data.features);
+                    
+                    // Cache the permissions
+                    localStorage.setItem('permissions', JSON.stringify({
+                        roleId: user.details.role.roleId,
+                        features: data.features
+                    }));
+                    
                     setPermissions(data.features);
                 } else {
-                    console.warn("User or roleId not found in user object");
                     setPermissions([]);
                 }
             } catch (error) {
                 console.error('Error fetching permissions:', error);
                 setError(error.message);
-                setPermissions([]); // Set empty array to prevent blocking UI
+                setPermissions([]);
             } finally {
                 setLoading(false);
+                setReady(true); // Mark as ready
             }
         };
         
@@ -43,30 +60,22 @@ export const PermissionProvider = ({ children }) => {
     }, []);
 
     const hasPermission = (component, action = 'read') => {
-        if (loading) return false; // Wait while loading
-        if (error) return false; // Deny if there was an error
+        if (!ready) return false; // Don't allow access until ready
+        if (error) return false;
         
         if (!permissions || permissions.length === 0) {
-            console.warn("No permissions loaded for component:", component);
             return false;
         }
         
         const feature = permissions.find(f => f.component === component);
-        
-        if (!feature) {
-            console.warn(`Permission not found for component: ${component}`);
-            return false;
-        }
-        
-        const hasAccess = feature[action];
-        console.log(`Permission check: ${component} - ${action} - ${hasAccess}`);
-        return hasAccess;
+        return feature ? feature[action] : false;
     };
 
     return (
         <PermissionContext.Provider value={{ 
             hasPermission, 
             loading, 
+            ready, // Expose ready state
             permissions,
             error 
         }}>
@@ -75,4 +84,10 @@ export const PermissionProvider = ({ children }) => {
     );
 };
 
-export const usePermissions = () => useContext(PermissionContext);
+export const usePermissions = () => {
+    const context = useContext(PermissionContext);
+    if (context === undefined) {
+        throw new Error('usePermissions must be used within a PermissionProvider');
+    }
+    return context;
+};

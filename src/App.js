@@ -62,7 +62,7 @@ import CloseProposal from './Components/DataComponents/CloseOrder/CloseProposal'
 import ProposalApprovalPage from './Components/DataComponents/Admin/QuoteApproval/ProposalApprovalPage';
 import CNoteDelete from './Components/DataComponents/Admin/CNote/CNoteDelete';
 import RoleManagement from './Components/DataComponents/Role/RoleManagement';
-import { PermissionProvider } from './PermissionContext';
+import { PermissionProvider, usePermissions } from './PermissionContext';
 import ProtectedRoute from './ProtectedRoute';
 import UserManagment from './Components/DataComponents/Master_Managemnet/User/UserManagment';
 import AdminRegion from './Components/DataComponents/Admin/AdminRegion';
@@ -80,51 +80,53 @@ const PrivateRoute = ({ children }) => {
 };
 
 
+// App.js
 const App = () => {
   return (
-    <Router>
-      <Toaster position="top-right" reverseOrder={false} />
-      <Routes>
+    <PermissionProvider>
+      <Router>
+        <Toaster position="top-right" reverseOrder={false} />
+        <Routes>
+          {/* Redirect root to login if not logged in */}
+          <Route path="/" element={<Navigate to="/login" />} />
 
-        {/* Redirect root to login if not logged in */}
-        <Route path="/" element={<Navigate to="/login" />} />
+          {/* Login route */}
+          <Route
+            path="/login"
+            element={
+              JSON.parse(localStorage.getItem('user'))?.token ? (
+                <Navigate to="/user" />
+              ) : (
+                <Login />
+              )
+            }
+          />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-otp" element={<OTPVerification />} />
+          <Route path="/reset-password-otp" element={<ResetPasswordOtp />} />
 
-        {/* Login route */}
-        <Route
-          path="/login"
-          element={
-            JSON.parse(localStorage.getItem('user'))?.token ? (
-              <Navigate to="/user" /> // Redirect to dashboard if logged in
-            ) : (
-              <Login />
-            )
-          }
-        />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/verify-otp" element={<OTPVerification />} />
-        <Route path="/reset-password-otp" element={<ResetPasswordOtp />} />
-
-
-        {/* Protected routes */}
-        <Route
-          path="/*"
-          element={
-            <PrivateRoute>
-              <AppContent />
-            </PrivateRoute>
-          }
-        />
-      </Routes>
-    </Router>
+          {/* Protected routes */}
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <AppContent />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </Router>
+    </PermissionProvider>
   );
 };
 
 
 
 const AppContent = () => {
-  const [currentRouteName, setCurrentRouteName] = useState('');
+
   const location = useLocation();
+  const [currentRouteName, setCurrentRouteName] = useState('');
 
   useEffect(() => {
     const routeName = location.pathname.split('/').pop().replace(/-/g, ' ');
@@ -156,259 +158,259 @@ const AppContent = () => {
           }}
         >
           {/* Define routes */}
-          <PermissionProvider>
 
-            <Routes>
-              <Route
-                path="/user"
-                element={
-                  <ProtectedRoute
-                    component={UserData}
-                    componentName="User"
-                    requiredPermission="read"
-                  />
-                }
-              />
-              <Route path="/equipment" element={<ProtectedRoute
-                component={Equipment}
-                componentName="Equipment"
-                requiredPermission="read"
-              />} />
-              <Route path="/product" element={<ProtectedRoute
-                component={Product}
-                componentName="Product"
-                requiredPermission="read"
-              />} />
-              <Route path="/reported-problem" element={<ProtectedRoute
-                component={ReportedProblem}
-                componentName="Reported Problem"
-                requiredPermission="read"
-              />} />
-              <Route path="/warrenty-code" element={<ProtectedRoute
-                component={WarrantyCode}
-                componentName="Warranty Code"
-                requiredPermission="read"
-              />} />
-              <Route path="/replaced-part-code" element={<ProtectedRoute
-                component={ReplacedPartCode}
-                componentName="Replaced Part Code"
-                requiredPermission="read"
-              />} />
-              <Route path="/aerb" element={<ProtectedRoute
-                component={Aerb}
-                componentName="AERB"
-                requiredPermission="read"
-              />} />
-              <Route path="/dealer" element={<ProtectedRoute
-                component={Dealer}
-                componentName="Dealer"
-                requiredPermission="read"
-              />} />
-              {/* <Route path="/branch" element={<ProtectedRoute
+
+          <Routes>
+            <Route
+              path="/user"
+              element={
+                <ProtectedRoute
+                  component={UserData}
+                  componentName="User"
+                  requiredPermission="read"
+                />
+              }
+            />
+            <Route path="/equipment" element={<ProtectedRoute
+              component={Equipment}
+              componentName="Equipment"
+              requiredPermission="read"
+            />} />
+            <Route path="/product" element={<ProtectedRoute
+              component={Product}
+              componentName="Product"
+              requiredPermission="read"
+            />} />
+            <Route path="/reported-problem" element={<ProtectedRoute
+              component={ReportedProblem}
+              componentName="Reported Problem"
+              requiredPermission="read"
+            />} />
+            <Route path="/warrenty-code" element={<ProtectedRoute
+              component={WarrantyCode}
+              componentName="Warranty Code"
+              requiredPermission="read"
+            />} />
+            <Route path="/replaced-part-code" element={<ProtectedRoute
+              component={ReplacedPartCode}
+              componentName="Replaced Part Code"
+              requiredPermission="read"
+            />} />
+            <Route path="/aerb" element={<ProtectedRoute
+              component={Aerb}
+              componentName="AERB"
+              requiredPermission="read"
+            />} />
+            <Route path="/dealer" element={<ProtectedRoute
+              component={Dealer}
+              componentName="Dealer"
+              requiredPermission="read"
+            />} />
+            {/* <Route path="/branch" element={<ProtectedRoute
                 component={Branch}
                 componentName="Branch"
                 requiredPermission="read"
               />} /> */}
-              {/* <Route path="/complaint-create" element={<ProtectedRoute
+            {/* <Route path="/complaint-create" element={<ProtectedRoute
                 component={ComplaintCreate}
                 componentName="Complaint Create"
                 requiredPermission="read"
               />} /> */}
-              <Route path="/complaint-create-close" element={<ProtectedRoute
-                component={ComplaintCreateClose}
-                componentName="Complaint Create Close"
-                requiredPermission="read"
-              />} />
-              <Route path="/complaint-update" element={<ProtectedRoute
-                component={ComplaintUpdate}
-                componentName="Complaint Update"
-                requiredPermission="read"
-              />} />
-              <Route path="/completed-installation" element={<ProtectedRoute
-                component={CompletedInstallation}
-                componentName="Completed Installation"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-country" element={<ProtectedRoute
-                component={AdminCountry}
-                componentName="Country"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-state" element={<ProtectedRoute
-                component={AdminState}
-                componentName="State"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-region" element={<ProtectedRoute
-                component={AdminRegion}
-                componentName="Region"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-geo" element={<ProtectedRoute
-                component={AdminGeo}
-                componentName="Geo"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-city" element={<ProtectedRoute
-                component={AdminCity}
-                componentName="City"
-                requiredPermission="read"
-              />} />
-              <Route path="/branch" element={<ProtectedRoute
-                component={AdminBranch}
-                componentName="Branch"
-                requiredPermission="read"
-              />} />
+            <Route path="/complaint-create-close" element={<ProtectedRoute
+              component={ComplaintCreateClose}
+              componentName="Complaint Create Close"
+              requiredPermission="read"
+            />} />
+            <Route path="/complaint-update" element={<ProtectedRoute
+              component={ComplaintUpdate}
+              componentName="Complaint Update"
+              requiredPermission="read"
+            />} />
+            <Route path="/completed-installation" element={<ProtectedRoute
+              component={CompletedInstallation}
+              componentName="Completed Installation"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-country" element={<ProtectedRoute
+              component={AdminCountry}
+              componentName="Country"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-state" element={<ProtectedRoute
+              component={AdminState}
+              componentName="State"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-region" element={<ProtectedRoute
+              component={AdminRegion}
+              componentName="Region"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-geo" element={<ProtectedRoute
+              component={AdminGeo}
+              componentName="Geo"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-city" element={<ProtectedRoute
+              component={AdminCity}
+              componentName="City"
+              requiredPermission="read"
+            />} />
+            <Route path="/branch" element={<ProtectedRoute
+              component={AdminBranch}
+              componentName="Branch"
+              requiredPermission="read"
+            />} />
 
-              <Route path="/admin-department" element={<ProtectedRoute
-                component={AdminDepartment}
-                componentName="Department"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-department" element={<ProtectedRoute
-                component={AdminDepartment}
-                componentName="Department"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-user-type" element={<ProtectedRoute
-                component={AdminUserType}
-                componentName="User Type"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-product-group" element={<ProtectedRoute
-                component={AdminProductGroup}
-                componentName="Product Group"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-checklist" element={<ProtectedRoute
-                component={AdminChecklist}
-                componentName="Checklist"
-                requiredPermission="read"
-              />} />
-              <Route path="/admin-pm-master" element={<ProtectedRoute
-                component={AdminPM_Master}
-                componentName="PM Master"
-                requiredPermission="read"
-              />} />
-              <Route path="/spare" element={<ProtectedRoute
-                component={Spare}
-                componentName="Spare Master"
-                requiredPermission="read"
-              />} />
-              <Route path="/new-customer" element={<ProtectedRoute
-                component={NewCustomer}
-                componentName="New Customer"
-                requiredPermission="read"
-              />} />
-              <Route path="/user-edit/:userId" element={<UserManagment />} />
-              <Route path="/amc-contract" element={<ProtectedRoute
-                component={AmcContract}
-                componentName="AMC Contract"
-                requiredPermission="read"
-              />} />
-              <Route path="/customer" element={<ProtectedRoute
-                component={Customer}
-                componentName="Customer"
-                requiredPermission="read"
-              />} />
-              <Route path="/dealer-stock" element={<ProtectedRoute
-                component={DealerStock}
-                componentName="Dealer Stock"
-                requiredPermission="read"
-              />} />
-              <Route path="/hub-stock" element={<ProtectedRoute
-                component={HubStock}
-                componentName="Hub Stock"
-                requiredPermission="read"
-              />} />
-              <Route path="/pending-complaint" element={<ProtectedRoute
-                component={PendingComplaint}
-                componentName="Pending Complaint"
-                requiredPermission="read"
-              />} />
-              <Route path="/pending-installation" element={<ProtectedRoute
-                component={PendingInstallation}
-                componentName="Pending Installation"
-                requiredPermission="read"
-              />} />
-              <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/admin-department" element={<ProtectedRoute
+              component={AdminDepartment}
+              componentName="Department"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-department" element={<ProtectedRoute
+              component={AdminDepartment}
+              componentName="Department"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-user-type" element={<ProtectedRoute
+              component={AdminUserType}
+              componentName="User Type"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-product-group" element={<ProtectedRoute
+              component={AdminProductGroup}
+              componentName="Product Group"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-checklist" element={<ProtectedRoute
+              component={AdminChecklist}
+              componentName="Checklist"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-pm-master" element={<ProtectedRoute
+              component={AdminPM_Master}
+              componentName="PM Master"
+              requiredPermission="read"
+            />} />
+            <Route path="/spare" element={<ProtectedRoute
+              component={Spare}
+              componentName="Spare Master"
+              requiredPermission="read"
+            />} />
+            <Route path="/new-customer" element={<ProtectedRoute
+              component={NewCustomer}
+              componentName="New Customer"
+              requiredPermission="read"
+            />} />
+            <Route path="/user-edit/:userId" element={<UserManagment />} />
+            <Route path="/amc-contract" element={<ProtectedRoute
+              component={AmcContract}
+              componentName="AMC Contract"
+              requiredPermission="read"
+            />} />
+            <Route path="/customer" element={<ProtectedRoute
+              component={Customer}
+              componentName="Customer"
+              requiredPermission="read"
+            />} />
+            <Route path="/dealer-stock" element={<ProtectedRoute
+              component={DealerStock}
+              componentName="Dealer Stock"
+              requiredPermission="read"
+            />} />
+            <Route path="/hub-stock" element={<ProtectedRoute
+              component={HubStock}
+              componentName="Hub Stock"
+              requiredPermission="read"
+            />} />
+            <Route path="/pending-complaint" element={<ProtectedRoute
+              component={PendingComplaint}
+              componentName="Pending Complaint"
+              requiredPermission="read"
+            />} />
+            <Route path="/pending-installation" element={<ProtectedRoute
+              component={PendingInstallation}
+              componentName="Pending Installation"
+              requiredPermission="read"
+            />} />
+            <Route path="/change-password" element={<ChangePassword />} />
 
 
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/preventive-maintenance" element={<ProtectedRoute
-                component={PreventiveMaintenance}
-                componentName="Preventive Maintenance"
-                requiredPermission="read"
-              />} />
-              <Route path="/checklist-type" element={<ProtectedRoute
-                component={CheckListType}
-                componentName="CheckListType"
-                requiredPermission="read"
-              />} />
-              <Route path="/checkpoint-type" element={<ProtectedRoute
-                component={CheckPointType}
-                componentName="CheckPointType"
-                requiredPermission="read"
-              />} />
-              <Route path="/formatmaster" element={<ProtectedRoute
-                component={FormatMaster}
-                componentName="Format Master"
-                requiredPermission="read"
-              />} />
-              <Route path="/cmc-ncmc-years" element={<ProtectedRoute
-                component={CmcNcmcWYears}
-                componentName="CMC/NCMC Years"
-                requiredPermission="read"
-              />} />
-              <Route path="/cmc-ncmc-price" element={<ProtectedRoute
-                component={CmcNcmcPrice}
-                componentName="CMC/NCMC Price"
-                requiredPermission="read"
-              />} />
-              <Route path="/cmc-ncmc-tds" element={<ProtectedRoute
-                component={CmcNcmcTds}
-                componentName="CMC/NCMC TDS"
-                requiredPermission="read"
-              />} />
-              <Route path="/cmc-ncmc-gst" element={<ProtectedRoute
-                component={CmcNcmcGst}
-                componentName="CMC/NCMC Gst"
-                requiredPermission="read"
-              />} />
-              <Route path="/cmc-ncmc-discount" element={<ProtectedRoute
-                component={CmcNcmcDiscount}
-                componentName="CMC/NCMC Discount"
-                requiredPermission="read"
-              />} />
-              <Route path="/quote-approval" element={<ProtectedRoute
-                component={QuoteApproval}
-                componentName="Quote Approval"
-                requiredPermission="read"
-              />} />
-              <Route path="/cnote-delete" element={<ProtectedRoute
-                component={CNoteDelete}
-                componentName="CNote Delete"
-                requiredPermission="read"
-              />} />
-              {/* <Route path="/open-proposal" element={<ProtectedRoute
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/preventive-maintenance" element={<ProtectedRoute
+              component={PreventiveMaintenance}
+              componentName="Preventive Maintenance"
+              requiredPermission="read"
+            />} />
+            <Route path="/checklist-type" element={<ProtectedRoute
+              component={CheckListType}
+              componentName="CheckListType"
+              requiredPermission="read"
+            />} />
+            <Route path="/checkpoint-type" element={<ProtectedRoute
+              component={CheckPointType}
+              componentName="CheckPointType"
+              requiredPermission="read"
+            />} />
+            <Route path="/formatmaster" element={<ProtectedRoute
+              component={FormatMaster}
+              componentName="Format Master"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-years" element={<ProtectedRoute
+              component={CmcNcmcWYears}
+              componentName="CMC/NCMC Years"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-price" element={<ProtectedRoute
+              component={CmcNcmcPrice}
+              componentName="CMC/NCMC Price"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-tds" element={<ProtectedRoute
+              component={CmcNcmcTds}
+              componentName="CMC/NCMC TDS"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-gst" element={<ProtectedRoute
+              component={CmcNcmcGst}
+              componentName="CMC/NCMC Gst"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-discount" element={<ProtectedRoute
+              component={CmcNcmcDiscount}
+              componentName="CMC/NCMC Discount"
+              requiredPermission="read"
+            />} />
+            <Route path="/quote-approval" element={<ProtectedRoute
+              component={QuoteApproval}
+              componentName="Quote Approval"
+              requiredPermission="read"
+            />} />
+            <Route path="/cnote-delete" element={<ProtectedRoute
+              component={CNoteDelete}
+              componentName="CNote Delete"
+              requiredPermission="read"
+            />} />
+            {/* <Route path="/open-proposal" element={<ProtectedRoute
                 component={OpenProposal}
                 componentName="Open Proposal"
                 requiredPermission="read"
               />} /> */}
-              <Route path="/open-proposal" element={<OpenProposal />} />
-              <Route path="/complaint-create" element={<ComplaintCreate />} />
-              <Route path="/user-create" element={<UserManagment />} />
-              <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
-              <Route path="/close-proposal" element={<CloseProposal />} />
-              {/* <Route path="/role-manage" element={<ProtectedRoute
+            <Route path="/open-proposal" element={<OpenProposal />} />
+            <Route path="/complaint-create" element={<ComplaintCreate />} />
+            <Route path="/user-create" element={<UserManagment />} />
+            <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
+            <Route path="/close-proposal" element={<CloseProposal />} />
+            {/* <Route path="/role-manage" element={<ProtectedRoute
                 component={RoleManagement}
                 componentName="Role Manage"
                 requiredPermission="read"
               />} /> */}
-              <Route path="/role-manage" element={<RoleManagement />} />
-              {/* Add other protected routes here */}
-            </Routes>
-          </PermissionProvider>
+            <Route path="/role-manage" element={<RoleManagement />} />
+            {/* Add other protected routes here */}
+          </Routes>
+
 
         </Box>
       </Box>
