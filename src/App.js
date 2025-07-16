@@ -71,6 +71,7 @@ import ResetPassword from './Components/Auth/ResetPassword';
 import ForgotPassword from './Components/Auth/ForgotPassword';
 import OTPVerification from './Components/Auth/OTPVerification';
 import ResetPasswordOtp from './Components/Auth/ResetPasswordOtp';
+import PmDocMaster from './Components/DataComponents/Master_Managemnet/PmDocMaster/PmDocMaster';
 
 
 const PrivateRoute = ({ children }) => {
@@ -194,6 +195,11 @@ const AppContent = () => {
             />} />
             <Route path="/replaced-part-code" element={<ProtectedRoute
               component={ReplacedPartCode}
+              componentName="Replaced Part Code"
+              requiredPermission="read"
+            />} />
+            <Route path="/pm-doc-master" element={<ProtectedRoute
+              component={PmDocMaster}
               componentName="Replaced Part Code"
               requiredPermission="read"
             />} />
