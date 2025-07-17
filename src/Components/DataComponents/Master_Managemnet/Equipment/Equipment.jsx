@@ -148,8 +148,10 @@ const UserData = () => {
       });
   };
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();

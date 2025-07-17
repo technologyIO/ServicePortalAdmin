@@ -137,8 +137,10 @@ function FormatMaster() {
   };
 
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();

@@ -148,8 +148,10 @@ function WarrantyCode() {
       });
   };
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();

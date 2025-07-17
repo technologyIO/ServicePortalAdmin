@@ -147,8 +147,10 @@ function ReportedProblem() {
       });
   };
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();

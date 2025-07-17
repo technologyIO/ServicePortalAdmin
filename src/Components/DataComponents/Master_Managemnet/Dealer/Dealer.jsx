@@ -286,7 +286,8 @@ function Dealer() {
     });
   };
   const handleSearch = async () => {
-    if (!searchQuery) {
+    if (!searchQuery.trim()) {
+      getData(); // fallback to all data if input is empty
       return;
     }
 
@@ -296,13 +297,31 @@ function Dealer() {
         `${process.env.REACT_APP_BASE_URL}/collections/searchdealer?q=${searchQuery}`
       );
 
-      setData(response.data);
-      setLoader(false);
+      let searchData = [];
+      if (Array.isArray(response.data)) {
+        searchData = response.data;
+      } else if (
+        response.data.results &&
+        Array.isArray(response.data.results)
+      ) {
+        searchData = response.data.results;
+      } else if (response.data.message === "No results found") {
+        searchData = [];
+      } else if (response.data._id) {
+        searchData = [response.data];
+      }
+
+      setData(searchData);
+      setTotalPages(1);
+      setPage(1);
     } catch (error) {
       console.error("Error searching users:", error);
+      setData([]);
+    } finally {
       setLoader(false);
     }
   };
+
   const getData = () => {
     setLoader(true);
     setSearchQuery("");
@@ -322,8 +341,10 @@ function Dealer() {
       });
   };
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();
@@ -887,7 +908,8 @@ function Dealer() {
                   </div>
                   <div className="relative  w-full mb-5 group">
                     <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                      Address{" "}  <span className="text-red-500 text-lg ml-1">*</span>
+                      Address{" "}
+                      <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
                     <textarea
                       type="text"

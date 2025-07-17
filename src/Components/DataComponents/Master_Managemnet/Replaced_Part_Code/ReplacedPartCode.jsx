@@ -146,8 +146,10 @@ function ReplacedPartCode() {
       });
   };
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();

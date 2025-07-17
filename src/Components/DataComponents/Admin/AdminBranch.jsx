@@ -123,7 +123,8 @@ const AdminBranch = () => {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery) {
+    if (!searchQuery.trim()) {
+      getAllData(); // Load all data if search query is empty
       return;
     }
 
@@ -132,13 +133,32 @@ const AdminBranch = () => {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/collections/searchbranch?q=${searchQuery}`
       );
-      setData(response.data);
-      setLoader(false);
+
+      let searchData = [];
+      if (Array.isArray(response.data)) {
+        searchData = response.data;
+      } else if (
+        response.data.results &&
+        Array.isArray(response.data.results)
+      ) {
+        searchData = response.data.results;
+      } else if (response.data.message === "No results found") {
+        searchData = [];
+      } else if (response.data._id) {
+        searchData = [response.data];
+      }
+
+      setData(searchData);
+      setTotalPages(1);
+      setPage(1);
     } catch (error) {
       console.error("Error searching users:", error);
+      setData([]);
+    } finally {
       setLoader(false);
     }
   };
+
   const getAllData = () => {
     setLoader(true);
     setSearchQuery("");
@@ -157,8 +177,10 @@ const AdminBranch = () => {
       });
   };
   useEffect(() => {
-    getAllData();
-  }, []);
+    if (!searchQuery) {
+      getAllData();
+    }
+  }, [searchQuery]);
   useEffect(() => {
     getAllData();
   }, [page]);

@@ -219,10 +219,10 @@ const AdminChecklist = () => {
       });
   };
   useEffect(() => {
-    getAllData();
-    // getAllRoles()
-    // getAllCitys()
-  }, []);
+    if (!searchQuery) {
+      getAllData();
+    }
+  }, [searchQuery]);
   useEffect(() => {
     getAllData();
     // getAllCountries()

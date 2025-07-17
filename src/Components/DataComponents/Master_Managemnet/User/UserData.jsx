@@ -241,8 +241,12 @@ const UserData = () => {
                 Search
               </button>
               <button
-                onClick={refreshpage}
                 type="button"
+                onClick={() => {
+                  setIsSpinning(true);
+                  getData();
+                  setTimeout(() => setIsSpinning(false), 1000);
+                }}
                 className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2 flex items-center justify-center gap-2"
               >
                 <RefreshCw

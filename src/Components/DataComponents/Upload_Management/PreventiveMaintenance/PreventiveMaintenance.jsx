@@ -109,7 +109,8 @@ function PreventiveMaintenance() {
     });
   };
   const handleSearch = async () => {
-    if (!searchQuery) {
+    if (!searchQuery.trim()) {
+      getData();
       return;
     }
 
@@ -118,10 +119,28 @@ function PreventiveMaintenance() {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/upload/pmsearch?q=${searchQuery}`
       );
-      setData(response.data);
-      setLoader(false);
+
+      let searchData = [];
+      if (Array.isArray(response.data)) {
+        searchData = response.data;
+      } else if (
+        response.data.results &&
+        Array.isArray(response.data.results)
+      ) {
+        searchData = response.data.results;
+      } else if (response.data.message === "No results found") {
+        searchData = [];
+      } else if (response.data._id) {
+        searchData = [response.data];
+      }
+
+      setData(searchData);
+      setTotalPages(1);
+      setPage(1);
     } catch (error) {
       console.error("Error searching users:", error);
+      setData([]);
+    } finally {
       setLoader(false);
     }
   };
@@ -145,8 +164,10 @@ function PreventiveMaintenance() {
   };
 
   useEffect(() => {
-    getData();
-  }, []);
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getData();
