@@ -145,7 +145,10 @@ export default function Sidebar({ onSidebarItemClick }) {
         { component: "CMC/NCMC Gst", path: "/cmc-ncmc-gst" },
         { component: "CMC/NCMC Discount", path: "/cmc-ncmc-discount" },
         { component: "Quote Approval", path: "/quote-approval" },
+        { component: "On Call Approval", path: "/on-call-approval" },
         { component: "CNote Delete", path: "/cnote-delete" },
+        { component: "OnCall Cnote Delete", path: "/oncall-cnote-delete" },
+        { component: "Service Charge", path: "/service-charge" },
       ],
     },
     {
@@ -153,8 +156,10 @@ export default function Sidebar({ onSidebarItemClick }) {
       icon: <SummarizeIcon />,
       storageKey: "closeOrderTogglerState",
       items: [
-        { component: "Open Proposal", path: "/open-proposal" },
-        { component: "Close Proposal", path: "/close-proposal" },
+        { component: "Close Order Open", path: "/open-proposal" },
+        { component: "Close Order Close", path: "/close-proposal" },
+        { component: "Open OnCall Order", path: "/open-oncall-order" },
+        { component: "Close OnCall Order", path: "/close-oncall-order" },
       ],
     },
   ];
@@ -181,7 +186,7 @@ export default function Sidebar({ onSidebarItemClick }) {
   const handleItemClick = (item) => {
     setSelectedItem(item);
   };
- 
+
   return (
     <Sheet
       className="Sidebar"

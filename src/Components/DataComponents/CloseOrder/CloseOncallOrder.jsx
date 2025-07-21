@@ -17,12 +17,12 @@ const api = axios.create({
   },
 });
 
-function CloseProposal() {
+function CloseOnCallOrder() {
   /* ───────────────────────── STATES ───────────────────────── */
   const [showViewModal, setShowViewModal] = useState(false);
-  const [proposals, setProposals] = useState([]);
+  const [onCalls, setOnCalls] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
-  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [selectedOnCall, setSelectedOnCall] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -46,50 +46,51 @@ function CloseProposal() {
   }, []);
 
   /* ───────────────────────── API CALLS ───────────────────────── */
-  const fetchProposals = useCallback(async () => {
+  const fetchOnCalls = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(
-        `/phone/proposal/allcompleted?page=${page}&limit=${limit}`
-      );
+      const res = await api.get(`/phone/oncall/pagecallcompleted?page=${page}&limit=${limit}`);
 
-      const data = res.data.records || [];
+      const data = res.data.data || res.data;
       const pagesCount =
         res.data.totalPages || Math.ceil((data.length || 0) / limit);
 
-      // Filter only completed proposals
-      const filteredProposals = (data || []).filter(
-        (proposal) => proposal.status?.toLowerCase() === "completed"
+      // Filter only completed OnCall orders
+      const filteredOnCalls = data.filter(
+        (onCall) => onCall.status?.toLowerCase() === "completed"
       );
 
-      setProposals(filteredProposals);
-      setFilteredData(filteredProposals);
+      setOnCalls(filteredOnCalls);
+      setFilteredData(filteredOnCalls);
       setTotalPages(pagesCount);
     } catch (error) {
-      console.error("Fetch proposals error:", error);
-      toast.error(error.response?.data?.message || "Failed to fetch proposals");
+      console.error("Fetch OnCall orders error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to fetch OnCall orders"
+      );
     } finally {
       setLoading(false);
     }
   }, [page]);
 
   useEffect(() => {
-    fetchProposals();
-  }, [fetchProposals]);
+    fetchOnCalls();
+  }, [fetchOnCalls]);
 
   /* ───────────────────────── SEARCH ───────────────────────── */
   const handleSearch = () => {
     if (!searchQuery.trim()) {
-      setFilteredData(proposals);
+      setFilteredData(onCalls);
       return;
     }
 
     const query = searchQuery.toLowerCase();
 
-    const filtered = proposals.filter((row) => {
+    const filtered = onCalls.filter((row) => {
       return (
-        row.proposalNumber?.toLowerCase().includes(query) ||
+        row.onCallNumber?.toLowerCase().includes(query) ||
         row.customer?.customername?.toLowerCase().includes(query) ||
+        row.complaint?.materialdescription?.toLowerCase().includes(query) ||
         row.CoNumber?.toLowerCase().includes(query) ||
         row.status?.toLowerCase().includes(query)
       );
@@ -99,17 +100,26 @@ function CloseProposal() {
   };
 
   /* ───────────────────────── MODALS ───────────────────────── */
-  const handleOpenViewModal = (proposal) => {
-    setSelectedProposal(proposal);
+  const handleOpenViewModal = (onCall) => {
+    setSelectedOnCall(onCall);
     setShowViewModal(true);
   };
 
   const handleCloseModal = () => {
     setShowViewModal(false);
-    setSelectedProposal(null);
+    setSelectedOnCall(null);
   };
 
   /* ───────────────────────── HELPERS ───────────────────────── */
+  const getTotalSpares = (productGroups) => {
+    return (
+      productGroups?.reduce(
+        (total, group) => total + (group.spares?.length || 0),
+        0
+      ) || 0
+    );
+  };
+
   const getStatusColor = (status) => {
     const colorMap = {
       completed: "bg-green-100 text-green-800",
@@ -143,7 +153,7 @@ function CloseProposal() {
           <FormControl sx={{ flex: 1 }} size="sm">
             <Input
               size="sm"
-              placeholder="Search Proposal / Customer / CO Number..."
+              placeholder="Search OnCall / Customer / Device / CO Number..."
               startDecorator={<SearchIcon />}
               value={searchQuery}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -171,19 +181,21 @@ function CloseProposal() {
               <th className="p-3 text-left">
                 <input type="checkbox" className="w-4 h-4" />
               </th>
-              <th className="p-3 text-left font-medium">Proposal No.</th>
+              <th className="p-3 text-left font-medium">OnCall No.</th>
               <th className="p-3 text-left font-medium">Customer</th>
+              <th className="p-3 text-left font-medium">Device</th>
               <th className="p-3 text-left font-medium">CO Number</th>
               <th className="p-3 text-left font-medium">Discount %</th>
               <th className="p-3 text-left font-medium">Final Amount</th>
+              <th className="p-3 text-left font-medium">Spares</th>
               <th className="p-3 text-left font-medium">Status</th>
               <th className="p-3 text-left font-medium">Created</th>
               <th className="p-3 text-left font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((proposal, idx) => (
-              <tr key={proposal._id} className="border-b hover:bg-gray-50">
+            {filteredData.map((onCall, idx) => (
+              <tr key={onCall._id} className="border-b hover:bg-gray-50">
                 <td className="p-3">
                   <input
                     type="checkbox"
@@ -192,53 +204,71 @@ function CloseProposal() {
                 </td>
 
                 <td className="p-3 font-bold text-blue-600">
-                  {proposal.proposalNumber}
+                  {onCall.onCallNumber}
                 </td>
 
                 <td className="p-3">
                   <div>
                     <div className="font-medium capitalize">
-                      {proposal.customer?.customername}
+                      {onCall.customer?.customername}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {proposal.customer?.city}
+                      {onCall.customer?.city}
+                    </div>
+                  </div>
+                </td>
+
+                <td className="p-3">
+                  <div className="max-w-32">
+                    <div
+                      className="font-medium text-xs truncate"
+                      title={onCall.complaint?.materialdescription}
+                    >
+                      {onCall.complaint?.materialdescription}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      S/N: {onCall.complaint?.serialnumber}
                     </div>
                   </div>
                 </td>
 
                 <td className="p-3">
                   <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">
-                    {proposal.CoNumber || "—"}
+                    {onCall.CoNumber || "—"}
                   </code>
                 </td>
 
                 <td className="p-3 text-center">
                   <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">
-                    {proposal.discountPercentage?.toFixed(1)}%
+                    {onCall.discountPercentage?.toFixed(1)}%
                   </span>
                 </td>
 
                 <td className="p-3 font-semibold text-green-600">
-                  ₹{proposal.finalAmount?.toLocaleString("en-IN") || "0"}
+                  ₹{onCall.finalAmount?.toLocaleString("en-IN") || "0"}
+                </td>
+
+                <td className="p-3 text-center">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                    {getTotalSpares(onCall.productGroups)}
+                  </span>
                 </td>
 
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                      proposal.status
+                      onCall.status
                     )}`}
                   >
-                    {proposal.status}
+                    {onCall.status}
                   </span>
                 </td>
 
                 <td className="p-3">
                   <div className="text-xs">
-                    <div>
-                      {moment(proposal.createdAt).format("MMM D, YYYY")}
-                    </div>
+                    <div>{moment(onCall.createdAt).format("MMM D, YYYY")}</div>
                     <div className="text-gray-500">
-                      {moment(proposal.createdAt).format("h:mm A")}
+                      {moment(onCall.createdAt).format("h:mm A")}
                     </div>
                   </div>
                 </td>
@@ -246,9 +276,9 @@ function CloseProposal() {
                 <td className="p-3">
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleOpenViewModal(proposal)}
+                      onClick={() => handleOpenViewModal(onCall)}
                       className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                      title="View Proposal Details"
+                      title="View OnCall Details"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -266,7 +296,7 @@ function CloseProposal() {
                     {/* <button
                       onClick={() =>
                         window.open(
-                          `${process.env.REACT_APP_BASE_URL}/phone/proposal/${proposal.proposalNumber}/pdf`,
+                          `${process.env.REACT_APP_BASE_URL}/phone/oncall-cnote/${onCall.onCallNumber}/pdf`,
                           "_blank"
                         )
                       }
@@ -292,7 +322,7 @@ function CloseProposal() {
 
             {filteredData.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center py-8 text-gray-500">
+                <td colSpan={11} className="text-center py-8 text-gray-500">
                   <div className="flex flex-col items-center gap-2">
                     <svg
                       className="w-12 h-12 text-gray-300"
@@ -307,7 +337,7 @@ function CloseProposal() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                       />
                     </svg>
-                    <p>No completed proposals found</p>
+                    <p>No completed OnCall orders found</p>
                   </div>
                 </td>
               </tr>
@@ -372,7 +402,7 @@ function CloseProposal() {
         <ModalDialog
           size="lg"
           sx={{
-            maxWidth: 800,
+            maxWidth: 900,
             width: "95%",
             bgcolor: "white",
             borderRadius: "8px",
@@ -383,10 +413,10 @@ function CloseProposal() {
           <div className="flex items-center justify-between p-4 border-b">
             <div>
               <h2 className="text-xl font-bold text-gray-900">
-                Completed Proposal
+                Completed OnCall Order
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Proposal #{selectedProposal?.proposalNumber}
+                OnCall #{selectedOnCall?.onCallNumber}
               </p>
             </div>
             <button
@@ -411,7 +441,7 @@ function CloseProposal() {
 
           {/* Modal Content */}
           <div className="p-4 space-y-4">
-            {/* Proposal Summary */}
+            {/* Order Summary */}
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
                 <svg
@@ -427,23 +457,23 @@ function CloseProposal() {
                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                Proposal Summary
+                Order Summary
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                 <div>
                   <span className="font-medium text-gray-700">Status:</span>
                   <span
                     className={`ml-2 px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                      selectedProposal?.status
+                      selectedOnCall?.status
                     )}`}
                   >
-                    {selectedProposal?.status}
+                    {selectedOnCall?.status}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">CO Number:</span>
                   <span className="ml-2 text-gray-900 font-mono">
-                    {selectedProposal?.CoNumber || "—"}
+                    {selectedOnCall?.CoNumber || "—"}
                   </span>
                 </div>
                 <div>
@@ -451,19 +481,7 @@ function CloseProposal() {
                     Final Amount:
                   </span>
                   <span className="ml-2 text-green-600 font-semibold">
-                    ₹{selectedProposal?.finalAmount?.toLocaleString("en-IN")}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Discount:</span>
-                  <span className="ml-2 text-orange-600 font-semibold">
-                    {selectedProposal?.discountPercentage?.toFixed(1)}%
-                  </span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-700">Created:</span>
-                  <span className="ml-2 text-gray-900">
-                    {moment(selectedProposal?.createdAt).format("MMM D, YYYY")}
+                    ₹{selectedOnCall?.finalAmount?.toLocaleString("en-IN")}
                   </span>
                 </div>
               </div>
@@ -491,41 +509,86 @@ function CloseProposal() {
                 <div>
                   <span className="font-medium text-gray-700">Name:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedProposal?.customer?.customername}
+                    {selectedOnCall?.customer.customername}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">City:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedProposal?.customer?.city}
+                    {selectedOnCall?.customer.city}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Phone:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedProposal?.customer?.telephone}
+                    {selectedOnCall?.customer.telephone}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Email:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedProposal?.customer?.email}
+                    {selectedOnCall?.customer.email}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Additional Info if needed */}
-            {selectedProposal?.description && (
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  Description
+            {/* Spare Parts Table */}
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b">
+                <h3 className="font-semibold text-gray-900 flex items-center">
+                  <svg
+                    className="w-5 h-5 text-gray-600 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
+                  Spare Parts ({getTotalSpares(selectedOnCall?.productGroups)}{" "}
+                  items)
                 </h3>
-                <p className="text-gray-700 text-sm">
-                  {selectedProposal.description}
-                </p>
               </div>
-            )}
+              <div className="max-h-64 overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100 sticky top-0">
+                    <tr>
+                      <th className="p-3 text-left font-medium text-gray-700">
+                        Description
+                      </th>
+                      <th className="p-3 text-left font-medium text-gray-700">
+                        Part Number
+                      </th>
+                      <th className="p-3 text-right font-medium text-gray-700">
+                        Rate
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(selectedOnCall?.productGroups || [])
+                      .flatMap((g) => g.spares)
+                      .map((sp, i) => (
+                        <tr key={i} className="border-b hover:bg-gray-50">
+                          <td className="p-3 text-gray-900">
+                            {sp.Description}
+                          </td>
+                          <td className="p-3 font-mono text-gray-700">
+                            {sp.PartNumber}
+                          </td>
+                          <td className="p-3 text-right font-semibold text-green-600">
+                            ₹{sp.Rate?.toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </ModalDialog>
       </Modal>
@@ -533,4 +596,4 @@ function CloseProposal() {
   );
 }
 
-export default CloseProposal;
+export default CloseOnCallOrder;

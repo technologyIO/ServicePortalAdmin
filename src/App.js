@@ -71,6 +71,11 @@ import ForgotPassword from './Components/Auth/ForgotPassword';
 import OTPVerification from './Components/Auth/OTPVerification';
 import ResetPasswordOtp from './Components/Auth/ResetPasswordOtp';
 import PmDocMaster from './Components/DataComponents/Master_Managemnet/PmDocMaster/PmDocMaster';
+import ServiceCharge from './Components/DataComponents/Admin/ServiceCharge';
+import OnCallApproval from './Components/DataComponents/OnCall/OnCallApproval';
+import OnCallCnoteDelete from './Components/DataComponents/Admin/CNote/OnCallCnoteDelete';
+import OpenOnCallOrder from './Components/DataComponents/CloseOrder/OpenOnCallOrder';
+import CloseOncallOrder from './Components/DataComponents/CloseOrder/CloseOncallOrder';
 
 
 const PrivateRoute = ({ children }) => {
@@ -393,9 +398,34 @@ const AppContent = () => {
               componentName="Quote Approval"
               requiredPermission="read"
             />} />
+            <Route path="/service-charge" element={<ProtectedRoute
+              component={ServiceCharge}
+              componentName="Service Charge"
+              requiredPermission="read"
+            />} />
             <Route path="/cnote-delete" element={<ProtectedRoute
               component={CNoteDelete}
               componentName="CNote Delete"
+              requiredPermission="read"
+            />} />
+            <Route path="/oncall-cnote-delete" element={<ProtectedRoute
+              component={OnCallCnoteDelete}
+              componentName="OnCall Cnote Delete"
+              requiredPermission="read"
+            />} />
+            <Route path="/on-call-approval" element={<ProtectedRoute
+              component={OnCallApproval}
+              componentName="On Call Approval"
+              requiredPermission="read"
+            />} />
+            <Route path="/open-oncall-order" element={<ProtectedRoute
+              component={OpenOnCallOrder}
+              componentName="Open OnCall Order"
+              requiredPermission="read"
+            />} />
+            <Route path="/close-oncall-order" element={<ProtectedRoute
+              component={CloseOncallOrder}
+              componentName="Close OnCall Order"
               requiredPermission="read"
             />} />
             {/* <Route path="/open-proposal" element={<ProtectedRoute
