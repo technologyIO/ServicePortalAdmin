@@ -88,3 +88,49 @@
     }
   }
       
+
+
+  @media print {
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  .page-break-after:last-child {
+    page-break-after: auto;
+  }
+}
+
+/* Clean black and white styling */
+#quote-template {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* Remove any background colors for clean printing */
+* {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.pdf-page {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-header {
+  flex-shrink: 0;
+}
+
+.page-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.page-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+}

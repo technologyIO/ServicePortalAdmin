@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import toast from "react-hot-toast";
+import { Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Axios instance
 const api = axios.create({
@@ -27,12 +29,14 @@ function OpenOnCallOrder() {
   const [showModal, setShowModal] = useState(false);
   const [coNumber, setCoNumber] = useState("");
   const limit = 10;
-
+  const navigate = useNavigate();
   // Fetch open OnCalls
   const fetchOnCalls = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/phone/oncall/pagecall?page=${page}&limit=${limit}`);
+      const res = await api.get(
+        `/phone/oncall/pagecall?page=${page}&limit=${limit}`
+      );
       const rows = res.data.data || res.data;
       const pages = res.data.totalPages || Math.ceil(rows.length / limit);
 
@@ -132,7 +136,9 @@ function OpenOnCallOrder() {
       </div>
     );
   }
-
+  const handleDownloadQuote = (proposalId) => {
+    navigate(`/quote-template/${proposalId}`);
+  };
   return (
     <>
       {/* TOP-BAR */}
@@ -281,12 +287,7 @@ function OpenOnCallOrder() {
 
                 <td className="p-3">
                   <button
-                    onClick={() =>
-                      window.open(
-                        `${process.env.REACT_APP_BASE_URL}/phone/oncall-quote/${oc.onCallNumber}/pdf`,
-                        "_blank"
-                      )
-                    }
+                    onClick={() => handleDownloadQuote(oc?._id)}
                     className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors"
                     title="Download Quote PDF"
                   >
@@ -310,17 +311,7 @@ function OpenOnCallOrder() {
                     className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
                     title="Complete OnCall Order"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      className="bi bi-check-circle"
-                      viewBox="0 0 16 16"
-                    >
-                      <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                      <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.061L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
-                    </svg>
+                    <Edit size={20} />
                   </button>
                 </td>
               </tr>

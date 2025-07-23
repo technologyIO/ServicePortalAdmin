@@ -26,7 +26,14 @@ function AmcContract() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    // ✅ Refresh data when modal is closed
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -649,7 +656,7 @@ function AmcContract() {
                 >
                   &times;
                 </button>
-                <AmcContractBulk />
+                <AmcContractBulk onClose={closeModal} />
               </div>
             </div>
           )}

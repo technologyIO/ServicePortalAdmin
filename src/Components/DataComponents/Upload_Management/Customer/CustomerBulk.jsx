@@ -1,385 +1,474 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-  X,
-  Upload,
-  Download,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  FileSpreadsheet,
-  Users,
-  UserPlus,
-  UserCheck,
-  AlertTriangle,
-  Clock,
-  TrendingUp,
-  Info,
-  AlertCircle,
-} from "lucide-react";
+import { Download, Database, X } from "lucide-react";
+import { useState } from "react";
 
-export default function CustomerBulk({ isOpen, onClose }) {
+export default function CustomerBulk({ isOpen, onClose, getData }) {
   const [file, setFile] = useState(null);
+  const [activeTab, setActiveTab] = useState("upload");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [resultFilter, setResultFilter] = useState("All");
   const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadResponse, setUploadResponse] = useState(null);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [expandedSections, setExpandedSections] = useState({});
-  const fileInputRef = useRef(null);
-  const modalRef = useRef(null);
+  const [processingData, setProcessingData] = useState({
+    status: "idle",
+    startTime: null,
+    endTime: null,
+    duration: null,
+    totalRecords: 0,
+    processedRecords: 0,
+    successfulRecords: 0,
+    failedRecords: 0,
+    results: [],
+    summary: {
+      created: 0,
+      updated: 0,
+      failed: 0,
+      duplicatesInFile: 0,
+      existingRecords: 0,
+      skippedTotal: 0,
+    },
+    headerMapping: {},
+    errors: [],
+    warnings: [],
+  });
+  const [liveUpdates, setLiveUpdates] = useState([]);
 
-  // Close modal when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (modalRef.current && !modalRef.current.contains(event.target)) {
-        if (!isUploading) {
-          onClose();
-        }
-      }
+  const addLiveUpdate = (message, type = "info") => {
+    const update = {
+      id: Date.now(),
+      message,
+      type,
+      timestamp: new Date().toLocaleTimeString(),
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isOpen, onClose, isUploading]);
+    setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
+  };
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!isOpen) {
+  const statusCounts = processingData.results.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const filterTabs = [
+    { label: "All", value: "All", count: processingData.results.length },
+    { label: "Created", value: "Created", count: statusCounts.Created || 0 },
+    { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
+    { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
+    { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
+  ];
+
+  const filteredResults =
+    resultFilter === "All"
+      ? processingData.results
+      : processingData.results.filter((r) => r.status === resultFilter);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0] || null;
+    validateAndSetFile(selectedFile);
+  };
+
+  const validateAndSetFile = (selectedFile) => {
+    setError("");
+    if (!selectedFile) {
       setFile(null);
-      setUploadResponse(null);
-      setIsUploading(false);
-      setActiveTab("overview");
-      setExpandedSections({});
+      return;
     }
-  }, [isOpen]);
+    const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
+    if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
+      setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
+      setFile(null);
+      return;
+    }
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      setError("File size exceeds 50MB limit");
+      setFile(null);
+      return;
+    }
+    setFile(selectedFile);
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e) => {
+    e.preventDefault();
     setIsDragging(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const droppedFile = e.dataTransfer.files[0];
-      const validTypes = [
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel",
-        "text/csv",
-        "application/csv",
-      ];
-      const validExtensions = [".xlsx", ".xls", ".csv"];
-      const fileName = droppedFile.name.toLowerCase();
-
-      if (
-        validTypes.includes(droppedFile.type) ||
-        validExtensions.some((ext) => fileName.endsWith(ext))
-      ) {
-        setFile(droppedFile);
-      } else {
-        alert("Please upload an Excel (.xlsx, .xls) or CSV file");
-      }
-    }
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-    }
+    const droppedFile = e.dataTransfer.files[0];
+    validateAndSetFile(droppedFile);
   };
 
   const handleUpload = async () => {
     if (!file) return;
-    setIsUploading(true);
-    setUploadResponse(null);
+
+    setIsProcessing(true);
+    setLiveUpdates([]);
+    setProcessingData({
+      status: "processing",
+      startTime: new Date(),
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
+      summary: {
+        created: 0,
+        updated: 0,
+        failed: 0,
+        duplicatesInFile: 0,
+        existingRecords: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
+      errors: [],
+      warnings: [],
+    });
+
     const formData = new FormData();
     formData.append("file", file);
 
     try {
+      addLiveUpdate("Starting Customer data upload...", "info");
+
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 600000);
+
       const response = await fetch(
         `${process.env.REACT_APP_BASE_URL}/bulk/customer/bulk-upload`,
         {
           method: "POST",
           body: formData,
+          signal: abortController.signal,
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("Failed to get response reader");
-      }
+      addLiveUpdate(
+        "File uploaded successfully. Processing Customer records...",
+        "success"
+      );
 
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let partialLine = "";
+      let retryCount = 0;
+      const maxRetries = 3;
 
-        const chunk = new TextDecoder().decode(value);
-        buffer += chunk;
+      while (retryCount < maxRetries) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || ""; // Keep incomplete line in buffer
+            const chunk = partialLine + decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            partialLine = lines.pop() || "";
 
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const update = JSON.parse(line);
+            for (const line of lines) {
+              if (!line.trim()) continue;
 
-              // Handle different types of updates
-              if (update.totalRecords !== undefined) {
-                // This is a complete response or initial response
-                setUploadResponse(update);
-              } else if (update.currentCounts !== undefined) {
-                // This is a progress update - merge with existing response
-                setUploadResponse((prev) => {
-                  if (!prev) return prev;
+              try {
+                const data = JSON.parse(line);
 
-                  return {
+                setProcessingData((prev) => {
+                  const newData = {
                     ...prev,
-                    processedRecords:
-                      update.processedRecords || prev.processedRecords,
-                    createdCount: update.currentCounts.created,
-                    updatedCount: update.currentCounts.updated,
-                    skippedCount: update.currentCounts.skipped,
-                    failedCount: update.currentCounts.failed,
-                    stats: update.stats || prev.stats,
-                    status: update.status || prev.status,
+                    ...data,
+                    results: data.results || prev.results,
+                    summary: data.summary
+                      ? { ...prev.summary, ...data.summary }
+                      : prev.summary,
+                    headerMapping: data.headerMapping || prev.headerMapping,
+                    errors: data.errors || prev.errors,
+                    warnings: data.warnings || prev.warnings,
                   };
-                });
-              } else {
-                // This might be a final complete response
-                setUploadResponse((prev) => {
-                  if (!prev) return update;
 
-                  // Merge the update with previous response
-                  return {
-                    ...prev,
-                    ...update,
-                  };
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed =
+                      data.processedRecords - prev.processedRecords;
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} more Customer records (${data.processedRecords}/${data.totalRecords})`,
+                      "success"
+                    );
+                  }
+
+                  if (data.summary?.created > prev.summary?.created) {
+                    const newCreated =
+                      data.summary.created - prev.summary.created;
+                    addLiveUpdate(
+                      `Created ${newCreated} new Customer records (Total: ${data.summary.created})`,
+                      "info"
+                    );
+                  }
+
+                  if (data.summary?.updated > prev.summary?.updated) {
+                    const newUpdated =
+                      data.summary.updated - prev.summary.updated;
+                    addLiveUpdate(
+                      `Updated ${newUpdated} existing Customer records (Total: ${data.summary.updated})`,
+                      "info"
+                    );
+                  }
+
+                  if (
+                    data.summary?.duplicatesInFile >
+                    prev.summary?.duplicatesInFile
+                  ) {
+                    const newDuplicates =
+                      data.summary.duplicatesInFile -
+                      prev.summary.duplicatesInFile;
+                    addLiveUpdate(
+                      `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
+                      "warning"
+                    );
+                  }
+
+                  if (
+                    data.summary?.existingRecords >
+                    prev.summary?.existingRecords
+                  ) {
+                    const newExisting =
+                      data.summary.existingRecords -
+                      prev.summary.existingRecords;
+                    addLiveUpdate(
+                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
+                      "warning"
+                    );
+                  }
+
+                  if (data.summary?.failed > prev.summary?.failed) {
+                    const newFailed = data.summary.failed - prev.summary.failed;
+                    addLiveUpdate(
+                      `${newFailed} records failed validation (Total: ${data.summary.failed})`,
+                      "error"
+                    );
+                  }
+
+                  if (data.status === "completed") {
+                    addLiveUpdate(
+                      `Customer bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      "success"
+                    );
+                    setIsProcessing(false);
+                    setTimeout(() => setActiveTab("results"), 100);
+                  } else if (data.status === "failed") {
+                    addLiveUpdate("Customer processing failed!", "error");
+                    setIsProcessing(false);
+                  }
+
+                  return newData;
                 });
+              } catch (parseError) {
+                console.error("Error parsing JSON:", parseError, "Line:", line);
+                addLiveUpdate(
+                  `Error processing data chunk: ${parseError.message}`,
+                  "error"
+                );
               }
-            } catch (parseError) {
-              console.warn(
-                "Failed to parse update:",
-                parseError,
-                "Line:",
-                line
-              );
             }
           }
+
+          if (partialLine.trim()) {
+            try {
+              const data = JSON.parse(partialLine);
+              setProcessingData((prev) => ({
+                ...prev,
+                ...data,
+              }));
+            } catch (parseError) {
+              console.error("Error parsing final JSON:", parseError);
+            }
+          }
+
+          break;
+        } catch (streamError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw streamError;
+          }
+
+          addLiveUpdate(
+            `Stream error (retry ${retryCount}/${maxRetries}): ${streamError.message}`,
+            "warning"
+          );
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          );
         }
       }
-    } catch (error) {
-      console.error("Upload failed:", error);
-      setUploadResponse({
+    } catch (err) {
+      addLiveUpdate("Upload failed: " + err.message, "error");
+      setIsProcessing(false);
+      setError("Upload failed: " + err.message);
+
+      setProcessingData((prev) => ({
+        ...prev,
         status: "failed",
-        startTime: new Date().toISOString(),
-        totalRecords: 0,
-        processedRecords: 0,
-        createdCount: 0,
-        updatedCount: 0,
-        failedCount: 1,
-        skippedCount: 0,
-        failures: [
-          {
-            error: error.message || "Upload failed. Please try again.",
-            suggestion: "Check your internet connection and file format.",
-            timestamp: new Date().toISOString(),
-          },
-        ],
-        creations: [],
-        updates: [],
-        skips: [],
-      });
-    } finally {
-      setIsUploading(false);
+        endTime: new Date(),
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
+      }));
     }
   };
 
-  const downloadTemplate = () => {
-    const headers = [
-      "customercodeid",
-      "customername",
-      "hospitalname",
-      "street",
-      "city",
-      "postalcode",
-      "district",
-      "state",
-      "region",
-      "country",
-      "telephone",
-      "taxnumber1",
-      "taxnumber2",
-      "email",
-      "status",
-      "customertype",
-    ];
-    const csvContent = headers.join(",");
-    const blob = new Blob([csvContent], { type: "text/csv" });
+  const csvContent = `CustomerCode,Name1,Name2,Street,City,PostalCode,District,Region,Country,Telephone,Tax Number1,Tax Number2,Email
+,,,,,,,,,,,,,
+,,,,,,,,,,,,,
+,,,,,,,,,,,,,`;
+
+  const handleDownload = () => {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "customer_upload_template.csv";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "customer_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const toggleSection = (section) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+  const resetForm = () => {
+    setFile(null);
+    setError("");
+    setActiveTab("upload");
+    setLiveUpdates([]);
+    setIsProcessing(false);
+    setProcessingData({
+      status: "idle",
+      startTime: null,
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
+      summary: {
+        created: 0,
+        updated: 0,
+        failed: 0,
+        duplicatesInFile: 0,
+        existingRecords: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
+      errors: [],
+      warnings: [],
+    });
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "completed":
-        return "text-emerald-700 bg-emerald-100 border-emerald-200";
-      case "completed_with_errors":
-        return "text-amber-700 bg-amber-100 border-amber-200";
-      case "completed_with_skips":
-        return "text-blue-700 bg-blue-100 border-blue-200";
-      case "failed":
-        return "text-red-700 bg-red-100 border-red-200";
-      case "processing":
-        return "text-blue-700 bg-blue-100 border-blue-200";
-      default:
-        return "text-gray-700 bg-gray-100 border-gray-200";
-    }
-  };
-
-  const getProgressColor = () => {
-    if (!uploadResponse) return "bg-blue-500";
-    if (uploadResponse.summary?.successRate) {
-      const successRate = Number.parseFloat(
-        uploadResponse.summary.successRate.replace("%", "")
-      );
-      if (successRate >= 95) return "bg-emerald-500";
-      if (successRate >= 80) return "bg-blue-500";
-      if (successRate >= 60) return "bg-amber-500";
-      return "bg-red-500";
-    }
-    const successRate =
-      uploadResponse.totalRecords > 0
-        ? ((uploadResponse.createdCount + uploadResponse.updatedCount) /
-            uploadResponse.totalRecords) *
-          100
-        : 0;
-    if (successRate >= 95) return "bg-emerald-500";
-    if (successRate >= 80) return "bg-blue-500";
-    if (successRate >= 60) return "bg-amber-500";
-    return "bg-red-500";
-  };
-
-  const getStatusText = (status) => {
-    switch (status) {
-      case "completed":
-        return "Upload Completed Successfully";
-      case "completed_with_errors":
-        return "Upload Completed with Errors";
-      case "completed_with_skips":
-        return "Upload Completed with Skips";
-      case "failed":
-        return "Upload Failed";
-      case "processing":
-        return "Processing Upload...";
-      default:
-        return "Upload Status Unknown";
-    }
-  };
-
-  // Custom Tab Component
-  const TabButton = ({ id, label, isActive, onClick, count }) => (
-    <button
-      onClick={() => onClick(id)}
-      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-        isActive
-          ? "bg-blue-100 text-blue-700 border border-blue-200"
-          : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-      }`}
-    >
-      {label}
-      {count !== undefined && (
-        <span
-          className={`ml-2 px-2 py-1 text-xs rounded-full ${
-            isActive ? "bg-blue-200 text-blue-800" : "bg-gray-200 text-gray-600"
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-
-  // Custom Progress Component
-  const ProgressBar = ({ value, className = "" }) => (
-    <div className={`w-full bg-gray-200 rounded-full h-3 ${className}`}>
-      <div
-        className={`h-3 rounded-full transition-all duration-500 ${getProgressColor()}`}
-        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-      />
-    </div>
-  );
-
-  // Custom Badge Component
-  const Badge = ({ children, variant = "default" }) => {
-    const variants = {
-      default: "bg-gray-100 text-gray-800",
-      success: "bg-emerald-100 text-emerald-800",
-      warning: "bg-amber-100 text-amber-800",
-      error: "bg-red-100 text-red-800",
-      info: "bg-blue-100 text-blue-800",
+  const renderStatusBadge = (status) => {
+    const statusMap = {
+      Created: { bg: "bg-green-100", text: "text-green-800", label: "Created" },
+      Updated: { bg: "bg-blue-100", text: "text-blue-800", label: "Updated" },
+      Failed: { bg: "bg-red-100", text: "text-red-800", label: "Failed" },
+      Skipped: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        label: "Skipped",
+      },
+      Processing: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Processing",
+      },
     };
+
+    const config = statusMap[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+      label: "Unknown",
+    };
+
     return (
       <span
-        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${variants[variant]}`}
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
       >
-        {children}
+        {config.label}
       </span>
     );
+  };
+
+  const getProcessingSteps = () => {
+    const steps = [
+      {
+        id: 1,
+        title: "File Upload & Validation",
+        description: "Validating file format and headers",
+        status: processingData.status !== "idle" ? "completed" : "pending",
+      },
+      {
+        id: 2,
+        title: "Header Mapping",
+        description:
+          Object.keys(processingData.headerMapping).length > 0
+            ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
+            : "Detecting Customer Code column",
+        status:
+          Object.keys(processingData.headerMapping).length > 0
+            ? "completed"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 3,
+        title: "Processing Customer Records",
+        description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
+        status:
+          processingData.processedRecords > 0
+            ? processingData.processedRecords === processingData.totalRecords
+              ? "completed"
+              : "active"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 4,
+        title: "Finalizing Process",
+        description: "Completing Customer bulk upload operation",
+        status: processingData.status === "completed" ? "completed" : "pending",
+      },
+    ];
+
+    return steps;
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div
-        ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200"
-      >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-black">
+        <div className="relative bg-gradient-to-r from-blue-50 to-emerald-50 p-6 text-black">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-lg">
-                  <Users size={24} />
+                  <Database size={24} />
                 </div>
                 Bulk Customer Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage customer data efficiently
+                Import and manage Customer data efficiently
               </p>
             </div>
             <button
               onClick={onClose}
-              disabled={isUploading}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
             >
               <X size={24} />
@@ -387,893 +476,659 @@ export default function CustomerBulk({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 h-[300px] overflow-y-auto flex flex-col">
-          {!uploadResponse ? (
-            <div className="p-6 space-y-6">
-              {/* Template Download */}
-              <div className="flex justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <div>
-                  <h3 className="font-semibold text-blue-900">
-                    Need a template?
-                  </h3>
-                  <p className="text-sm text-blue-700">
-                    Download our Excel template with the required format
-                  </p>
-                </div>
-                <button
-                  onClick={downloadTemplate}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Download size={16} />
-                  Download Template
-                </button>
-              </div>
+        {/* Template Download Section */}
+        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <div>
+            <h3 className="font-semibold text-blue-900">Need a template?</h3>
+            <p className="text-sm text-blue-700">
+              Download our CSV template with all required Customer columns
+            </p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download size={16} />
+            Download Template
+          </button>
+        </div>
 
-              {/* File Upload Area */}
-              <div
-                className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-50 scale-105"
-                    : file
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-gray-300 hover:border-gray-400"
+        {/* Content */}
+        <div className="p-6">
+          {/* Tabs */}
+          <div className="mb-6">
+            <div className="flex border-b border-gray-200">
+              <button
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
+                  activeTab === "upload"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    : "text-gray-500 hover:text-gray-700"
                 }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
+                onClick={() => setActiveTab("upload")}
               >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept=".xlsx,.xls,.csv"
-                  className="hidden"
-                />
-                {file ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-center">
-                      <div className="p-4 bg-emerald-100 rounded-full">
-                        <FileSpreadsheet className="h-12 w-12 text-emerald-600" />
+                Upload
+                {isProcessing && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
+                    !
+                  </span>
+                )}
+              </button>
+              <button
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
+                  activeTab === "results"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveTab("results")}
+                disabled={processingData.status !== "completed"}
+              >
+                Results
+                {processingData.status === "completed" && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full">
+                    ✓
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Upload Tab */}
+          {activeTab === "upload" && (
+            <div className="space-y-6 h-[400px] overflow-y-auto">
+              {/* File Upload Section */}
+              {!isProcessing && (
+                <div className="space-y-6">
+                  {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-red-500 flex-shrink-0 mt-0.5"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Error
+                        </h3>
+                        <p className="text-sm text-red-700 mt-1">{error}</p>
                       </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-emerald-800">
-                        File Ready for Upload
-                      </h3>
-                      <p className="text-emerald-600 font-medium">
-                        {file.name}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+                  )}
+
+                  <div
+                    className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
+                      isDragging
+                        ? "border-blue-500 bg-blue-50 scale-105"
+                        : file
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex flex-col items-center justify-center py-12">
+                      {file ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-blue-600"
+                            >
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <div className="flex items-center gap-2 justify-center">
+                              <span className="font-medium text-lg">
+                                {file.name}
+                              </span>
+                              <button
+                                className="h-8 w-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setFile(null);
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                            <span className="text-sm text-gray-500 mt-2 block">
+                              {(file.size / 1024).toFixed(2)} KB
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-blue-600"
+                            >
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="17 8 12 3 7 8"></polyline>
+                              <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                          </div>
+                          <p className="mb-2 text-lg text-center">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-sm text-center text-gray-500">
+                            CSV or Excel files only (max 50MB)
+                          </p>
+                          <p className="text-xs text-center text-blue-600 mt-2">
+                            Required column: Customer Code
+                          </p>
+                        </>
+                      )}
                     </div>
-                    <button
-                      onClick={() => setFile(null)}
-                      className="text-sm text-red-600 hover:text-red-800 underline"
+                    <input
+                      id="file-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".csv,.xls,.xlsx"
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="absolute inset-0 cursor-pointer"
                     >
-                      Remove file
+                      <span className="sr-only">Upload file</span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    {file && (
+                      <button
+                        onClick={resetForm}
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={handleUpload}
+                      disabled={!file}
+                      className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
+                        !file
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white transition-colors`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      Upload & Process Customer Data
                     </button>
                   </div>
-                ) : (
-                  <div
-                    className="space-y-4 cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="flex justify-center">
-                      <div className="p-4 bg-gray-100 rounded-full">
-                        <Upload className="h-12 w-12 text-gray-400" />
+                </div>
+              )}
+
+              {/* Processing Status Section */}
+              {isProcessing && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Processing Steps */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        Processing Status
+                      </h3>
+                      <div className="space-y-4">
+                        {getProcessingSteps().map((step) => (
+                          <div key={step.id} className="flex items-start gap-4">
+                            <div className="flex-shrink-0 mt-1">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                  step.status === "completed"
+                                    ? "bg-blue-500 text-white"
+                                    : step.status === "active"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                }`}
+                              >
+                                {step.status === "completed" ? (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                ) : step.status === "active" ? (
+                                  <svg
+                                    className="animate-spin h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  step.id
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h4
+                                className={`font-medium ${
+                                  step.status === "active"
+                                    ? "text-blue-600"
+                                    : "text-gray-800"
+                                }`}
+                              >
+                                {step.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {step.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-700">
-                        Drop your Excel file here
-                      </h3>
-                      <p className="text-gray-500">
-                        or{" "}
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="text-blue-600 hover:text-blue-800 font-medium underline"
-                        >
-                          browse to upload
-                        </button>
-                      </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Supports .xlsx, .xls, and .csv files up to 10MB
-                      </p>
+                  </div>
+
+                  {/* Live Updates */}
+                  <div className="space-y-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        Live Updates
+                      </h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {liveUpdates.length > 0 ? (
+                          liveUpdates.map((update) => (
+                            <div
+                              key={update.id}
+                              className={`p-2 rounded text-xs ${
+                                update.type === "error"
+                                  ? "bg-red-50 text-red-700"
+                                  : update.type === "success"
+                                  ? "bg-green-50 text-green-700"
+                                  : update.type === "warning"
+                                  ? "bg-yellow-50 text-yellow-700"
+                                  : "bg-blue-50 text-blue-700"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <span>{update.message}</span>
+                                <span className="text-gray-500 ml-2">
+                                  {update.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500 text-center py-4">
+                            Processing will start soon...
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col">
-              {/* Progress Header */}
-              <div className="p-6 bg-gray-50 border-b">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    {isUploading ? (
-                      <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-                    ) : uploadResponse.status === "completed" ? (
-                      <CheckCircle className="h-6 w-6 text-emerald-600" />
-                    ) : uploadResponse.status === "completed_with_errors" ? (
-                      <AlertTriangle className="h-6 w-6 text-amber-600" />
-                    ) : uploadResponse.status === "completed_with_skips" ? (
-                      <Clock className="h-6 w-6 text-blue-600" />
-                    ) : uploadResponse.status === "failed" ? (
-                      <XCircle className="h-6 w-6 text-red-600" />
-                    ) : (
-                      <Loader2 className="h-6 w-6 text-gray-600" />
-                    )}
+          )}
+
+          {/* Results Tab */}
+          {activeTab === "results" && processingData.status === "completed" && (
+            <div className="space-y-6 h-[400px] overflow-y-auto px-2">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {isUploading
-                          ? "Processing Upload..."
-                          : getStatusText(uploadResponse.status)}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {uploadResponse.processedRecords || 0} of{" "}
-                        {uploadResponse.totalRecords || 0} records processed
+                      <p className="text-sm font-medium text-blue-700">
+                        Records Created
+                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {processingData.summary.created}
                       </p>
                     </div>
-                  </div>
-                  <div
-                    className={`px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(
-                      uploadResponse.status
-                    )}`}
-                  >
-                    {uploadResponse.status.replace(/_/g, " ").toUpperCase()}
+                    <div className="bg-blue-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-blue-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Progress</span>
-                    <span className="font-medium">
-                      {uploadResponse.totalRecords > 0
-                        ? Math.round(
-                            (uploadResponse.processedRecords /
-                              uploadResponse.totalRecords) *
-                              100
-                          )
-                        : 0}
-                      %
-                    </span>
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">
+                        Records Updated
+                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {processingData.summary.updated}
+                      </p>
+                    </div>
+                    <div className="bg-blue-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-blue-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </div>
                   </div>
-                  <ProgressBar
-                    value={
-                      uploadResponse.totalRecords > 0
-                        ? (uploadResponse.processedRecords /
-                            uploadResponse.totalRecords) *
-                          100
-                        : 0
-                    }
-                  />
+                </div>
+
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-700">
+                        File Duplicates
+                      </p>
+                      <p className="text-2xl font-bold text-orange-800 mt-2">
+                        {processingData.summary.duplicatesInFile}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Within uploaded file
+                      </p>
+                    </div>
+                    <div className="bg-orange-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-orange-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-700">
+                        Existing Records
+                      </p>
+                      <p className="text-2xl font-bold text-yellow-800 mt-2">
+                        {processingData.summary.existingRecords}
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Already in database
+                      </p>
+                    </div>
+                    <div className="bg-yellow-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-yellow-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        Failed Records
+                      </p>
+                      <p className="text-2xl font-bold text-red-800 mt-2">
+                        {processingData.summary.failed}
+                      </p>
+                    </div>
+                    <div className="bg-red-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-red-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="">
-                {/* Stats Grid */}
-                <div className="p-6 bg-white">
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-                    <div className="bg-gray-50 p-4 rounded-xl border">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="h-4 w-4 text-gray-600" />
-                        <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                          Total
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {uploadResponse.totalRecords || 0}
-                      </p>
+
+              {/* Processing Summary */}
+              {processingData.duration && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-sm text-gray-800 mb-2">
+                    Processing Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Records:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.totalRecords}
+                      </span>
                     </div>
-                    <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <UserPlus className="h-4 w-4 text-emerald-600" />
-                        <span className="text-xs font-medium text-emerald-600 uppercase tracking-wide">
-                          Created
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold text-emerald-700">
-                        {uploadResponse.createdCount || 0}
-                      </p>
+                    <div>
+                      <span className="text-gray-600">Processing Time:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.duration}
+                      </span>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <UserCheck className="h-4 w-4 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-600 uppercase tracking-wide">
-                          Updated
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold text-blue-700">
-                        {uploadResponse.updatedCount || 0}
-                      </p>
+                    <div>
+                      <span className="text-gray-600">Total Skipped:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.summary.skippedTotal}
+                      </span>
                     </div>
-                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Clock className="h-4 w-4 text-amber-600" />
-                        <span className="text-xs font-medium text-amber-600 uppercase tracking-wide">
-                          Skipped
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold text-amber-700">
-                        {uploadResponse.skippedCount || 0}
-                      </p>
-                    </div>
-                    <div className="bg-red-50 p-4 rounded-xl border border-red-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <XCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-xs font-medium text-red-600 uppercase tracking-wide">
-                          Failed
-                        </span>
-                      </div>
-                      <p className="text-2xl font-bold text-red-700">
-                        {uploadResponse.failedCount || 0}
-                      </p>
+                    <div>
+                      <span className="text-gray-600">Completed At:</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(processingData.endTime).toLocaleString()}
+                      </span>
                     </div>
                   </div>
+                </div>
+              )}
 
-                  {/* Performance Stats */}
-                  {uploadResponse.stats && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                      <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Clock className="h-4 w-4 text-purple-600" />
-                          <span className="text-xs font-medium text-purple-600 uppercase tracking-wide">
-                            Processing Time
-                          </span>
+              {/* Detailed Results */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Detailed Results ({filteredResults.length} records)
+                  </h3>
+                </div>
+
+                <div className="border-b border-gray-200 mb-4">
+                  <nav className="flex -mb-px">
+                    {filterTabs.map((tab) => (
+                      <button
+                        key={tab.value}
+                        onClick={() => setResultFilter(tab.value)}
+                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 ${
+                          resultFilter === tab.value
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {processingData.results.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {filteredResults.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-gray-500">
+                                  Row {item.row}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  Customer Code: {item.customercodeid}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  Name: {item.customername}
+                                </span>
+                              </div>
+                              {item.action && (
+                                <div className="text-xs text-blue-600">
+                                  {item.action}
+                                </div>
+                              )}
+                              {item.error && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  Error: {item.error}
+                                </div>
+                              )}
+                              {item.warnings && item.warnings.length > 0 && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Warnings: {item.warnings.join(", ")}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              {renderStatusBadge(item.status)}
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-lg font-bold text-purple-700">
-                          {uploadResponse.stats.processingTime?.toFixed(2)}s
-                        </p>
-                      </div>
-                      <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-indigo-600" />
-                          <span className="text-xs font-medium text-indigo-600 uppercase tracking-wide">
-                            Records/Second
-                          </span>
-                        </div>
-                        <p className="text-lg font-bold text-indigo-700">
-                          {uploadResponse.stats.recordsPerSecond?.toFixed(1)}
-                        </p>
-                      </div>
-                      <div className="bg-teal-50 p-4 rounded-xl border border-teal-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle className="h-4 w-4 text-teal-600" />
-                          <span className="text-xs font-medium text-teal-600 uppercase tracking-wide">
-                            Success Rate
-                          </span>
-                        </div>
-                        <p className="text-lg font-bold text-teal-700">
-                          {uploadResponse.summary?.successRate || "0%"}
-                        </p>
-                      </div>
+                      ))}
                     </div>
-                  )}
-
-                  {/* Processing Summary */}
-                  {uploadResponse.summary && (
-                    <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-gray-600" />
-                        Processing Summary
-                      </h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Success Rate</p>
-                          <p className="text-2xl font-bold text-emerald-600">
-                            {uploadResponse.summary.successRate}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Creation Rate</p>
-                          <p className="text-2xl font-bold text-blue-600">
-                            {uploadResponse.summary.creationRate}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Update Rate</p>
-                          <p className="text-2xl font-bold text-purple-600">
-                            {uploadResponse.summary.updateRate}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Failure Rate</p>
-                          <p className="text-2xl font-bold text-red-600">
-                            {uploadResponse.summary.failureRate}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Skip Rate</p>
-                          <p className="text-2xl font-bold text-amber-600">
-                            {uploadResponse.summary.skipRate}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Time Taken</p>
-                          <p className="text-2xl font-bold text-gray-600">
-                            {uploadResponse.summary.timeTaken}
-                          </p>
-                        </div>
-                      </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      No results to display
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Tabs for Detailed Results */}
-                {!isUploading && (
-                  <div className="flex-1 overflow-hidden flex flex-col">
-                    {/* Tab Navigation */}
-                    <div className="px-6 py-4 bg-gray-50 border-b">
-                      <div className="flex space-x-2 overflow-x-auto">
-                        <TabButton
-                          id="overview"
-                          label="Overview"
-                          isActive={activeTab === "overview"}
-                          onClick={setActiveTab}
-                        />
-                        {(uploadResponse.createdCount > 0 ||
-                          uploadResponse.creations?.length > 0) && (
-                          <TabButton
-                            id="created"
-                            label="Created"
-                            count={
-                              uploadResponse.createdCount ||
-                              uploadResponse.creations?.length ||
-                              0
-                            }
-                            isActive={activeTab === "created"}
-                            onClick={setActiveTab}
-                          />
-                        )}
-                        {(uploadResponse.updatedCount > 0 ||
-                          uploadResponse.updates?.length > 0) && (
-                          <TabButton
-                            id="updated"
-                            label="Updated"
-                            count={
-                              uploadResponse.updatedCount ||
-                              uploadResponse.updates?.length ||
-                              0
-                            }
-                            isActive={activeTab === "updated"}
-                            onClick={setActiveTab}
-                          />
-                        )}
-                        {(uploadResponse.skippedCount > 0 ||
-                          uploadResponse.skips?.length > 0) && (
-                          <TabButton
-                            id="skipped"
-                            label="Skipped"
-                            count={
-                              uploadResponse.skippedCount ||
-                              uploadResponse.skips?.length ||
-                              0
-                            }
-                            isActive={activeTab === "skipped"}
-                            onClick={setActiveTab}
-                          />
-                        )}
-                        {(uploadResponse.failedCount > 0 ||
-                          uploadResponse.failures?.length > 0) && (
-                          <TabButton
-                            id="failed"
-                            label="Failed"
-                            count={
-                              uploadResponse.failedCount ||
-                              uploadResponse.failures?.length ||
-                              0
-                            }
-                            isActive={activeTab === "failed"}
-                            onClick={setActiveTab}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tab Content */}
-                    <div className="flex-1 overflow-y-auto">
-                      {activeTab === "overview" && (
-                        <div className="p-6 space-y-6">
-                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                            <div className="flex items-start gap-3">
-                              <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-blue-900">
-                                  Upload Summary
-                                </h4>
-                                <p className="text-sm text-blue-700 mt-1">
-                                  Your file has been processed successfully.
-                                  Review the detailed results in the tabs above.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Quick Stats */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <h4 className="font-semibold text-gray-900">
-                                Processing Results
-                              </h4>
-                              <div className="space-y-3">
-                                {uploadResponse.createdCount > 0 && (
-                                  <div className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                      <UserPlus className="h-4 w-4 text-emerald-600" />
-                                      <span className="text-sm font-medium text-emerald-800">
-                                        New Customers Created
-                                      </span>
-                                    </div>
-                                    <Badge variant="success">
-                                      {uploadResponse.createdCount}
-                                    </Badge>
-                                  </div>
-                                )}
-                                {uploadResponse.updatedCount > 0 && (
-                                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                      <UserCheck className="h-4 w-4 text-blue-600" />
-                                      <span className="text-sm font-medium text-blue-800">
-                                        Existing Customers Updated
-                                      </span>
-                                    </div>
-                                    <Badge variant="info">
-                                      {uploadResponse.updatedCount}
-                                    </Badge>
-                                  </div>
-                                )}
-                                {uploadResponse.skippedCount > 0 && (
-                                  <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="h-4 w-4 text-amber-600" />
-                                      <span className="text-sm font-medium text-amber-800">
-                                        Records Skipped
-                                      </span>
-                                    </div>
-                                    <Badge variant="warning">
-                                      {uploadResponse.skippedCount}
-                                    </Badge>
-                                  </div>
-                                )}
-                                {uploadResponse.failedCount > 0 && (
-                                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                                    <div className="flex items-center gap-2">
-                                      <XCircle className="h-4 w-4 text-red-600" />
-                                      <span className="text-sm font-medium text-red-800">
-                                        Records Failed
-                                      </span>
-                                    </div>
-                                    <Badge variant="error">
-                                      {uploadResponse.failedCount}
-                                    </Badge>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="space-y-4">
-                              <h4 className="font-semibold text-gray-900">
-                                Performance Metrics
-                              </h4>
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <span className="text-sm font-medium text-gray-700">
-                                    Total Records Processed
-                                  </span>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    {uploadResponse.totalRecords}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <span className="text-sm font-medium text-gray-700">
-                                    Processing Time
-                                  </span>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    {uploadResponse.stats?.processingTime?.toFixed(
-                                      2
-                                    )}
-                                    s
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                  <span className="text-sm font-medium text-gray-700">
-                                    Records per Second
-                                  </span>
-                                  <span className="text-sm font-bold text-gray-900">
-                                    {uploadResponse.stats?.recordsPerSecond?.toFixed(
-                                      1
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTab === "created" && uploadResponse.creations && (
-                        <div className="p-6">
-                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-                            <div className="flex items-start gap-3">
-                              <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-emerald-900">
-                                  Successfully Created Records
-                                </h4>
-                                <p className="text-sm text-emerald-700 mt-1">
-                                  {uploadResponse.createdCount} new customer
-                                  records have been created in the system.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="overflow-x-auto">
-                            <table className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Customer Code
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Customer Name
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Hospital Name
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Email
-                                  </th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Created At
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {uploadResponse.creations.map(
-                                  (record, index) => (
-                                    <tr
-                                      key={index}
-                                      className="hover:bg-gray-50"
-                                    >
-                                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                        {record.customercodeid}
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-700">
-                                        {record.details?.customername || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-700">
-                                        {record.details?.hospitalname || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-700">
-                                        {record.details?.email || "N/A"}
-                                      </td>
-                                      <td className="px-4 py-3 text-sm text-gray-500">
-                                        {new Date(
-                                          record.timestamp
-                                        ).toLocaleString()}
-                                      </td>
-                                    </tr>
-                                  )
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTab === "updated" && uploadResponse.updates && (
-                        <div className="p-6">
-                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                            <div className="flex items-start gap-3">
-                              <UserCheck className="h-5 w-5 text-blue-600 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-blue-900">
-                                  Successfully Updated Records
-                                </h4>
-                                <p className="text-sm text-blue-700 mt-1">
-                                  {uploadResponse.updatedCount} existing
-                                  customer records have been updated with new
-                                  information.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {uploadResponse.updates.map((record, index) => (
-                              <div
-                                key={index}
-                                className="border border-gray-200 rounded-lg p-4"
-                              >
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <h5 className="font-medium text-gray-900">
-                                      {record.customercodeid}
-                                    </h5>
-                                    <p className="text-sm text-gray-500">
-                                      Updated on{" "}
-                                      {new Date(
-                                        record.timestamp
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <Badge variant="info">Updated</Badge>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <h6 className="text-sm font-medium text-gray-700">
-                                    Changes Made:
-                                  </h6>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {Object.entries(record.changes || {}).map(
-                                      ([field, change]) => (
-                                        <div
-                                          key={field}
-                                          className="bg-gray-50 p-3 rounded-lg"
-                                        >
-                                          <div className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-1">
-                                            {field}
-                                          </div>
-                                          <div className="space-y-1">
-                                            <div className="text-sm">
-                                              <span className="text-red-600 line-through">
-                                                {String(change.old)}
-                                              </span>
-                                            </div>
-                                            <div className="text-sm">
-                                              <span className="text-green-600 font-medium">
-                                                {String(change.new)}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTab === "skipped" && uploadResponse.skips && (
-                        <div className="p-6">
-                          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                            <div className="flex items-start gap-3">
-                              <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-amber-900">
-                                  Skipped Records
-                                </h4>
-                                <p className="text-sm text-amber-700 mt-1">
-                                  {uploadResponse.skippedCount} records were
-                                  skipped because no changes were detected or
-                                  they matched existing data.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {uploadResponse.skips.map((record, index) => (
-                              <div
-                                key={index}
-                                className="border border-amber-200 rounded-lg p-4 bg-amber-50"
-                              >
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <h5 className="font-medium text-amber-900">
-                                      {record.customercodeid}
-                                    </h5>
-                                    <p className="text-sm text-amber-700">
-                                      Skipped on{" "}
-                                      {new Date(
-                                        record.timestamp
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <Badge variant="warning">Skipped</Badge>
-                                </div>
-
-                                <div className="bg-white p-3 rounded-lg">
-                                  <div className="flex items-start gap-2">
-                                    <Info className="h-4 w-4 text-amber-600 mt-0.5" />
-                                    <div>
-                                      <p className="text-sm font-medium text-amber-800">
-                                        Reason:
-                                      </p>
-                                      <p className="text-sm text-amber-700">
-                                        {record.message}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {record.details && (
-                                  <div className="mt-3 bg-white p-3 rounded-lg">
-                                    <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-                                      Existing Record Details:
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-2 text-sm">
-                                      <div>
-                                        <span className="text-gray-500">
-                                          Name:
-                                        </span>{" "}
-                                        <span className="text-gray-900">
-                                          {record.details.existingRecord
-                                            ?.customername || "N/A"}
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-gray-500">
-                                          Email:
-                                        </span>{" "}
-                                        <span className="text-gray-900">
-                                          {record.details.existingRecord
-                                            ?.email || "N/A"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {activeTab === "failed" && uploadResponse.failures && (
-                        <div className="p-6">
-                          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                            <div className="flex items-start gap-3">
-                              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                              <div>
-                                <h4 className="font-semibold text-red-900">
-                                  Failed Records
-                                </h4>
-                                <p className="text-sm text-red-700 mt-1">
-                                  {uploadResponse.failedCount} records failed to
-                                  process due to validation errors or missing
-                                  required data.
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {uploadResponse.failures.map((failure, index) => (
-                              <div
-                                key={index}
-                                className="border border-red-200 rounded-lg p-4 bg-red-50"
-                              >
-                                <div className="flex items-center justify-between mb-3">
-                                  <div>
-                                    <h5 className="font-medium text-red-900">
-                                      {failure.data?.customercodeid ||
-                                        failure.record?.customercodeid ||
-                                        "Unknown Record"}
-                                    </h5>
-                                    <p className="text-sm text-red-700">
-                                      Failed on{" "}
-                                      {new Date(
-                                        failure.timestamp
-                                      ).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <Badge variant="error">Failed</Badge>
-                                </div>
-
-                                <div className="space-y-3">
-                                  <div className="bg-white p-3 rounded-lg">
-                                    <div className="flex items-start gap-2">
-                                      <XCircle className="h-4 w-4 text-red-600 mt-0.5" />
-                                      <div>
-                                        <p className="text-sm font-medium text-red-800">
-                                          Error:
-                                        </p>
-                                        <p className="text-sm text-red-700">
-                                          {failure.error}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {failure.suggestion && (
-                                    <div className="bg-blue-50 p-3 rounded-lg">
-                                      <div className="flex items-start gap-2">
-                                        <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-                                        <div>
-                                          <p className="text-sm font-medium text-blue-800">
-                                            Suggestion:
-                                          </p>
-                                          <p className="text-sm text-blue-700">
-                                            {failure.suggestion}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {failure.data && (
-                                    <div className="bg-gray-50 p-3 rounded-lg">
-                                      <p className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2">
-                                        Record Data:
-                                      </p>
-                                      <div className="grid grid-cols-2 gap-2 text-sm">
-                                        <div>
-                                          <span className="text-gray-500">
-                                            Customer Code:
-                                          </span>{" "}
-                                          <span className="text-gray-900">
-                                            {failure.data.customercodeid}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <span className="text-gray-500">
-                                            Customer Name:
-                                          </span>{" "}
-                                          <span className="text-gray-900">
-                                            {failure.data.customername}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+              {/* Action Buttons */}
+              <div className="flex justify-end pb-4 gap-3">
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Upload Another File
+                </button>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 bg-gray-50 border-t flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            {uploadResponse && uploadResponse.endTime && (
-              <span>
-                Completed at {new Date(uploadResponse.endTime).toLocaleString()}
-              </span>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              disabled={isUploading}
-              className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
-            >
-              {uploadResponse ? "Close" : "Cancel"}
-            </button>
-            {!uploadResponse && (
-              <button
-                onClick={handleUpload}
-                disabled={!file || isUploading}
-                className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700    disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <Upload size={16} />
-                    Start Upload
-                  </>
-                )}
-              </button>
-            )}
-          </div>
         </div>
       </div>
     </div>

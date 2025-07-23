@@ -76,6 +76,8 @@ import OnCallApproval from './Components/DataComponents/OnCall/OnCallApproval';
 import OnCallCnoteDelete from './Components/DataComponents/Admin/CNote/OnCallCnoteDelete';
 import OpenOnCallOrder from './Components/DataComponents/CloseOrder/OpenOnCallOrder';
 import CloseOncallOrder from './Components/DataComponents/CloseOrder/CloseOncallOrder';
+import QuoteTemplate from './Components/Template/OnCallQuoteTemplate';
+import ProposalQuoteTemplate from './Components/Template/ProposalQuoteTemplate';
 
 
 const PrivateRoute = ({ children }) => {
@@ -425,6 +427,16 @@ const AppContent = () => {
             />} />
             <Route path="/close-oncall-order" element={<ProtectedRoute
               component={CloseOncallOrder}
+              componentName="Close OnCall Order"
+              requiredPermission="read"
+            />} />
+            <Route path="/quote-template/:proposalId" element={<ProtectedRoute
+              component={QuoteTemplate}
+              componentName="Close OnCall Order"
+              requiredPermission="read"
+            />} />
+            <Route path="/proposal-template/:proposalId" element={<ProtectedRoute
+              component={ProposalQuoteTemplate}
               componentName="Close OnCall Order"
               requiredPermission="read"
             />} />

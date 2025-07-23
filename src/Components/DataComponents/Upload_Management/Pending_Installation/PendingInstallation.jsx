@@ -25,7 +25,14 @@ function PendingInstallation() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    // ✅ Refresh data when modal is closed
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -397,7 +404,6 @@ function PendingInstallation() {
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {moment(item?.invoicedate).format("MMM D, YYYY")}
-                       
                     </td>
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.distchnl}
@@ -1042,7 +1048,10 @@ function PendingInstallation() {
                 >
                   &times;
                 </button>
-                <PendingInstallationBulk getData={getData} closeModal ={closeModal} />
+                <PendingInstallationBulk
+                  getData={getData}
+                  onClose={closeModal}
+                />
               </div>
             </div>
           )}

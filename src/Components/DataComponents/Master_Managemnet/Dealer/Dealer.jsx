@@ -32,7 +32,14 @@ function Dealer() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    // ✅ Refresh data when modal is closed
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const [selectedRows, setSelectedRows] = useState([]);
   const [department, setdepartment] = useState([]);
   const [BranchData, setBranchData] = useState([]);
@@ -950,13 +957,7 @@ function Dealer() {
               {/* Modal Content */}
 
               <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <BulkModal />
+                <BulkModal onClose={closeModal} />
               </div>
             </div>
           )}

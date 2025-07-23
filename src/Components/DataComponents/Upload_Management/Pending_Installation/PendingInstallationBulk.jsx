@@ -1,35 +1,66 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
-import toast from "react-hot-toast";
+import { Download, Database, X } from "lucide-react";
+import { useState } from "react";
 
-function PendingInstallationBulk({ closeModal, getData }) {
+function PendingInstallationBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
-
-  const [processingState, setProcessingState] = useState({
-    status: "idle", // 'idle' | 'processing' | 'completed' | 'error'
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [resultFilter, setResultFilter] = useState("All");
+  const [isDragging, setIsDragging] = useState(false);
+  const [processingData, setProcessingData] = useState({
+    status: "idle",
     startTime: null,
     endTime: null,
     duration: null,
     totalRecords: 0,
     processedRecords: 0,
-    successCount: 0,
-    errorCount: 0,
-    currentRecord: null,
-    message: "Ready to upload",
-    errors: [],
+    successfulRecords: 0,
+    failedRecords: 0,
+    results: [],
     summary: {
-      totalRecords: 0,
-      processed: 0,
+      created: 0,
+      updated: 0,
       failed: 0,
-      completionPercentage: 0
-    }
+      duplicatesInFile: 0,
+      existingRecords: 0,
+      skippedTotal: 0,
+    },
+    headerMapping: {},
+    errors: [],
+    warnings: [],
   });
+  const [liveUpdates, setLiveUpdates] = useState([]);
+
+  const addLiveUpdate = (message, type = "info") => {
+    const update = {
+      id: Date.now(),
+      message,
+      type,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
+  };
+
+  const statusCounts = processingData.results.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const filterTabs = [
+    { label: "All", value: "All", count: processingData.results.length },
+    { label: "Created", value: "Created", count: statusCounts.Created || 0 },
+    { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
+    { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
+    { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
+  ];
+
+  const filteredResults =
+    resultFilter === "All"
+      ? processingData.results
+      : processingData.results.filter((r) => r.status === resultFilter);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -37,25 +68,22 @@ function PendingInstallationBulk({ closeModal, getData }) {
   };
 
   const validateAndSetFile = (selectedFile) => {
-    setError(null);
+    setError("");
     if (!selectedFile) {
       setFile(null);
       return;
     }
-    
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
-    
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError("File size exceeds 5MB limit");
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
-    
     setFile(selectedFile);
   };
 
@@ -76,11 +104,235 @@ function PendingInstallationBulk({ closeModal, getData }) {
     validateAndSetFile(droppedFile);
   };
 
-  const handleDownload = () => {
-    const csvContent = `invoiceno,invoicedate,distchnl,customerid,material,description,serialnumber,salesdist,salesoff,currentcustomerid,mtl_grp4,key,status
-9016032553,11-12-2022,2,111111,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E22GD0300,DS_KL,COK,1020882,1YR,,Active
-9836025727,31-03-2025,1,111111,F3-05-390-0142-14,Surgiskan 100 with Re-Usable Pat. Plate,E25GD0400,DN_DL,DEL,1049037,2YR,,Active`;
+  const handleUpload = async () => {
+    if (!file) return;
 
+    setIsProcessing(true);
+    setLiveUpdates([]);
+    setProcessingData({
+      status: "processing",
+      startTime: new Date(),
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
+      summary: {
+        created: 0,
+        updated: 0,
+        failed: 0,
+        duplicatesInFile: 0,
+        existingRecords: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
+      errors: [],
+      warnings: [],
+    });
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      addLiveUpdate("Starting Pending Installation data upload...", "info");
+
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 600000);
+
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/bulk/pendinginstallation/bulk-upload`,
+        {
+          method: "POST",
+          body: formData,
+          signal: abortController.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      addLiveUpdate(
+        "File uploaded successfully. Processing Pending Installation records...",
+        "success"
+      );
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let partialLine = "";
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = partialLine + decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            partialLine = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+
+              try {
+                const data = JSON.parse(line);
+
+                setProcessingData((prev) => {
+                  const newData = {
+                    ...prev,
+                    ...data,
+                    results: data.results || prev.results,
+                    summary: data.summary
+                      ? { ...prev.summary, ...data.summary }
+                      : prev.summary,
+                    headerMapping: data.headerMapping || prev.headerMapping,
+                    errors: data.errors || prev.errors,
+                    warnings: data.warnings || prev.warnings,
+                  };
+
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed =
+                      data.processedRecords - prev.processedRecords;
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} more Pending Installation records (${data.processedRecords}/${data.totalRecords})`,
+                      "success"
+                    );
+                  }
+
+                  if (data.summary?.created > prev.summary?.created) {
+                    const newCreated =
+                      data.summary.created - prev.summary.created;
+                    addLiveUpdate(
+                      `Created ${newCreated} new Pending Installation records (Total: ${data.summary.created})`,
+                      "info"
+                    );
+                  }
+
+                  if (data.summary?.updated > prev.summary?.updated) {
+                    const newUpdated =
+                      data.summary.updated - prev.summary.updated;
+                    addLiveUpdate(
+                      `Updated ${newUpdated} existing Pending Installation records (Total: ${data.summary.updated})`,
+                      "info"
+                    );
+                  }
+
+                  if (
+                    data.summary?.duplicatesInFile >
+                    prev.summary?.duplicatesInFile
+                  ) {
+                    const newDuplicates =
+                      data.summary.duplicatesInFile -
+                      prev.summary.duplicatesInFile;
+                    addLiveUpdate(
+                      `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
+                      "warning"
+                    );
+                  }
+
+                  if (
+                    data.summary?.existingRecords >
+                    prev.summary?.existingRecords
+                  ) {
+                    const newExisting =
+                      data.summary.existingRecords -
+                      prev.summary.existingRecords;
+                    addLiveUpdate(
+                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
+                      "warning"
+                    );
+                  }
+
+                  if (data.summary?.failed > prev.summary?.failed) {
+                    const newFailed = data.summary.failed - prev.summary.failed;
+                    addLiveUpdate(
+                      `${newFailed} records failed validation (Total: ${data.summary.failed})`,
+                      "error"
+                    );
+                  }
+
+                  if (data.status === "completed") {
+                    addLiveUpdate(
+                      `Pending Installation bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      "success"
+                    );
+                    setIsProcessing(false);
+                    setTimeout(() => setActiveTab("results"), 100);
+                  } else if (data.status === "failed") {
+                    addLiveUpdate(
+                      "Pending Installation processing failed!",
+                      "error"
+                    );
+                    setIsProcessing(false);
+                  }
+
+                  return newData;
+                });
+              } catch (parseError) {
+                console.error("Error parsing JSON:", parseError, "Line:", line);
+                addLiveUpdate(
+                  `Error processing data chunk: ${parseError.message}`,
+                  "error"
+                );
+              }
+            }
+          }
+
+          if (partialLine.trim()) {
+            try {
+              const data = JSON.parse(partialLine);
+              setProcessingData((prev) => ({
+                ...prev,
+                ...data,
+              }));
+            } catch (parseError) {
+              console.error("Error parsing final JSON:", parseError);
+            }
+          }
+
+          break;
+        } catch (streamError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw streamError;
+          }
+
+          addLiveUpdate(
+            `Stream error (retry ${retryCount}/${maxRetries}): ${streamError.message}`,
+            "warning"
+          );
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          );
+        }
+      }
+    } catch (err) {
+      addLiveUpdate("Upload failed: " + err.message, "error");
+      setIsProcessing(false);
+      setError("Upload failed: " + err.message);
+
+      setProcessingData((prev) => ({
+        ...prev,
+        status: "failed",
+        endTime: new Date(),
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
+      }));
+    }
+  };
+
+  const csvContent = `Invoice No,Invoice Date,DistChnl,Customer id,Customer Name1,Customer Name2,Customer City,Customer Postal Code,Material,Description,Serial No,SalesDist,SalesOff,Customer Country,Customer Region,Current Customer id,Current Customer Name1,Current Customer Name2,Current Customer City,Current Customer Region,Current Customer Postal Code,Current Customer Country,Mtl.Grp4,Key
+,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,`;
+
+  const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -93,630 +345,362 @@ function PendingInstallationBulk({ closeModal, getData }) {
 
   const resetForm = () => {
     setFile(null);
-    setIsUploading(false);
-    setError(null);
-    setProcessingState({
+    setError("");
+    setActiveTab("upload");
+    setLiveUpdates([]);
+    setIsProcessing(false);
+    setProcessingData({
       status: "idle",
       startTime: null,
       endTime: null,
       duration: null,
       totalRecords: 0,
       processedRecords: 0,
-      successCount: 0,
-      errorCount: 0,
-      currentRecord: null,
-      message: "Ready to upload",
-      errors: [],
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
       summary: {
-        totalRecords: 0,
-        processed: 0,
+        created: 0,
+        updated: 0,
         failed: 0,
-        completionPercentage: 0
-      }
-    });
-    setActiveTab("upload");
-  };
-
-  const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file to upload");
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-    setActiveTab("results");
-
-    // Initialize processing state
-    setProcessingState({
-      status: "processing",
-      startTime: new Date(),
-      endTime: null,
-      duration: null,
-      totalRecords: 0,
-      processedRecords: 0,
-      successCount: 0,
-      errorCount: 0,
-      currentRecord: null,
-      message: "Starting file processing...",
+        duplicatesInFile: 0,
+        existingRecords: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
       errors: [],
-      summary: {
-        totalRecords: 0,
-        processed: 0,
-        failed: 0,
-        completionPercentage: 0
-      }
-    });
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      let accumulatedData = "";
-      
-      const response = await axios.post(
-        `${process.env.REACT_APP_BASE_URL}/bulk/pendinginstallation/bulk-upload`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onDownloadProgress: (progressEvent) => {
-            // Handle streaming response
-            const chunk = progressEvent.event.target.responseText;
-            accumulatedData += chunk;
-            
-            // Split by newlines and process each complete JSON object
-            const lines = accumulatedData.split('\n');
-            
-            // Process all complete lines (leave incomplete one in buffer)
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i].trim();
-              if (line) {
-                try {
-                  const data = JSON.parse(line);
-                  updateProcessingState(data);
-                } catch (e) {
-                  console.error("Error parsing progress update:", e);
-                }
-              }
-            }
-            
-            // Keep the last (potentially incomplete) line for next chunk
-            accumulatedData = lines[lines.length - 1];
-          },
-        }
-      );
-
-      // Final update with completed status
-      if (response.data) {
-        updateProcessingState({
-          ...response.data,
-          status: "completed",
-          endTime: new Date(),
-          duration: `${((new Date() - new Date(response.data.startTime)) / 1000).toFixed(2)}s`
-        });
-      }
-
-      if (response.data?.errors?.length > 0) {
-        toast.error(
-          `Process completed with ${response.data.errors.length} errors`
-        );
-      } else {
-        toast.success("All records processed successfully!");
-        getData();
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      
-      const errorMessage = err.response?.data?.message || 
-                         err.message || 
-                         "An error occurred during upload";
-      
-      toast.error(errorMessage);
-      setError(errorMessage);
-      
-      setProcessingState(prev => ({
-        ...prev,
-        status: "error",
-        endTime: new Date(),
-        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
-        message: "Processing failed",
-        errors: [...prev.errors, { error: errorMessage }]
-      }));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const updateProcessingState = (data) => {
-    setProcessingState(prev => {
-      const newState = {
-        ...prev,
-        ...data,
-        summary: {
-          totalRecords: data.totalRecords || prev.summary.totalRecords,
-          processed: data.processedRecords || prev.summary.processed,
-          failed: data.errorCount || prev.summary.failed,
-          completionPercentage: data.totalRecords > 0 
-            ? Math.round(((data.processedRecords || 0) / data.totalRecords) * 100)
-            : prev.summary.completionPercentage
-        }
-      };
-      
-      // Update message if not provided in the data
-      if (!data.message) {
-        if (data.status === "processing") {
-          newState.message = `Processing ${data.processedRecords || 0} of ${data.totalRecords || '?'} records`;
-        } else if (data.status === "completed") {
-          newState.message = `Completed processing ${data.processedRecords || 0} records`;
-        }
-      }
-      
-      return newState;
+      warnings: [],
     });
   };
 
-  const CircularProgressBar = ({ percentage }) => {
-    const circumference = 2 * Math.PI * 40;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const renderStatusBadge = (status) => {
+    const statusMap = {
+      Created: { bg: "bg-green-100", text: "text-green-800", label: "Created" },
+      Updated: { bg: "bg-blue-100", text: "text-blue-800", label: "Updated" },
+      Failed: { bg: "bg-red-100", text: "text-red-800", label: "Failed" },
+      Skipped: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        label: "Skipped",
+      },
+      Processing: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Processing",
+      },
+    };
+
+    const config = statusMap[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+      label: "Unknown",
+    };
 
     return (
-      <div className="relative inline-flex items-center justify-center">
-        <svg className="w-24 h-24" viewBox="0 0 100 100">
-          <circle
-            className="text-gray-200"
-            strokeWidth="8"
-            stroke="currentColor"
-            fill="transparent"
-            r="40"
-            cx="50"
-            cy="50"
-          />
-          <circle
-            className="text-blue-600 transition-all duration-300 ease-in-out"
-            strokeWidth="8"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            stroke="currentColor"
-            fill="transparent"
-            r="40"
-            cx="50"
-            cy="50"
-            transform="rotate(-90 50 50)"
-          />
-        </svg>
-        <span className="absolute text-xl font-bold text-blue-700">
-          {percentage}%
-        </span>
-      </div>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+      >
+        {config.label}
+      </span>
     );
   };
 
-  const renderResultsTab = () => {
-    if (processingState.status === "idle") {
-      return (
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="text-gray-400 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-            </svg>
-          </div>
-          <p className="text-gray-500">Upload a file to see processing results</p>
-        </div>
-      );
-    }
+  const getProcessingSteps = () => {
+    const steps = [
+      {
+        id: 1,
+        title: "File Upload & Validation",
+        description: "Validating file format and headers",
+        status: processingData.status !== "idle" ? "completed" : "pending",
+      },
+      {
+        id: 2,
+        title: "Header Mapping",
+        description:
+          Object.keys(processingData.headerMapping).length > 0
+            ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
+            : "Detecting Invoice No and Serial Number columns",
+        status:
+          Object.keys(processingData.headerMapping).length > 0
+            ? "completed"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 3,
+        title: "Processing Pending Installation Records",
+        description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
+        status:
+          processingData.processedRecords > 0
+            ? processingData.processedRecords === processingData.totalRecords
+              ? "completed"
+              : "active"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 4,
+        title: "Finalizing Process",
+        description: "Completing Pending Installation bulk upload operation",
+        status: processingData.status === "completed" ? "completed" : "pending",
+      },
+    ];
 
-    return (
-      <div className="space-y-6 pb-10 h-[370px] overflow-y-auto">
-        {processingState.status === "processing" && (
-          <div className="flex flex-col items-center justify-center py-8">
-            <CircularProgressBar percentage={processingState.summary.completionPercentage} />
-            <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-2">
-              Processing Pending Installations
-            </h3>
-            <p className="text-gray-600 mb-1">
-              {processingState.message}
-            </p>
-            {processingState.currentRecord && (
-              <p className="text-sm text-gray-500 mb-4">
-                Current: {processingState.currentRecord.serialnumber || 'N/A'}
-              </p>
-            )}
-            <div className="w-full max-w-md bg-gray-200 rounded-full h-2.5">
-              <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out"
-                style={{ width: `${processingState.summary.completionPercentage}%` }}
-              ></div>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mt-4 w-full max-w-md">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-800">Total</p>
-                <p className="text-xl font-bold text-gray-900">
-                  {processingState.summary.totalRecords}
-                </p>
-              </div>
-              <div className="bg-green-50 p-3 rounded-lg">
-                <p className="text-sm text-green-800">Processed</p>
-                <p className="text-xl font-bold text-green-900">
-                  {processingState.summary.processed}
-                </p>
-              </div>
-              <div className="bg-red-50 p-3 rounded-lg">
-                <p className="text-sm text-red-800">Failed</p>
-                <p className="text-xl font-bold text-red-900">
-                  {processingState.summary.failed}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {processingState.status === "completed" && (
-          <div className="space-y-4">
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-md">
-              <div className="flex items-start gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500 flex-shrink-0 mt-0.5">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                <div>
-                  <h3 className="text-sm font-medium text-green-800">Processing Completed</h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    Successfully processed {processingState.summary.processed} of {processingState.summary.totalRecords} records in {processingState.duration}.
-                    {processingState.summary.failed > 0 && (
-                      <span> {processingState.summary.failed} records failed.</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white border rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-500">Total Records</h4>
-                  <span className="text-2xl font-bold text-gray-800">
-                    {processingState.summary.totalRecords}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-white border rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-500">Success</h4>
-                  <span className="text-2xl font-bold text-green-600">
-                    {processingState.summary.processed}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-white border rounded-lg p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium text-gray-500">Failed</h4>
-                  <span className="text-2xl font-bold text-red-600">
-                    {processingState.summary.failed}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {processingState.errors.length > 0 && (
-              <div className="bg-white border rounded-lg overflow-hidden">
-                <div className="p-4 border-b">
-                  <h4 className="font-medium text-gray-800">Error Details</h4>
-                </div>
-                <div className="overflow-y-auto max-h-60">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Error</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {processingState.errors.slice(0, 10).map((error, idx) => (
-                        <tr key={idx}>
-                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                            {error.serialnumber || error.record || 'N/A'}
-                          </td>
-                          <td className="px-4 py-2 whitespace-normal text-sm text-red-600">
-                            {error.error || error.message || 'Unknown error'}
-                          </td>
-                        </tr>
-                      ))}
-                      {processingState.errors.length > 10 && (
-                        <tr>
-                          <td colSpan="2" className="px-4 py-2 text-center text-sm text-gray-500">
-                            + {processingState.errors.length - 10} more errors
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {processingState.status === "error" && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-            <div className="flex items-start gap-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 flex-shrink-0 mt-0.5">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
-              <div>
-                <h3 className="text-sm font-medium text-red-800">Processing Failed</h3>
-                <p className="text-sm text-red-700 mt-1">
-                  {processingState.message}
-                </p>
-                {processingState.duration && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Duration: {processingState.duration}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return steps;
   };
 
   return (
-    <div className="container mx-auto">
-      <div className="bg-white rounded-xl h-[470px] overflow-hidden w-full max-w-4xl mx-auto">
-        <div className="p-5 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="relative bg-gradient-to-r from-blue-50 to-blue-100 p-6 text-black">
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">
-                Pending Installation Bulk Upload
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Database size={24} />
+                </div>
+                Bulk Pending Installation Upload
               </h2>
-              <p className="text-gray-500 text-sm mt-1">
-                Upload pending installation records from a CSV or Excel file.
+              <p className="text-gray-500 mt-1">
+                Import and manage Pending Installation data efficiently
               </p>
             </div>
             <button
-              onClick={handleDownload}
-              className="flex items-center text-sm h-10 gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors self-start"
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              Download Template
+              <X size={24} />
             </button>
           </div>
         </div>
 
-        <div className="p-5 pt-0">
-          <div className="mb-4">
+        {/* Template Download Section */}
+        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <div>
+            <h3 className="font-semibold text-blue-900">Need a template?</h3>
+            <p className="text-sm text-blue-700">
+              Download our CSV template with all required Pending Installation
+              columns
+            </p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download size={16} />
+            Download Template
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Tabs */}
+          <div className="mb-6">
             <div className="flex border-b border-gray-200">
               <button
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "upload"
-                    ? "text-blue-600 border-b-2 border-blue-600"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("upload")}
-                disabled={isUploading}
               >
                 Upload
+                {isProcessing && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
+                    !
+                  </span>
+                )}
               </button>
               <button
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "results"
-                    ? "text-blue-600 border-b-2 border-blue-600"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("results")}
+                disabled={processingData.status !== "completed"}
               >
                 Results
-                {processingState.errorCount > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium leading-4 text-white bg-red-500 rounded-full">
-                    {processingState.errorCount}
+                {processingData.status === "completed" && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-green-600 text-white rounded-full">
+                    ✓
                   </span>
                 )}
               </button>
             </div>
           </div>
 
+          {/* Upload Tab */}
           {activeTab === "upload" && (
-            <div className="space-y-6">
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-red-500 flex-shrink-0 mt-0.5"
-                  >
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">Error</h3>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
-                  </div>
-                </div>
-              )}
-
-              <div
-                className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-50"
-                    : file
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="flex flex-col items-center justify-center py-4">
-                  {file ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-green-600"
-                        >
-                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{file.name}</span>
-                        <button
-                          className="h-6 w-6 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setFile(null);
-                          }}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                          </svg>
-                          <span className="sr-only">Remove file</span>
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {(file.size / 1024).toFixed(2)} KB
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-blue-600"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="17 8 12 3 7 8"></polyline>
-                          <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                      </div>
-                      <p className="mb-2 text-sm text-center">
-                        <span className="font-semibold">Click to upload</span>{" "}
-                        or drag and drop
-                      </p>
-                      <p className="text-xs text-center text-gray-500">
-                        CSV or Excel files only (max 5MB)
-                      </p>
-                    </>
-                  )}
-                </div>
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  accept=".csv,.xls,.xlsx"
-                  onChange={handleFileChange}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="absolute inset-0 cursor-pointer"
-                >
-                  <span className="sr-only">Upload file</span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                {file && (
-                  <button
-                    onClick={resetForm}
-                    disabled={isUploading}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-gray-700 ${
-                      isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-                    } transition-colors`}
-                  >
-                    Reset
-                  </button>
-                )}
-                <button
-                  onClick={handleUpload}
-                  disabled={!file || isUploading}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    !file || isUploading
-                      ? "bg-blue-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  } text-white transition-colors`}
-                >
-                  {isUploading ? (
-                    <>
+            <div className="space-y-6 h-[400px] overflow-y-auto">
+              {/* File Upload Section */}
+              {!isProcessing && (
+                <div className="space-y-6">
+                  {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
                       <svg
-                        className="animate-spin h-4 w-4 text-white"
                         xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
+                        width="20"
+                        height="20"
                         viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-red-500 flex-shrink-0 mt-0.5"
                       >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
                       </svg>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Error
+                        </h3>
+                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
+                      isDragging
+                        ? "border-blue-500 bg-blue-50 scale-105"
+                        : file
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex flex-col items-center justify-center py-12">
+                      {file ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-green-600"
+                            >
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <div className="flex items-center gap-2 justify-center">
+                              <span className="font-medium text-lg">
+                                {file.name}
+                              </span>
+                              <button
+                                className="h-8 w-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setFile(null);
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                            <span className="text-sm text-gray-500 mt-2 block">
+                              {(file.size / 1024).toFixed(2)} KB
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-blue-600"
+                            >
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="17 8 12 3 7 8"></polyline>
+                              <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                          </div>
+                          <p className="mb-2 text-lg text-center">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-sm text-center text-gray-500">
+                            CSV or Excel files only (max 50MB)
+                          </p>
+                          <p className="text-xs text-center text-blue-600 mt-2">
+                            Required columns: Invoice No, Serial Number
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".csv,.xls,.xlsx"
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="absolute inset-0 cursor-pointer"
+                    >
+                      <span className="sr-only">Upload file</span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    {file && (
+                      <button
+                        onClick={resetForm}
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={handleUpload}
+                      disabled={!file}
+                      className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
+                        !file
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white transition-colors`}
+                    >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"
@@ -732,15 +716,421 @@ function PendingInstallationBulk({ closeModal, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload File
-                    </>
+                      Upload & Process Pending Installation Data
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Processing Status Section */}
+              {isProcessing && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Processing Steps */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        Processing Status
+                      </h3>
+                      <div className="space-y-4">
+                        {getProcessingSteps().map((step) => (
+                          <div key={step.id} className="flex items-start gap-4">
+                            <div className="flex-shrink-0 mt-1">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                  step.status === "completed"
+                                    ? "bg-green-500 text-white"
+                                    : step.status === "active"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                }`}
+                              >
+                                {step.status === "completed" ? (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                ) : step.status === "active" ? (
+                                  <svg
+                                    className="animate-spin h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  step.id
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h4
+                                className={`font-medium ${
+                                  step.status === "active"
+                                    ? "text-blue-600"
+                                    : "text-gray-800"
+                                }`}
+                              >
+                                {step.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {step.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Updates */}
+                  <div className="space-y-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        Live Updates
+                      </h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {liveUpdates.length > 0 ? (
+                          liveUpdates.map((update) => (
+                            <div
+                              key={update.id}
+                              className={`p-2 rounded text-xs ${
+                                update.type === "error"
+                                  ? "bg-red-50 text-red-700"
+                                  : update.type === "success"
+                                  ? "bg-green-50 text-green-700"
+                                  : update.type === "warning"
+                                  ? "bg-yellow-50 text-yellow-700"
+                                  : "bg-blue-50 text-blue-700"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <span>{update.message}</span>
+                                <span className="text-gray-500 ml-2">
+                                  {update.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500 text-center py-4">
+                            Processing will start soon...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Results Tab */}
+          {activeTab === "results" && processingData.status === "completed" && (
+            <div className="space-y-6 h-[400px] overflow-y-auto px-2">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">
+                        Records Created
+                      </p>
+                      <p className="text-2xl font-bold text-green-800 mt-2">
+                        {processingData.summary.created}
+                      </p>
+                    </div>
+                    <div className="bg-green-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-green-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">
+                        Records Updated
+                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {processingData.summary.updated}
+                      </p>
+                    </div>
+                    <div className="bg-blue-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-blue-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-700">
+                        File Duplicates
+                      </p>
+                      <p className="text-2xl font-bold text-orange-800 mt-2">
+                        {processingData.summary.duplicatesInFile}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Within uploaded file
+                      </p>
+                    </div>
+                    <div className="bg-orange-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-orange-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-700">
+                        Existing Records
+                      </p>
+                      <p className="text-2xl font-bold text-yellow-800 mt-2">
+                        {processingData.summary.existingRecords}
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Already in database
+                      </p>
+                    </div>
+                    <div className="bg-yellow-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-yellow-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        Failed Records
+                      </p>
+                      <p className="text-2xl font-bold text-red-800 mt-2">
+                        {processingData.summary.failed}
+                      </p>
+                    </div>
+                    <div className="bg-red-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-red-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Processing Summary */}
+              {processingData.duration && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-sm text-gray-800 mb-2">
+                    Processing Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Records:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.totalRecords}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Processing Time:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.duration}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Skipped:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.summary.skippedTotal}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Completed At:</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(processingData.endTime).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Results */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Detailed Results ({filteredResults.length} records)
+                  </h3>
+                </div>
+
+                <div className="border-b border-gray-200 mb-4">
+                  <nav className="flex -mb-px">
+                    {filterTabs.map((tab) => (
+                      <button
+                        key={tab.value}
+                        onClick={() => setResultFilter(tab.value)}
+                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 ${
+                          resultFilter === tab.value
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {processingData.results.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {filteredResults.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-gray-500">
+                                  Row {item.row}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  Invoice: {item.invoiceno}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  Serial: {item.serialnumber}
+                                </span>
+                              </div>
+                              {item.action && (
+                                <div className="text-xs text-blue-600">
+                                  {item.action}
+                                </div>
+                              )}
+                              {item.error && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  Error: {item.error}
+                                </div>
+                              )}
+                              {item.warnings && item.warnings.length > 0 && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Warnings: {item.warnings.join(", ")}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              {renderStatusBadge(item.status)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      No results to display
+                    </div>
                   )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end pb-4 gap-3">
+                <button
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Upload Another File
                 </button>
               </div>
             </div>
           )}
-
-          {activeTab === "results" && renderResultsTab()}
         </div>
       </div>
     </div>

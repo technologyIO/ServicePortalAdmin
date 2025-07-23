@@ -7,6 +7,8 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import toast from "react-hot-toast";
+import { Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -30,7 +32,7 @@ function OpenProposal() {
   const [searchQuery, setSearchQuery] = useState("");
   const [userId, setUserId] = useState(null);
   const [coNumber, setCoNumber] = useState(""); // Single CO number for entire proposal
-
+  const navigate = useNavigate();
   const limit = 10;
 
   useEffect(() => {
@@ -146,7 +148,9 @@ function OpenProposal() {
       toast.error(error.response?.data?.message || "Failed to close proposal");
     }
   };
-
+  const handleDownloadQuote = (proposalId) => {
+    navigate(`/proposal-template/${proposalId}`);
+  };
   /* ───────────────────────── HELPERS ───────────────────────── */
   const getStatusColor = (status) => {
     const colorMap = {
@@ -368,12 +372,7 @@ function OpenProposal() {
 
                   <td className="p-3 text-center">
                     <button
-                      onClick={() =>
-                        window.open(
-                          `${process.env.REACT_APP_BASE_URL}/phone/proposal/${proposal.proposalNumber}/quote-pdf`,
-                          "_blank"
-                        )
-                      }
+                      onClick={() => handleDownloadQuote(proposal?._id)}
                       className="p-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
                       title="Download Quote PDF"
                     >
@@ -397,16 +396,7 @@ function OpenProposal() {
                         className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
                         title="Close Proposal"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          fill="currentColor"
-                          viewBox="0 0 16 16"
-                        >
-                          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                          <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.061L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z" />
-                        </svg>
+                        <Edit size={20} />
                       </button>
 
                       <button

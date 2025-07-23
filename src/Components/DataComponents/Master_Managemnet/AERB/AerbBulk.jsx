@@ -3,7 +3,7 @@
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
 
-function DealerStockBulk({ onClose, getData }) {
+function AerbBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -21,21 +21,16 @@ function DealerStockBulk({ onClose, getData }) {
     failedRecords: 0,
     results: [],
     summary: {
-      deletedExisting: 0,
       created: 0,
+      updated: 0,
       failed: 0,
-      duplicatesInFile: 0,
-      skippedTotal: 0,
+      duplicatesInFile: 0, // New field for file duplicates
+      existingRecords: 0, // New field for existing records with same data
+      skippedTotal: 0, // New field for total skipped
     },
     headerMapping: {},
     errors: [],
     warnings: [],
-    deletionPhase: {
-      status: "pending",
-      totalExisting: 0,
-      deleted: 0,
-      progress: 0,
-    },
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
 
@@ -48,7 +43,6 @@ function DealerStockBulk({ onClose, getData }) {
     };
     setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
   };
-
   const statusCounts = processingData.results.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
     return acc;
@@ -57,6 +51,7 @@ function DealerStockBulk({ onClose, getData }) {
   const filterTabs = [
     { label: "All", value: "All", count: processingData.results.length },
     { label: "Created", value: "Created", count: statusCounts.Created || 0 },
+    { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
     { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
     { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
   ];
@@ -124,34 +119,29 @@ function DealerStockBulk({ onClose, getData }) {
       failedRecords: 0,
       results: [],
       summary: {
-        deletedExisting: 0,
         created: 0,
+        updated: 0,
         failed: 0,
         duplicatesInFile: 0,
+        existingRecords: 0,
         skippedTotal: 0,
       },
       headerMapping: {},
       errors: [],
       warnings: [],
-      deletionPhase: {
-        status: "pending",
-        totalExisting: 0,
-        deleted: 0,
-        progress: 0,
-      },
     });
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      addLiveUpdate("Starting DealerStock data upload...", "info");
+      addLiveUpdate("Starting Aerb data upload...", "info");
 
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => abortController.abort(), 600000);
 
       const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/bulk/dealerstock/bulk-upload`,
+        `${process.env.REACT_APP_BASE_URL}/bulk/aerb/bulk-upload`,
         {
           method: "POST",
           body: formData,
@@ -166,7 +156,7 @@ function DealerStockBulk({ onClose, getData }) {
       }
 
       addLiveUpdate(
-        "File uploaded successfully. Processing DealerStock records...",
+        "File uploaded successfully. Processing Aerb records...",
         "success"
       );
 
@@ -203,30 +193,14 @@ function DealerStockBulk({ onClose, getData }) {
                     headerMapping: data.headerMapping || prev.headerMapping,
                     errors: data.errors || prev.errors,
                     warnings: data.warnings || prev.warnings,
-                    deletionPhase: data.deletionPhase || prev.deletionPhase,
                   };
 
-                  // Deletion phase updates
-                  if (data.deletionPhase?.status === "deleting") {
-                    addLiveUpdate(
-                      `Deleting existing DealerStock records: ${data.deletionPhase.totalExisting} records found`,
-                      "info"
-                    );
-                  }
-
-                  if (data.deletionPhase?.status === "completed") {
-                    addLiveUpdate(
-                      `Deleted ${data.deletionPhase.deleted} existing DealerStock records`,
-                      "success"
-                    );
-                  }
-
-                  // Processing updates
+                  // Enhanced live updates with detailed tracking
                   if (data.processedRecords > prev.processedRecords) {
                     const newlyProcessed =
                       data.processedRecords - prev.processedRecords;
                     addLiveUpdate(
-                      `Processed ${newlyProcessed} more DealerStock records (${data.processedRecords}/${data.totalRecords})`,
+                      `Processed ${newlyProcessed} more Aerb records (${data.processedRecords}/${data.totalRecords})`,
                       "success"
                     );
                   }
@@ -235,7 +209,16 @@ function DealerStockBulk({ onClose, getData }) {
                     const newCreated =
                       data.summary.created - prev.summary.created;
                     addLiveUpdate(
-                      `Created ${newCreated} new DealerStock records (Total: ${data.summary.created})`,
+                      `Created ${newCreated} new Aerb records (Total: ${data.summary.created})`,
+                      "info"
+                    );
+                  }
+
+                  if (data.summary?.updated > prev.summary?.updated) {
+                    const newUpdated =
+                      data.summary.updated - prev.summary.updated;
+                    addLiveUpdate(
+                      `Updated ${newUpdated} existing Aerb records (Total: ${data.summary.updated})`,
                       "info"
                     );
                   }
@@ -253,6 +236,19 @@ function DealerStockBulk({ onClose, getData }) {
                     );
                   }
 
+                  if (
+                    data.summary?.existingRecords >
+                    prev.summary?.existingRecords
+                  ) {
+                    const newExisting =
+                      data.summary.existingRecords -
+                      prev.summary.existingRecords;
+                    addLiveUpdate(
+                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
+                      "warning"
+                    );
+                  }
+
                   if (data.summary?.failed > prev.summary?.failed) {
                     const newFailed = data.summary.failed - prev.summary.failed;
                     addLiveUpdate(
@@ -263,17 +259,13 @@ function DealerStockBulk({ onClose, getData }) {
 
                   if (data.status === "completed") {
                     addLiveUpdate(
-                      `DealerStock bulk upload completed in ${data.duration}! ` +
-                        `Deleted: ${data.summary.deletedExisting}, ` +
-                        `Created: ${data.summary.created}, ` +
-                        `Skipped: ${data.summary.skippedTotal}, ` +
-                        `Failed: ${data.summary.failed}`,
+                      `Aerb bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
                     setTimeout(() => setActiveTab("results"), 100);
                   } else if (data.status === "failed") {
-                    addLiveUpdate("DealerStock processing failed!", "error");
+                    addLiveUpdate("Aerb processing failed!", "error");
                     setIsProcessing(false);
                   }
 
@@ -332,18 +324,17 @@ function DealerStockBulk({ onClose, getData }) {
     }
   };
 
-  // Updated CSV template with all required fields
-  const csvContent = `Dealer Code,Dealer Name,Dealer City,Material Code,Material Description,Plant,Unrestricted Quantity
-,,,,,,
-,,,,,,
-,,,,,,`;
+  const csvContent = `Material Code,Material Description
+,,
+,,
+,,`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "dealerstock_template.csv");
+    link.setAttribute("download", "aerb_template.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -366,27 +357,23 @@ function DealerStockBulk({ onClose, getData }) {
       failedRecords: 0,
       results: [],
       summary: {
-        deletedExisting: 0,
         created: 0,
+        updated: 0,
         failed: 0,
         duplicatesInFile: 0,
+        existingRecords: 0,
         skippedTotal: 0,
       },
       headerMapping: {},
       errors: [],
       warnings: [],
-      deletionPhase: {
-        status: "pending",
-        totalExisting: 0,
-        deleted: 0,
-        progress: 0,
-      },
     });
   };
 
   const renderStatusBadge = (status) => {
     const statusMap = {
       Created: { bg: "bg-green-100", text: "text-green-800", label: "Created" },
+      Updated: { bg: "bg-blue-100", text: "text-blue-800", label: "Updated" },
       Failed: { bg: "bg-red-100", text: "text-red-800", label: "Failed" },
       Skipped: {
         bg: "bg-yellow-100",
@@ -429,7 +416,7 @@ function DealerStockBulk({ onClose, getData }) {
         description:
           Object.keys(processingData.headerMapping).length > 0
             ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
-            : "Detecting required columns: Dealer Code, Dealer Name, Dealer City, Material Code, Material Description, Plant, Unrestricted Quantity",
+            : "Detecting Material Code and Material Description columns",
         status:
           Object.keys(processingData.headerMapping).length > 0
             ? "completed"
@@ -439,39 +426,21 @@ function DealerStockBulk({ onClose, getData }) {
       },
       {
         id: 3,
-        title: "Database Cleanup",
-        description:
-          processingData.deletionPhase.status === "completed"
-            ? `Deleted ${processingData.deletionPhase.deleted} existing records`
-            : processingData.deletionPhase.status === "deleting"
-            ? `Deleting ${processingData.deletionPhase.totalExisting} existing records...`
-            : "Preparing to replace existing DealerStock data",
-        status:
-          processingData.deletionPhase.status === "completed"
-            ? "completed"
-            : processingData.deletionPhase.status === "deleting"
-            ? "active"
-            : processingData.status === "processing"
-            ? "active"
-            : "pending",
-      },
-      {
-        id: 4,
-        title: "Processing DealerStock Records",
+        title: "Processing Aerb Records",
         description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
             ? processingData.processedRecords === processingData.totalRecords
               ? "completed"
               : "active"
-            : processingData.deletionPhase.status === "completed"
+            : processingData.status === "processing"
             ? "active"
             : "pending",
       },
       {
-        id: 5,
+        id: 4,
         title: "Finalizing Process",
-        description: "Completing DealerStock bulk upload operation",
+        description: "Completing Aerb bulk upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -490,11 +459,10 @@ function DealerStockBulk({ onClose, getData }) {
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Database size={24} />
                 </div>
-                Bulk DealerStock Upload
+                Bulk Aerb Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage dealer stock data efficiently (Replace all
-                existing data)
+                Import and manage Aerb material data efficiently
               </p>
             </div>
             <button
@@ -511,13 +479,13 @@ function DealerStockBulk({ onClose, getData }) {
           <div>
             <h3 className="font-semibold text-blue-900">Need a template?</h3>
             <p className="text-sm text-blue-700">
-              Download our CSV template with all required columns: Dealer Code,
-              Dealer Name, Dealer City, Material Code, Material Description
+              Download our CSV template with Material Code and Material
+              Description columns
             </p>
           </div>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600  text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={16} />
             Download Template
@@ -539,7 +507,7 @@ function DealerStockBulk({ onClose, getData }) {
               >
                 Upload
                 {isProcessing && (
-                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600  text-white rounded-full animate-pulse">
                     !
                   </span>
                 )}
@@ -597,7 +565,7 @@ function DealerStockBulk({ onClose, getData }) {
                   )}
 
                   <div
-                    className={`relative border-2 border-dashed h-[250px] rounded-lg transition-all duration-200 ${
+                    className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
                       isDragging
                         ? "border-blue-500 bg-blue-50 scale-105"
                         : file
@@ -692,11 +660,8 @@ function DealerStockBulk({ onClose, getData }) {
                             CSV or Excel files only (max 50MB)
                           </p>
                           <p className="text-xs text-center text-blue-600 mt-2">
-                            Required columns: Dealer Code, Dealer Name, Dealer
-                            City, Material Code, Material Description, Plant,etc
-                          </p>
-                          <p className="text-xs text-center text-red-600 mt-1 font-medium">
-                            ⚠️ This will replace ALL existing DealerStock data
+                            Required columns: Material Code, Material
+                            Description
                           </p>
                         </>
                       )}
@@ -731,7 +696,7 @@ function DealerStockBulk({ onClose, getData }) {
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
                         !file
                           ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700"
+                          : "bg-blue-600  hover:bg-blue-700"
                       } text-white transition-colors`}
                     >
                       <svg
@@ -749,7 +714,7 @@ function DealerStockBulk({ onClose, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Replace DealерStock Data
+                      Upload & Process Aerb Data
                     </button>
                   </div>
                 </div>
@@ -880,40 +845,11 @@ function DealerStockBulk({ onClose, getData }) {
             </div>
           )}
 
-          {/* Results Tab - Updated for DealerStock */}
+          {/* Results Tab - Enhanced with 5 cards */}
           {activeTab === "results" && processingData.status === "completed" && (
-            <div className="space-y-6 h-[400px] overflow-y-auto px-2">
-              {/* Enhanced Summary Cards - 4 cards layout for DealerStock */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-700">
-                        Deleted Existing
-                      </p>
-                      <p className="text-2xl font-bold text-red-800 mt-2">
-                        {processingData.summary.deletedExisting}
-                      </p>
-                    </div>
-                    <div className="bg-red-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-red-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
+            <div className="space-y-6  h-[400px] overflow-y-auto px-2">
+              {/* Enhanced Summary Cards - 5 cards layout */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -937,6 +873,35 @@ function DealerStockBulk({ onClose, getData }) {
                           strokeLinejoin="round"
                           strokeWidth={2}
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">
+                        Records Updated
+                      </p>
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
+                        {processingData.summary.updated}
+                      </p>
+                    </div>
+                    <div className="bg-blue-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-blue-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                         />
                       </svg>
                     </div>
@@ -969,6 +934,38 @@ function DealerStockBulk({ onClose, getData }) {
                           strokeLinejoin="round"
                           strokeWidth={2}
                           d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-700">
+                        Existing Records
+                      </p>
+                      <p className="text-2xl font-bold text-yellow-800 mt-2">
+                        {processingData.summary.existingRecords}
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Already in database
+                      </p>
+                    </div>
+                    <div className="bg-yellow-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-yellow-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                         />
                       </svg>
                     </div>
@@ -1047,18 +1044,19 @@ function DealerStockBulk({ onClose, getData }) {
                     Detailed Results ({filteredResults.length} records)
                   </h3>
                 </div>
-                {/* Result Tabs */}
-                <div className="border-b border-gray-200 mb-4">
+                {/* ----------  RESULT TABS  ---------- */}
+                <div className="border-b border-gray-200 mb-4  ">
                   <nav className="flex -mb-px">
                     {filterTabs.map((tab) => (
                       <button
                         key={tab.value}
                         onClick={() => setResultFilter(tab.value)}
-                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 ${
-                          resultFilter === tab.value
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                        }`}
+                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2
+          ${
+            resultFilter === tab.value
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
                       >
                         {tab.label}
                         <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
@@ -1084,11 +1082,10 @@ function DealerStockBulk({ onClose, getData }) {
                                   Row {item.row}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  {item.dealercodeid} - {item.dealername}
+                                  {item.materialcode}
                                 </span>
                               </div>
                               <div className="text-sm text-gray-600 mb-1">
-                                Material: {item.materialcode} |{" "}
                                 {item.materialdescription || "No description"}
                               </div>
                               {item.action && (
@@ -1139,4 +1136,4 @@ function DealerStockBulk({ onClose, getData }) {
   );
 }
 
-export default DealerStockBulk;
+export default AerbBulk;
