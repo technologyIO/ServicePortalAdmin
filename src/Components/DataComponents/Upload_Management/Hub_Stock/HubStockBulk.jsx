@@ -1,15 +1,76 @@
-import React, { useState } from "react";
-import axios from "axios";
-import toast from "react-hot-toast";
+"use client";
 
-function HubStockBulk() {
+import { Download, Database, X } from "lucide-react";
+import { useState } from "react";
+
+function HubStockBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [progress, setProgress] = useState(0); // Upload (insertion) progress
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
-  const [result, setResult] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [resultFilter, setResultFilter] = useState("All");
+  const [isDragging, setIsDragging] = useState(false);
+  const [processingData, setProcessingData] = useState({
+    status: "idle",
+    startTime: null,
+    endTime: null,
+    duration: null,
+    totalRecords: 0,
+    processedRecords: 0,
+    successfulRecords: 0,
+    failedRecords: 0,
+    results: [],
+    summary: {
+      deletedExisting: 0,
+      created: 0,
+      failed: 0,
+      duplicatesInFile: 0,
+      skippedTotal: 0,
+    },
+    headerMapping: {},
+    errors: [],
+    warnings: [],
+    deletionPhase: {
+      status: "pending",
+      totalExisting: 0,
+      deleted: 0,
+      progress: 0,
+    },
+    batchProgress: {
+      currentBatch: 0,
+      totalBatches: 0,
+      batchSize: 0,
+      currentBatchRecords: 0,
+    },
+  });
+  const [liveUpdates, setLiveUpdates] = useState([]);
+
+  const addLiveUpdate = (message, type = "info") => {
+    const update = {
+      id: Date.now(),
+      message,
+      type,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
+  };
+
+  const statusCounts = processingData.results.reduce((acc, r) => {
+    acc[r.status] = (acc[r.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const filterTabs = [
+    { label: "All", value: "All", count: processingData.results.length },
+    { label: "Created", value: "Created", count: statusCounts.Created || 0 },
+    { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
+    { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
+  ];
+
+  const filteredResults =
+    resultFilter === "All"
+      ? processingData.results
+      : processingData.results.filter((r) => r.status === resultFilter);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -17,7 +78,7 @@ function HubStockBulk() {
   };
 
   const validateAndSetFile = (selectedFile) => {
-    setError(null);
+    setError("");
     if (!selectedFile) {
       setFile(null);
       return;
@@ -28,8 +89,8 @@ function HubStockBulk() {
       setFile(null);
       return;
     }
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError("File size exceeds 5MB limit");
+    if (selectedFile.size > 50 * 1024 * 1024) {
+      setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
@@ -54,66 +115,271 @@ function HubStockBulk() {
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      setError("Please select a file to upload");
-      return;
-    }
-    setIsUploading(true);
-    setProgress(0);
-    setError(null);
+    if (!file) return;
+
+    setIsProcessing(true);
+    setLiveUpdates([]);
+    setProcessingData({
+      status: "processing",
+      startTime: new Date(),
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
+      summary: {
+        deletedExisting: 0,
+        created: 0,
+        failed: 0,
+        duplicatesInFile: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
+      errors: [],
+      warnings: [],
+      deletionPhase: {
+        status: "pending",
+        totalExisting: 0,
+        deleted: 0,
+        progress: 0,
+      },
+      batchProgress: {
+        currentBatch: 0,
+        totalBatches: 0,
+        batchSize: 0,
+        currentBatchRecords: 0,
+      },
+    });
+
     const formData = new FormData();
     formData.append("file", file);
+
     try {
-      const response = await axios.post(
+      addLiveUpdate("Starting HubStock batch upload...", "info");
+      
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 600000);
+
+      const response = await fetch(
         `${process.env.REACT_APP_BASE_URL}/bulk/hubstock/bulk-upload`,
-        formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              setProgress(percentCompleted);
-            }
-          },
+          method: "POST",
+          body: formData,
+          signal: abortController.signal,
         }
       );
-      setResult(response.data);
-      setActiveTab("results");
 
-      // Agar insertion phase mein koi record failed ho to toast error show karein
-      const failedInsertion = response.data.insertion.results.find(
-        (item) => item.status === "Failed"
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      addLiveUpdate(
+        "File uploaded successfully. Processing HubStock records in batches...",
+        "success"
       );
-      if (failedInsertion) {
-        toast.error(failedInsertion.error || "Some records failed to upload.");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let partialLine = "";
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = partialLine + decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            partialLine = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+
+              try {
+                const data = JSON.parse(line);
+
+                setProcessingData((prev) => {
+                  const newData = {
+                    ...prev,
+                    ...data,
+                    results: data.results || prev.results,
+                    summary: data.summary
+                      ? { ...prev.summary, ...data.summary }
+                      : prev.summary,
+                    headerMapping: data.headerMapping || prev.headerMapping,
+                    errors: data.errors || prev.errors,
+                    warnings: data.warnings || prev.warnings,
+                    deletionPhase: data.deletionPhase || prev.deletionPhase,
+                    batchProgress: data.batchProgress || prev.batchProgress,
+                  };
+
+                  // Deletion phase updates
+                  if (data.deletionPhase?.status === "deleting") {
+                    addLiveUpdate(
+                      `Deleting existing HubStock records: ${data.deletionPhase.totalExisting} records found`,
+                      "info"
+                    );
+                  }
+
+                  if (data.deletionPhase?.status === "completed") {
+                    addLiveUpdate(
+                      `Deleted ${data.deletionPhase.deleted} existing HubStock records`,
+                      "success"
+                    );
+                  }
+
+                  // Batch processing updates
+                  if (data.batchProgress?.currentBatch > prev.batchProgress?.currentBatch) {
+                    addLiveUpdate(
+                      `Starting batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches} (${data.batchProgress.batchSize} records)`,
+                      "info"
+                    );
+                  }
+
+                  // Individual record processing updates
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed = data.processedRecords - prev.processedRecords;
+                    const batchInfo = data.batchProgress?.currentBatch 
+                      ? ` [Batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches}]`
+                      : '';
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} record(s) (${data.processedRecords}/${data.totalRecords})${batchInfo}`,
+                      "success"
+                    );
+                  }
+
+                  // Real-time individual record updates
+                  if (data.latestRecord) {
+                    const record = data.latestRecord;
+                    addLiveUpdate(
+                      `${record.status}: ${record.materialcode} - ${record.materialdescription || 'No description'}`,
+                      record.status === 'Created' ? 'success' : 
+                      record.status === 'Failed' ? 'error' : 'info'
+                    );
+                  }
+
+                  if (data.summary?.created > prev.summary?.created) {
+                    const newCreated = data.summary.created - prev.summary.created;
+                    addLiveUpdate(
+                      `${newCreated} new HubStock record(s) created (Total: ${data.summary.created})`,
+                      "success"
+                    );
+                  }
+
+                  if (data.summary?.duplicatesInFile > prev.summary?.duplicatesInFile) {
+                    const newDuplicates = data.summary.duplicatesInFile - prev.summary.duplicatesInFile;
+                    addLiveUpdate(
+                      `${newDuplicates} duplicate(s) found in file (Total: ${data.summary.duplicatesInFile})`,
+                      "warning"
+                    );
+                  }
+
+                  if (data.summary?.failed > prev.summary?.failed) {
+                    const newFailed = data.summary.failed - prev.summary.failed;
+                    addLiveUpdate(
+                      `${newFailed} record(s) failed validation (Total: ${data.summary.failed})`,
+                      "error"
+                    );
+                  }
+
+                  // Batch completion updates
+                  if (data.batchCompleted) {
+                    addLiveUpdate(
+                      `Batch ${data.batchProgress.currentBatch} completed: ${data.batchSummary?.created || 0} created, ${data.batchSummary?.failed || 0} failed`,
+                      "info"
+                    );
+                  }
+
+                  if (data.status === "completed") {
+                    addLiveUpdate(
+                      `HubStock batch upload completed in ${data.duration}! ` +
+                        `Total Batches: ${data.batchProgress?.totalBatches || 0}, ` +
+                        `Deleted: ${data.summary.deletedExisting}, ` +
+                        `Created: ${data.summary.created}, ` +
+                        `Skipped: ${data.summary.skippedTotal}, ` +
+                        `Failed: ${data.summary.failed}`,
+                      "success"
+                    );
+                    setIsProcessing(false);
+                    setActiveTab("results");
+                  } else if (data.status === "failed") {
+                    addLiveUpdate("HubStock batch processing failed!", "error");
+                    setIsProcessing(false);
+                  }
+
+                  return newData;
+                });
+              } catch (parseError) {
+                console.error("Error parsing JSON:", parseError, "Line:", line);
+                addLiveUpdate(
+                  `Error processing data chunk: ${parseError.message}`,
+                  "error"
+                );
+              }
+            }
+          }
+
+          if (partialLine.trim()) {
+            try {
+              const data = JSON.parse(partialLine);
+              setProcessingData((prev) => ({
+                ...prev,
+                ...data,
+              }));
+            } catch (parseError) {
+              console.error("Error parsing final JSON:", parseError);
+            }
+          }
+
+          break;
+        } catch (streamError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw streamError;
+          }
+
+          addLiveUpdate(
+            `Stream error (retry ${retryCount}/${maxRetries}): ${streamError.message}`,
+            "warning"
+          );
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          );
+        }
       }
     } catch (err) {
-      console.error(err);
-      toast.error("An error occurred during upload. Please try again.");
-      setError("An error occurred during upload. Please try again.");
-    } finally {
-      setIsUploading(false);
+      addLiveUpdate("Upload failed: " + err.message, "error");
+      setIsProcessing(false);
+      setError("Upload failed: " + err.message);
+
+      setProcessingData((prev) => ({
+        ...prev,
+        status: "failed",
+        endTime: new Date(),
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
+      }));
     }
   };
 
-  // HubStock sample CSV content (5 rows)
-  const csvContent = `materialcode,materialdescription,quantity,storagelocation,status
-MC-001,Steel Beams,500,Warehouse A,Available
-MC-002,Aluminum Sheets,300,Warehouse B,Available
-MC-003,Copper Wires,150,Warehouse C,Unavailable
-MC-004,Plastic Pipes,400,Warehouse A,Available
-MC-005,Glass Panels,100,Warehouse D,Available`;
+  // Updated CSV template with all required HubStock fields
+  const csvContent = `Material Code,Material Description,Quantity,Storage Location
+,,,
+,,,
+,,,`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "hubstock_sample.csv");
+    link.setAttribute("download", "hubstock_template.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -121,386 +387,834 @@ MC-005,Glass Panels,100,Warehouse D,Available`;
 
   const resetForm = () => {
     setFile(null);
-    setProgress(0);
-    setResult(null);
-    setError(null);
+    setError("");
     setActiveTab("upload");
+    setLiveUpdates([]);
+    setIsProcessing(false);
+    setProcessingData({
+      status: "idle",
+      startTime: null,
+      endTime: null,
+      duration: null,
+      totalRecords: 0,
+      processedRecords: 0,
+      successfulRecords: 0,
+      failedRecords: 0,
+      results: [],
+      summary: {
+        deletedExisting: 0,
+        created: 0,
+        failed: 0,
+        duplicatesInFile: 0,
+        skippedTotal: 0,
+      },
+      headerMapping: {},
+      errors: [],
+      warnings: [],
+      deletionPhase: {
+        status: "pending",
+        totalExisting: 0,
+        deleted: 0,
+        progress: 0,
+      },
+      batchProgress: {
+        currentBatch: 0,
+        totalBatches: 0,
+        batchSize: 0,
+        currentBatchRecords: 0,
+      },
+    });
+  };
+
+  const renderStatusBadge = (status) => {
+    const statusMap = {
+      Created: { bg: "bg-green-100", text: "text-green-800", label: "Created" },
+      Failed: { bg: "bg-red-100", text: "text-red-800", label: "Failed" },
+      Skipped: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        label: "Skipped",
+      },
+      Processing: {
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Processing",
+      },
+    };
+
+    const config = statusMap[status] || {
+      bg: "bg-gray-100",
+      text: "text-gray-800",
+      label: "Unknown",
+    };
+
+    return (
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
+      >
+        {config.label}
+      </span>
+    );
+  };
+
+  const getProcessingSteps = () => {
+    const steps = [
+      {
+        id: 1,
+        title: "File Upload & Validation",
+        description: "Validating file format and headers",
+        status: processingData.status !== "idle" ? "completed" : "pending",
+      },
+      {
+        id: 2,
+        title: "Header Mapping",
+        description:
+          Object.keys(processingData.headerMapping).length > 0
+            ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
+            : "Detecting required columns: Material Code, Material Description, Quantity, Storage Location",
+        status:
+          Object.keys(processingData.headerMapping).length > 0
+            ? "completed"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 3,
+        title: "Database Cleanup",
+        description:
+          processingData.deletionPhase.status === "completed"
+            ? `Deleted ${processingData.deletionPhase.deleted} existing records`
+            : processingData.deletionPhase.status === "deleting"
+            ? `Deleting ${processingData.deletionPhase.totalExisting} existing records...`
+            : "Preparing to replace existing HubStock data",
+        status:
+          processingData.deletionPhase.status === "completed"
+            ? "completed"
+            : processingData.deletionPhase.status === "deleting"
+            ? "active"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 4,
+        title: "Batch Processing HubStock Records",
+        description: processingData.batchProgress.totalBatches > 0
+          ? `Batch ${processingData.batchProgress.currentBatch}/${processingData.batchProgress.totalBatches} - ${processingData.processedRecords}/${processingData.totalRecords} records processed`
+          : `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
+        status:
+          processingData.processedRecords > 0
+            ? processingData.processedRecords === processingData.totalRecords
+              ? "completed"
+              : "active"
+            : processingData.deletionPhase.status === "completed"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 5,
+        title: "Finalizing Process",
+        description: processingData.batchProgress.totalBatches > 0
+          ? `Completed ${processingData.batchProgress.totalBatches} batches - Finalizing HubStock bulk upload`
+          : "Completing HubStock bulk upload operation",
+        status: processingData.status === "completed" ? "completed" : "pending",
+      },
+    ];
+
+    return steps;
   };
 
   return (
-    <div className="container mx-auto px-2">
-      {/* Card container */}
-      <div className="bg-white rounded-xl   overflow-hidden w-full max-w-4xl h-[470px] mx-auto ">
-        {/* Card header */}
-        <div className="p-5 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
+        {/* Header */}
+        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-black">
+          <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl font-bold text-gray-800">
-                Hub Stock Bulk Upload
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <Database size={24} />
+                </div>
+                Bulk HubStock Upload
               </h2>
-              <p className="text-gray-500 text-sm mt-1">
-                This will delete all existing Hub Stock records and upload new data from the file.
+              <p className="text-gray-500 mt-1">
+                Import and manage hub stock data efficiently with batch processing (Replace all
+                existing data)
               </p>
             </div>
             <button
-              onClick={handleDownload}
-              className="flex items-center text-sm h-10 gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors self-start"
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              Download Template
+              <X size={24} />
             </button>
           </div>
         </div>
 
-        {/* Card content */}
-        <div className="p-5 pt-0">
+        {/* Template Download Section */}
+        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+          <div>
+            <h3 className="font-semibold text-blue-900">Need a template?</h3>
+            <p className="text-sm text-blue-700">
+              Download our CSV template with all required columns: Material
+              Code, Material Description, Quantity, Storage Location
+            </p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Download size={16} />
+            Download Template
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
           {/* Tabs */}
-          <div className="mb-4">
+          <div className="mb-6">
             <div className="flex border-b border-gray-200">
               <button
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "upload"
-                    ? "text-blue-600 border-b-2 border-blue-600"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("upload")}
               >
                 Upload
+                {isProcessing && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
+                    !
+                  </span>
+                )}
               </button>
               <button
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "results"
-                    ? "text-blue-600 border-b-2 border-blue-600"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("results")}
-                disabled={!result}
+                disabled={processingData.status !== "completed"}
               >
                 Results
+                {processingData.status === "completed" && (
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-green-600 text-white rounded-full">
+                    ✓
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
-          {/* Upload tab content */}
+          {/* Upload Tab */}
           {activeTab === "upload" && (
-            <div className="space-y-6">
-              {/* Error alert */}
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="text-red-500 flex-shrink-0 mt-0.5"
+            <div className="space-y-6 h-[400px] overflow-y-auto">
+              {/* File Upload Section */}
+              {!isProcessing && (
+                <div className="space-y-6">
+                  {error && (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-red-500 flex-shrink-0 mt-0.5"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Error
+                        </h3>
+                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div
+                    className={`relative border-2 border-dashed h-[250px] rounded-lg transition-all duration-200 ${
+                      isDragging
+                        ? "border-blue-500 bg-blue-50 scale-105"
+                        : file
+                        ? "border-green-500 bg-green-50"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                   >
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">Error</h3>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                    <div className="flex flex-col items-center justify-center py-12">
+                      {file ? (
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-green-600"
+                            >
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <div className="flex items-center gap-2 justify-center">
+                              <span className="font-medium text-lg">
+                                {file.name}
+                              </span>
+                              <button
+                                className="h-8 w-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setFile(null);
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                            <span className="text-sm text-gray-500 mt-2 block">
+                              {(file.size / 1024).toFixed(2)} KB
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="32"
+                              height="32"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-blue-600"
+                            >
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                              <polyline points="17 8 12 3 7 8"></polyline>
+                              <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                          </div>
+                          <p className="mb-2 text-lg text-center">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-sm text-center text-gray-500">
+                            CSV or Excel files only (max 50MB)
+                          </p>
+                          <p className="text-xs text-center text-blue-600 mt-2">
+                            Required columns: Material Code, Material
+                            Description, Quantity, Storage Location
+                          </p>
+                          <p className="text-xs text-center text-red-600 mt-1 font-medium">
+                            ⚠️ This will replace ALL existing HubStock data
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".csv,.xls,.xlsx"
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="absolute inset-0 cursor-pointer"
+                    >
+                      <span className="sr-only">Upload file</span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-3">
+                    {file && (
+                      <button
+                        onClick={resetForm}
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={handleUpload}
+                      disabled={!file}
+                      className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
+                        !file
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white transition-colors`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      Start Batch Upload & Replace HubStock Data
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* File upload area */}
-              <div
-                className={`relative border-2 border-dashed rounded-lg transition-colors ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-50"
-                    : file
-                    ? "border-green-500 bg-green-50"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <div className="flex flex-col items-center justify-center py-4">
-                  {file ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-green-100">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-green-600"
-                        >
-                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
+              {/* Processing Status Section */}
+              {isProcessing && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Processing Steps */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        Batch Processing Status
+                      </h3>
+                      
+                      {/* Batch Progress Indicator */}
+                      {processingData.batchProgress.totalBatches > 0 && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-blue-800">
+                              Batch Progress
+                            </span>
+                            <span className="text-sm text-blue-600">
+                              {processingData.batchProgress.currentBatch}/{processingData.batchProgress.totalBatches}
+                            </span>
+                          </div>
+                          <div className="w-full bg-blue-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${(processingData.batchProgress.currentBatch / processingData.batchProgress.totalBatches) * 100}%`
+                              }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            Processing {processingData.batchProgress.batchSize} records per batch
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-4">
+                        {getProcessingSteps().map((step) => (
+                          <div key={step.id} className="flex items-start gap-4">
+                            <div className="flex-shrink-0 mt-1">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                                  step.status === "completed"
+                                    ? "bg-green-500 text-white"
+                                    : step.status === "active"
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 text-gray-500"
+                                }`}
+                              >
+                                {step.status === "completed" ? (
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                ) : step.status === "active" ? (
+                                  <svg
+                                    className="animate-spin h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                ) : (
+                                  step.id
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <h4
+                                className={`font-medium ${
+                                  step.status === "active"
+                                    ? "text-blue-600"
+                                    : "text-gray-800"
+                                }`}
+                              >
+                                {step.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {step.description}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{file.name}</span>
-                        <button
-                          className="h-6 w-6 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setFile(null);
-                          }}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                          </svg>
-                          <span className="sr-only">Remove file</span>
-                        </button>
-                      </div>
-                      <span className="text-xs text-gray-500">
-                        {(file.size / 1024).toFixed(2)} KB
-                      </span>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-4">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-blue-600"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="17 8 12 3 7 8"></polyline>
-                          <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                      </div>
-                      <p className="mb-2 text-sm text-center">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
-                      </p>
-                      <p className="text-xs text-center text-gray-500">
-                        CSV or Excel files only (max 5MB)
-                      </p>
-                    </>
-                  )}
-                </div>
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  accept=".csv,.xls,.xlsx"
-                  onChange={handleFileChange}
-                />
-                <label htmlFor="file-upload" className="absolute inset-0 cursor-pointer">
-                  <span className="sr-only">Upload file</span>
-                </label>
-              </div>
-  
-              {/* Progress bar for upload/insertion */}
-              {isUploading && (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Uploading...</span>
-                    <span className="text-gray-600">{progress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    ></div>
+
+                  {/* Live Updates */}
+                  <div className="space-y-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        Real-time Updates
+                      </h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {liveUpdates.length > 0 ? (
+                          liveUpdates.map((update) => (
+                            <div
+                              key={update.id}
+                              className={`p-2 rounded text-xs ${
+                                update.type === "error"
+                                  ? "bg-red-50 text-red-700"
+                                  : update.type === "success"
+                                  ? "bg-green-50 text-green-700"
+                                  : update.type === "warning"
+                                  ? "bg-yellow-50 text-yellow-700"
+                                  : "bg-blue-50 text-blue-700"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <span>{update.message}</span>
+                                <span className="text-gray-500 ml-2">
+                                  {update.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-sm text-gray-500 text-center py-4">
+                            Batch processing will start soon...
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
-  
-              {/* Action buttons */}
-              <div className="flex justify-end gap-3">
-                {file && (
-                  <button
-                    onClick={resetForm}
-                    disabled={isUploading}
-                    className={`px-4 py-2 border border-gray-300 rounded-lg text-gray-700 ${
-                      isUploading ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-                    } transition-colors`}
-                  >
-                    Reset
-                  </button>
-                )}
+            </div>
+          )}
+
+          {/* Results Tab - Updated for HubStock */}
+          {activeTab === "results" && processingData.status === "completed" && (
+            <div className="space-y-6 h-[400px] overflow-y-auto px-2">
+              {/* Enhanced Summary Cards - 4 cards layout for HubStock */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        Deleted Existing
+                      </p>
+                      <p className="text-2xl font-bold text-red-800 mt-2">
+                        {processingData.summary.deletedExisting}
+                      </p>
+                    </div>
+                    <div className="bg-red-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-red-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-700">
+                        Records Created
+                      </p>
+                      <p className="text-2xl font-bold text-green-800 mt-2">
+                        {processingData.summary.created}
+                      </p>
+                    </div>
+                    <div className="bg-green-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-green-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-orange-700">
+                        File Duplicates
+                      </p>
+                      <p className="text-2xl font-bold text-orange-800 mt-2">
+                        {processingData.summary.duplicatesInFile}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Within uploaded file
+                      </p>
+                    </div>
+                    <div className="bg-orange-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-orange-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        Failed Records
+                      </p>
+                      <p className="text-2xl font-bold text-red-800 mt-2">
+                        {processingData.summary.failed}
+                      </p>
+                    </div>
+                    <div className="bg-red-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-red-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Processing Summary */}
+              {processingData.duration && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-sm text-gray-800 mb-2">
+                    Batch Processing Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Records:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.totalRecords}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Batches:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.batchProgress.totalBatches || 'N/A'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Processing Time:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.duration}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Skipped:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.summary.skippedTotal}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Completed At:</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(processingData.endTime).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Results */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    Detailed Results ({filteredResults.length} records)
+                  </h3>
+                </div>
+                {/* Result Tabs */}
+                <div className="border-b border-gray-200 mb-4">
+                  <nav className="flex -mb-px">
+                    {filterTabs.map((tab) => (
+                      <button
+                        key={tab.value}
+                        onClick={() => setResultFilter(tab.value)}
+                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 ${
+                          resultFilter === tab.value
+                            ? "border-blue-600 text-blue-600"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {tab.label}
+                        <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
+                          {tab.count}
+                        </span>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {processingData.results.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {filteredResults.map((item, index) => (
+                        <div
+                          key={index}
+                          className="p-4 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs text-gray-500">
+                                  Row {item.row}
+                                </span>
+                                <span className="text-sm font-medium text-gray-800">
+                                  {item.materialcode}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600 mb-1">
+                                Description:{" "}
+                                {item.materialdescription || "No description"}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-1">
+                                Quantity: {item.quantity} | Storage:{" "}
+                                {item.storagelocation || "N/A"}
+                              </div>
+                              {item.action && (
+                                <div className="text-xs text-blue-600">
+                                  {item.action}
+                                </div>
+                              )}
+                              {item.error && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  Error: {item.error}
+                                </div>
+                              )}
+                              {item.warnings && item.warnings.length > 0 && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Warnings: {item.warnings.join(", ")}
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              {renderStatusBadge(item.status)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      No results to display
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end pb-4 gap-3">
                 <button
-                  onClick={handleUpload}
-                  disabled={!file || isUploading}
-                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    !file || isUploading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                  } text-white transition-colors`}
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
-                  </svg>
-                  Upload File
+                  Upload Another File
                 </button>
               </div>
             </div>
           )}
-  
-          {/* Results tab content */}
-          {activeTab === "results" && result && (
-            <div className="space-y-6 h-[370px] overflow-y-auto">
-              {/* Deletion progress */}
-              <div className="mb-4">
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Deletion Progress</h3>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-red-600">
-                    Deleted {result.deletion.deleted} of {result.deletion.totalExisting}
-                  </span>
-                  <span className="text-red-600">{result.deletion.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-red-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${result.deletion.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-  
-              {/* Insertion stats */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-500">Total Records</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-1">{result.insertion.total}</p>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-gray-500">Processed</p>
-                    <p className="text-3xl font-bold text-gray-800 mt-1">{result.insertion.processed}</p>
-                  </div>
-                </div>
-              </div>
-  
-              {/* Separator */}
-              <div className="h-px bg-gray-200 w-full"></div>
-  
-              {/* Results list */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-800 mb-3">Insertion Results</h3>
-                <div className="border border-gray-200 rounded-lg mb-14 divide-y divide-gray-200">
-                  {(result?.insertion.results || []).map((item, index) => (
-                    <div key={index} className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          {item.materialcode} - {item.materialdescription}
-                        </p>
-                        {item.message && (
-                          <p className="text-sm text-gray-500">{item.message}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {item.status === "Created" ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-green-500"
-                          >
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                          </svg>
-                        ) : (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-red-500"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                          </svg>
-                        )}
-                        <span
-                          className={
-                            item.status === "Created"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-  
-        {/* Card footer */}
-        <div className="p-3 pt-2 border-t border-gray-200 bg-gray-100">
-          <div className="flex flex-col items-start text-sm text-gray-500">
-            <p className="font-medium">Notes:</p>
-            <ul className="list-disc list-inside space-y-1 mt-2">
-              <li>Maximum file size: 5MB</li>
-              <li>Supported formats: CSV, Excel (.xls, .xlsx)</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

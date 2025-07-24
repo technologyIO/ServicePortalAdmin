@@ -1042,14 +1042,9 @@ function PendingInstallation() {
               {/* Modal Content */}
 
               <div className="bg-white rounded-lg p-6    relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
                 <PendingInstallationBulk
                   getData={getData}
+                  isOpen={openModal}
                   onClose={closeModal}
                 />
               </div>

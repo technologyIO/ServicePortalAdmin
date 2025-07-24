@@ -3,7 +3,7 @@
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
 
-function AmcContractBulk({ onClose, getData }) {
+function AMCContractBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -31,6 +31,12 @@ function AmcContractBulk({ onClose, getData }) {
     headerMapping: {},
     errors: [],
     warnings: [],
+    batchProgress: {
+      currentBatch: 0,
+      totalBatches: 0,
+      batchSize: 1000,
+      currentBatchRecords: 0,
+    }
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
 
@@ -130,14 +136,20 @@ function AmcContractBulk({ onClose, getData }) {
       headerMapping: {},
       errors: [],
       warnings: [],
+      batchProgress: {
+        currentBatch: 0,
+        totalBatches: 0,
+        batchSize: 1000,
+        currentBatchRecords: 0,
+      }
     });
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      addLiveUpdate("Starting AMC Contract data upload...", "info");
-
+      addLiveUpdate("Starting AMC Contract batch upload...", "info");
+      
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => abortController.abort(), 600000);
 
@@ -157,7 +169,7 @@ function AmcContractBulk({ onClose, getData }) {
       }
 
       addLiveUpdate(
-        "File uploaded successfully. Processing AMC Contract records...",
+        "File uploaded successfully. Processing AMC Contract records in batches...",
         "success"
       );
 
@@ -194,58 +206,69 @@ function AmcContractBulk({ onClose, getData }) {
                     headerMapping: data.headerMapping || prev.headerMapping,
                     errors: data.errors || prev.errors,
                     warnings: data.warnings || prev.warnings,
+                    batchProgress: data.batchProgress || prev.batchProgress,
                   };
 
-                  if (data.processedRecords > prev.processedRecords) {
-                    const newlyProcessed =
-                      data.processedRecords - prev.processedRecords;
+                  // Batch processing updates
+                  if (data.batchProgress?.currentBatch > prev.batchProgress?.currentBatch) {
                     addLiveUpdate(
-                      `Processed ${newlyProcessed} more AMC Contract records (${data.processedRecords}/${data.totalRecords})`,
-                      "success"
-                    );
-                  }
-
-                  if (data.summary?.created > prev.summary?.created) {
-                    const newCreated =
-                      data.summary.created - prev.summary.created;
-                    addLiveUpdate(
-                      `Created ${newCreated} new AMC Contract records (Total: ${data.summary.created})`,
+                      `Starting batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches} (${data.batchProgress.batchSize} records)`,
                       "info"
                     );
                   }
 
+                  // Individual record processing updates
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed = data.processedRecords - prev.processedRecords;
+                    const batchInfo = data.batchProgress?.currentBatch 
+                      ? ` [Batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches}]`
+                      : '';
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} AMC Contract record(s) (${data.processedRecords}/${data.totalRecords})${batchInfo}`,
+                      "success"
+                    );
+                  }
+
+                  // Real-time individual record updates
+                  if (data.latestRecords && data.latestRecords.length > 0) {
+                    const latestRecord = data.latestRecords[data.latestRecords.length - 1];
+                    addLiveUpdate(
+                      `${latestRecord.status}: ${latestRecord.serialnumber} (${latestRecord.salesdoc})`,
+                      latestRecord.status === 'Created' ? 'success' : 
+                      latestRecord.status === 'Updated' ? 'info' :
+                      latestRecord.status === 'Failed' ? 'error' : 'info'
+                    );
+                  }
+
+                  if (data.summary?.created > prev.summary?.created) {
+                    const newCreated = data.summary.created - prev.summary.created;
+                    addLiveUpdate(
+                      `Created ${newCreated} new AMC Contract records (Total: ${data.summary.created})`,
+                      "success"
+                    );
+                  }
+
                   if (data.summary?.updated > prev.summary?.updated) {
-                    const newUpdated =
-                      data.summary.updated - prev.summary.updated;
+                    const newUpdated = data.summary.updated - prev.summary.updated;
                     addLiveUpdate(
                       `Updated ${newUpdated} existing AMC Contract records (Total: ${data.summary.updated})`,
                       "info"
                     );
                   }
 
-                  if (
-                    data.summary?.duplicatesInFile >
-                    prev.summary?.duplicatesInFile
-                  ) {
-                    const newDuplicates =
-                      data.summary.duplicatesInFile -
-                      prev.summary.duplicatesInFile;
+                  if (data.summary?.duplicatesInFile > prev.summary?.duplicatesInFile) {
+                    const newDuplicates = data.summary.duplicatesInFile - prev.summary.duplicatesInFile;
                     addLiveUpdate(
                       `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
                       "warning"
                     );
                   }
 
-                  if (
-                    data.summary?.existingRecords >
-                    prev.summary?.existingRecords
-                  ) {
-                    const newExisting =
-                      data.summary.existingRecords -
-                      prev.summary.existingRecords;
+                  if (data.summary?.existingRecords > prev.summary?.existingRecords) {
+                    const newExisting = data.summary.existingRecords - prev.summary.existingRecords;
                     addLiveUpdate(
-                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
-                      "warning"
+                      `Processing ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
+                      "info"
                     );
                   }
 
@@ -257,13 +280,26 @@ function AmcContractBulk({ onClose, getData }) {
                     );
                   }
 
+                  // Batch completion updates
+                  if (data.batchCompleted) {
+                    addLiveUpdate(
+                      `Batch ${data.batchProgress.currentBatch} completed: ${data.batchSummary?.created || 0} created, ${data.batchSummary?.updated || 0} updated, ${data.batchSummary?.failed || 0} failed`,
+                      "info"
+                    );
+                  }
+
                   if (data.status === "completed") {
                     addLiveUpdate(
-                      `AMC Contract bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      `AMC Contract batch upload completed in ${data.duration}! ` +
+                        `Total Batches: ${data.batchProgress?.totalBatches || 0}, ` +
+                        `Created: ${data.summary.created}, ` +
+                        `Updated: ${data.summary.updated}, ` +
+                        `Skipped: ${data.summary.skippedTotal}, ` +
+                        `Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
-                    setTimeout(() => setActiveTab("results"), 100);
+                    setActiveTab("results");
                   } else if (data.status === "failed") {
                     addLiveUpdate("AMC Contract processing failed!", "error");
                     setIsProcessing(false);
@@ -324,10 +360,11 @@ function AmcContractBulk({ onClose, getData }) {
     }
   };
 
-  const csvContent = `Sales Doc,Start Date,End Date,Sa type,Serial number,Material Code
-,,,,,,
-,,,,,,
-,,,,,,`;
+  // Updated CSV template for AMC Contract
+  const csvContent = `Sales Doc,Start Date,End Date,SA Type,Serial Number,Material Code
+,,,,,
+,,,,,
+,,,,,`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -367,6 +404,12 @@ function AmcContractBulk({ onClose, getData }) {
       headerMapping: {},
       errors: [],
       warnings: [],
+      batchProgress: {
+        currentBatch: 0,
+        totalBatches: 0,
+        batchSize: 1000,
+        currentBatchRecords: 0,
+      }
     });
   };
 
@@ -426,8 +469,10 @@ function AmcContractBulk({ onClose, getData }) {
       },
       {
         id: 3,
-        title: "Processing AMC Contract Records",
-        description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
+        title: "Batch Processing AMC Contract Records",
+        description: processingData.batchProgress.totalBatches > 0
+          ? `Batch ${processingData.batchProgress.currentBatch}/${processingData.batchProgress.totalBatches} - ${processingData.processedRecords}/${processingData.totalRecords} records processed`
+          : `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
             ? processingData.processedRecords === processingData.totalRecords
@@ -440,7 +485,9 @@ function AmcContractBulk({ onClose, getData }) {
       {
         id: 4,
         title: "Finalizing Process",
-        description: "Completing AMC Contract bulk upload operation",
+        description: processingData.batchProgress.totalBatches > 0
+          ? `Completed ${processingData.batchProgress.totalBatches} batches - Finalizing AMC Contract bulk upload`
+          : "Completing AMC Contract bulk upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -462,7 +509,7 @@ function AmcContractBulk({ onClose, getData }) {
                 Bulk AMC Contract Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage AMC Contract data efficiently
+                Import and manage AMC contract data efficiently with batch processing
               </p>
             </div>
             <button
@@ -479,7 +526,8 @@ function AmcContractBulk({ onClose, getData }) {
           <div>
             <h3 className="font-semibold text-blue-900">Need a template?</h3>
             <p className="text-sm text-blue-700">
-              Download our CSV template with all required AMC Contract columns
+              Download our CSV template with all required columns: Sales Doc,
+              Serial Number, Start Date, End Date, SA Type, Material Code
             </p>
           </div>
           <button
@@ -564,7 +612,7 @@ function AmcContractBulk({ onClose, getData }) {
                   )}
 
                   <div
-                    className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
+                    className={`relative border-2 border-dashed h-[250px] rounded-lg transition-all duration-200 ${
                       isDragging
                         ? "border-blue-500 bg-blue-50 scale-105"
                         : file
@@ -661,6 +709,9 @@ function AmcContractBulk({ onClose, getData }) {
                           <p className="text-xs text-center text-blue-600 mt-2">
                             Required columns: Sales Doc, Serial Number
                           </p>
+                          <p className="text-xs text-center text-gray-600 mt-1">
+                            Optional: Start Date, End Date, SA Type, Material Code
+                          </p>
                         </>
                       )}
                     </div>
@@ -712,7 +763,7 @@ function AmcContractBulk({ onClose, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Process AMC Contract Data
+                      Start Batch Upload AMC Contracts
                     </button>
                   </div>
                 </div>
@@ -726,8 +777,34 @@ function AmcContractBulk({ onClose, getData }) {
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                        Processing Status
+                        Batch Processing Status
                       </h3>
+                      
+                      {/* Batch Progress Indicator */}
+                      {processingData.batchProgress.totalBatches > 0 && (
+                        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-blue-800">
+                              Batch Progress
+                            </span>
+                            <span className="text-sm text-blue-600">
+                              {processingData.batchProgress.currentBatch}/{processingData.batchProgress.totalBatches}
+                            </span>
+                          </div>
+                          <div className="w-full bg-blue-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{
+                                width: `${(processingData.batchProgress.currentBatch / processingData.batchProgress.totalBatches) * 100}%`
+                              }}
+                            ></div>
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            Processing {processingData.batchProgress.batchSize} records per batch
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="space-y-4">
                         {getProcessingSteps().map((step) => (
                           <div key={step.id} className="flex items-start gap-4">
@@ -805,7 +882,7 @@ function AmcContractBulk({ onClose, getData }) {
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        Live Updates
+                        Real-time Updates
                       </h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {liveUpdates.length > 0 ? (
@@ -832,7 +909,7 @@ function AmcContractBulk({ onClose, getData }) {
                           ))
                         ) : (
                           <div className="text-sm text-gray-500 text-center py-4">
-                            Processing will start soon...
+                            Batch processing will start soon...
                           </div>
                         )}
                       </div>
@@ -846,7 +923,7 @@ function AmcContractBulk({ onClose, getData }) {
           {/* Results Tab */}
           {activeTab === "results" && processingData.status === "completed" && (
             <div className="space-y-6 h-[400px] overflow-y-auto px-2">
-              {/* Summary Cards */}
+              {/* Summary Cards - 5 cards layout for AMC Contract */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
@@ -899,7 +976,7 @@ function AmcContractBulk({ onClose, getData }) {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                         />
                       </svg>
                     </div>
@@ -914,9 +991,6 @@ function AmcContractBulk({ onClose, getData }) {
                       </p>
                       <p className="text-2xl font-bold text-orange-800 mt-2">
                         {processingData.summary.duplicatesInFile}
-                      </p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        Within uploaded file
                       </p>
                     </div>
                     <div className="bg-orange-200 p-2 rounded-full">
@@ -938,23 +1012,20 @@ function AmcContractBulk({ onClose, getData }) {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-yellow-700">
+                      <p className="text-sm font-medium text-gray-700">
                         Existing Records
                       </p>
-                      <p className="text-2xl font-bold text-yellow-800 mt-2">
+                      <p className="text-2xl font-bold text-gray-800 mt-2">
                         {processingData.summary.existingRecords}
                       </p>
-                      <p className="text-xs text-yellow-600 mt-1">
-                        Already in database
-                      </p>
                     </div>
-                    <div className="bg-yellow-200 p-2 rounded-full">
+                    <div className="bg-gray-200 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-yellow-700"
+                        className="h-6 w-6 text-gray-700"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -1004,13 +1075,19 @@ function AmcContractBulk({ onClose, getData }) {
               {processingData.duration && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-medium text-sm text-gray-800 mb-2">
-                    Processing Summary
+                    Batch Processing Summary
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Total Records:</span>
                       <span className="ml-2 font-medium">
                         {processingData.totalRecords}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Total Batches:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.batchProgress.totalBatches || 'N/A'}
                       </span>
                     </div>
                     <div>
@@ -1042,7 +1119,7 @@ function AmcContractBulk({ onClose, getData }) {
                     Detailed Results ({filteredResults.length} records)
                   </h3>
                 </div>
-
+                {/* Result Tabs */}
                 <div className="border-b border-gray-200 mb-4">
                   <nav className="flex -mb-px">
                     {filterTabs.map((tab) => (
@@ -1079,11 +1156,11 @@ function AmcContractBulk({ onClose, getData }) {
                                   Row {item.row}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  Sales Doc: {item.salesdoc}
+                                  {item.serialnumber}
                                 </span>
-                                <span className="text-sm font-medium text-gray-800">
-                                  Serial: {item.serialnumber}
-                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600 mb-1">
+                                Sales Doc: {item.salesdoc || "N/A"}
                               </div>
                               {item.action && (
                                 <div className="text-xs text-blue-600">
@@ -1133,4 +1210,4 @@ function AmcContractBulk({ onClose, getData }) {
   );
 }
 
-export default AmcContractBulk;
+export default AMCContractBulk;

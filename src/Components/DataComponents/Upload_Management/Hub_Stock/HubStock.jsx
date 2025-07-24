@@ -25,7 +25,13 @@ function HubStock() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -464,13 +470,7 @@ function HubStock() {
               {/* Modal Content */}
 
               <div className="bg-white rounded-lg p-6   relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <HubStockBulk />
+                <HubStockBulk onClose={closeModal} />
               </div>
             </div>
           )}

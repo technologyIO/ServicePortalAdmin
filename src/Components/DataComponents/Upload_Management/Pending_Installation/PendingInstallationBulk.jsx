@@ -256,14 +256,14 @@ function PendingInstallationBulk({ onClose, getData }) {
                       "error"
                     );
                   }
-
                   if (data.status === "completed") {
                     addLiveUpdate(
                       `Pending Installation bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
-                    setTimeout(() => setActiveTab("results"), 100);
+
+                    setActiveTab("results");  
                   } else if (data.status === "failed") {
                     addLiveUpdate(
                       "Pending Installation processing failed!",

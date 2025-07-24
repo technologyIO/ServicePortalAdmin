@@ -271,7 +271,7 @@ function DealerStockBulk({ onClose, getData }) {
                       "success"
                     );
                     setIsProcessing(false);
-                    setTimeout(() => setActiveTab("results"), 100);
+                    setActiveTab("results");
                   } else if (data.status === "failed") {
                     addLiveUpdate("DealerStock processing failed!", "error");
                     setIsProcessing(false);
