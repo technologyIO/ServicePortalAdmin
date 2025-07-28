@@ -135,7 +135,7 @@ export default function OrderList() {
                   {listItem.customer.name}
                 </Typography>
                 <Typography level="body-xs" gutterBottom>
-                  {listItem.customer.email}
+                  {listItem.customer?.email}
                 </Typography>
                 <Box
                   sx={{

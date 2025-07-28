@@ -25,7 +25,10 @@ function Spare() {
   const [selectedRows, setSelectedRows] = useState([]);
 
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+    getData();
+  };
 
   const getCities = () => {
     axios
@@ -604,7 +607,7 @@ function Spare() {
                 >
                   &times;
                 </button>
-                <SpareMasterBulk getData={getData} closeModal={closeModal} />
+                <SpareMasterBulk getData={getData} onClose={closeModal} />
               </div>
             </div>
           )}

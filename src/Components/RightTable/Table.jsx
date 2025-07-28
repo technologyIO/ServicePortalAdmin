@@ -495,7 +495,7 @@ export default function OrderTable() {
                                         <Avatar size="sm">{row.customer.initial}</Avatar>
                                         <div>
                                             <Typography level="body-xs">{row.customer.name}</Typography>
-                                            <Typography level="body-xs">{row.customer.email}</Typography>
+                                            <Typography level="body-xs">{row.customer?.email}</Typography>
                                         </div>
                                     </Box>
                                 </td>

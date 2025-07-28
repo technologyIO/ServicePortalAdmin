@@ -255,10 +255,7 @@ export default function EquipmentBulk({ onClose }) {
     }
   };
 
-  const csvContent = `equipmentid,name,materialdescription,serialnumber,materialcode,status,currentcustomer,endcustomer,custWarrantystartdate,custWarrantyenddate,dealerwarrantystartdate,dealerwarrantyenddate,dealer,palnumber,installationreportno
-EQID-001,Equipment A,"High quality equipment for industrial use",SN-001,MAT3333,Active,CUST006,Customer Y,2025-01-01,2025-12-31,2024-12-01,2025-06-30,Dealer A,PAL-001,IR-001
-EQID-002,Equipment B,"Light duty equipment for daily operations",SN-002,MAT3334,Inactive,CUST002,Customer Z,2024-05-01,2025-04-30,2024-04-15,2024-10-15,Dealer B,PAL-002,IR-002
-EQID-003,Equipment C,"Heavy-duty equipment for construction sites",SN-003,MAT3335,Active,CUST003,Customer X,2025-02-01,2026-01-31,2025-01-10,2025-07-10,Dealer C,PAL-003,IR-003`;
+  const csvContent = `equipmentid,name,materialdescription,serialnumber,materialcode,status,currentcustomer,endcustomer,custWarrantystartdate,custWarrantyenddate,dealerwarrantystartdate,dealerwarrantyenddate,dealer,palnumber,installationreportno`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });

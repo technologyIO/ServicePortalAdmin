@@ -116,7 +116,7 @@ function QuoteApproval() {
       return (
         item.cnoteNumber?.toString().toLowerCase().includes(query) ||
         item.proposalNumber?.toString().toLowerCase().includes(query) ||
-        item.customer.customername?.toString().toLowerCase().includes(query) ||
+        item.customer?.customername?.toString().toLowerCase().includes(query) ||
         item.status?.toLowerCase().includes(query)
       );
     });

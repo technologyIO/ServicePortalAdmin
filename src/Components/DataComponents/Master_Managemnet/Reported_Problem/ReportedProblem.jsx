@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import ReportedProblemBulk from "./ReportedProblemBulk";
 
 function ReportedProblem() {
   const [showModal, setShowModal] = useState(false);
@@ -25,7 +26,10 @@ function ReportedProblem() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+    getData();
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -265,7 +269,7 @@ function ReportedProblem() {
             </div>
           )}
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border  border min-w-max caption-bottom text-sm">
+            <table className="w-full  border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
                 <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
@@ -629,7 +633,7 @@ function ReportedProblem() {
                 >
                   &times;
                 </button>
-                <BulkModal />
+                <ReportedProblemBulk onClose={closeModal} />
               </div>
             </div>
           )}

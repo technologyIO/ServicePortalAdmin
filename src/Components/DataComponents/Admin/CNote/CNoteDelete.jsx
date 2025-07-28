@@ -61,7 +61,7 @@ function CNoteDelete() {
       return (
         item.cnoteNumber?.toString().includes(searchQuery) ||
         item.proposalNumber?.toString().includes(searchQuery) ||
-        item.customer.customername?.toString().includes(searchQuery) ||
+        item.customer?.customername?.toString().includes(searchQuery) ||
         item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     });
@@ -212,7 +212,7 @@ function CNoteDelete() {
                       {i?.proposalNumber}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.customer.customername}
+                      {i?.customer?.customername}
                     </td>
                     <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
                       {i?.currentRevision}

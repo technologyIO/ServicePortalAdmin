@@ -106,19 +106,19 @@ function OnCallViewModal({ open, onClose, proposal, revision }) {
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <span className="block text-sm font-medium text-gray-600">Name:</span>
-                    <span className="font-semibold text-gray-900">{safe(() => proposal.customer.customername, "N/A")}</span>
+                    <span className="font-semibold text-gray-900">{safe(() => proposal.customer?.customername, "N/A")}</span>
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-gray-600">Phone:</span>
-                    <span className="text-gray-900">{safe(() => proposal.customer.telephone, "—")}</span>
+                    <span className="text-gray-900">{safe(() => proposal.customer?.telephone, "—")}</span>
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-gray-600">Email:</span>
-                    <span className="text-gray-900">{safe(() => proposal.customer.email, "—")}</span>
+                    <span className="text-gray-900">{safe(() => proposal.customer?.email, "—")}</span>
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-gray-600">City:</span>
-                    <span className="text-gray-900">{safe(() => proposal.customer.city, "—")}</span>
+                    <span className="text-gray-900">{safe(() => proposal.customer?.city, "—")}</span>
                   </div>
                   <div>
                     <span className="block text-sm font-medium text-gray-600">Tax1/Tax2:</span>

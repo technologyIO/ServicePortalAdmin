@@ -233,7 +233,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   if (data.latestRecords && data.latestRecords.length > 0) {
                     const latestRecord = data.latestRecords[data.latestRecords.length - 1];
                     addLiveUpdate(
-                      `${latestRecord.status}: ${latestRecord.customercodeid} (${latestRecord.customername})`,
+                      `${latestRecord.status}: ${latestRecord.customercodeid} (${latestRecord?.customername})`,
                       latestRecord.status === 'Created' ? 'success' : 
                       latestRecord.status === 'Updated' ? 'info' :
                       latestRecord.status === 'Failed' ? 'error' : 'info'
@@ -1160,7 +1160,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                                   Customer Code: {item.customercodeid}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  Name: {item.customername}
+                                  Name: {item?.customername}
                                 </span>
                               </div>
                               {item.action && (

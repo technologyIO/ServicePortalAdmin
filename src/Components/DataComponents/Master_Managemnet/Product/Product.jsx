@@ -29,7 +29,14 @@ function Product() {
   const [isOpen, setIsOpen] = useState(false);
 
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    // ✅ Refresh data when modal is closed
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -508,7 +515,7 @@ function Product() {
                 >
                   &times;
                 </button>
-                <ProductBulk />
+                <ProductBulk onClose={closeModal} isOpen={openModal} />
               </div>
             </div>
           )}

@@ -3,7 +3,7 @@
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
 
-function SpareMasterBulk({ onClose }) {
+function WarrantyCodeBulk({ onClose }) {
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -138,13 +138,13 @@ function SpareMasterBulk({ onClose }) {
     formData.append("file", file);
 
     try {
-      addLiveUpdate("Starting Spare Master data upload...", "info");
+      addLiveUpdate("Starting Warranty Code data upload...", "info");
 
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => abortController.abort(), 600000);
 
       const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/bulk/spare-master/bulk-upload`,
+        `${process.env.REACT_APP_BASE_URL}/bulk/warranty-code/bulk-upload`,
         {
           method: "POST",
           body: formData,
@@ -159,7 +159,7 @@ function SpareMasterBulk({ onClose }) {
       }
 
       addLiveUpdate(
-        "File uploaded successfully. Processing Spare Master records...",
+        "File uploaded successfully. Processing Warranty Code records...",
         "success"
       );
 
@@ -203,7 +203,7 @@ function SpareMasterBulk({ onClose }) {
                     const newlyProcessed =
                       data.processedRecords - prev.processedRecords;
                     addLiveUpdate(
-                      `Processed ${newlyProcessed} more Spare Master records (${data.processedRecords}/${data.totalRecords})`,
+                      `Processed ${newlyProcessed} more Warranty Code records (${data.processedRecords}/${data.totalRecords})`,
                       "success"
                     );
                   }
@@ -212,7 +212,7 @@ function SpareMasterBulk({ onClose }) {
                     const newCreated =
                       data.summary.created - prev.summary.created;
                     addLiveUpdate(
-                      `Created ${newCreated} new Spare Master records (Total: ${data.summary.created})`,
+                      `Created ${newCreated} new Warranty Code records (Total: ${data.summary.created})`,
                       "info"
                     );
                   }
@@ -221,7 +221,7 @@ function SpareMasterBulk({ onClose }) {
                     const newUpdated =
                       data.summary.updated - prev.summary.updated;
                     addLiveUpdate(
-                      `Updated ${newUpdated} existing Spare Master records (Total: ${data.summary.updated})`,
+                      `Updated ${newUpdated} existing Warranty Code records (Total: ${data.summary.updated})`,
                       "info"
                     );
                   }
@@ -262,13 +262,13 @@ function SpareMasterBulk({ onClose }) {
 
                   if (data.status === "completed") {
                     addLiveUpdate(
-                      `Spare Master bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      `Warranty Code bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
                     setTimeout(() => setActiveTab("results"), 100);
                   } else if (data.status === "failed") {
-                    addLiveUpdate("Spare Master processing failed!", "error");
+                    addLiveUpdate("Warranty Code processing failed!", "error");
                     setIsProcessing(false);
                   }
 
@@ -327,18 +327,18 @@ function SpareMasterBulk({ onClose }) {
     }
   };
 
-  // Updated CSV template with all 8 SpareMaster fields (empty data)
-  const csvContent = `Sub_GRp,Part Number,Description,Type,Rate (MRP),DP,Charges (Exchange Price),Sl No. status
-,,,,,,,
-,,,,,,,
-,,,,,,,`;
+  // Updated CSV template with WarrantyCode fields (empty data)
+  const csvContent = `Warranty Code,Description,Months
+,,
+,,
+,,`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "spare_master_template.csv");
+    link.setAttribute("download", "warranty_code_template.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -421,7 +421,7 @@ function SpareMasterBulk({ onClose }) {
         description:
           Object.keys(processingData.headerMapping).length > 0
             ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
-            : "Detecting Sub_GRp, Part Number, Description, Type, Rate, DP, Charges, and Status columns",
+            : "Detecting Warranty Code, Description, and Months columns",
         status:
           Object.keys(processingData.headerMapping).length > 0
             ? "completed"
@@ -431,7 +431,7 @@ function SpareMasterBulk({ onClose }) {
       },
       {
         id: 3,
-        title: "Processing Spare Master Records",
+        title: "Processing Warranty Code Records",
         description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
@@ -445,7 +445,7 @@ function SpareMasterBulk({ onClose }) {
       {
         id: 4,
         title: "Finalizing Process",
-        description: "Completing Spare Master bulk upload operation",
+        description: "Completing Warranty Code bulk upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -457,17 +457,17 @@ function SpareMasterBulk({ onClose }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-indigo-50 to-blue-50 p-6 text-black">
+        <div className="relative bg-gradient-to-r from-blue-50 to-teal-50 p-6 text-black">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Database size={24} />
                 </div>
-                Bulk Spare Master Upload
+                Bulk Warranty Code Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage Spare Master data efficiently
+                Import and manage Warranty Code data efficiently
               </p>
             </div>
             <button
@@ -480,16 +480,16 @@ function SpareMasterBulk({ onClose }) {
         </div>
 
         {/* Template Download Section */}
-        <div className="flex m-3 justify-between items-center p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
           <div>
-            <h3 className="font-semibold text-indigo-900">Need a template?</h3>
-            <p className="text-sm text-indigo-700">
-              Download our CSV template with Sub_GRp, Part Number, Description, Type, Rate (MRP), DP, Charges (Exchange Price), and Sl No. status columns
+            <h3 className="font-semibold text-blue-900">Need a template?</h3>
+            <p className="text-sm text-blue-700">
+              Download our CSV template with Warranty Code, Description, and Months columns
             </p>
           </div>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={16} />
             Download Template
@@ -504,14 +504,14 @@ function SpareMasterBulk({ onClose }) {
               <button
                 className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "upload"
-                    ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("upload")}
               >
                 Upload
                 {isProcessing && (
-                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-indigo-600 text-white rounded-full animate-pulse">
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
                     !
                   </span>
                 )}
@@ -519,7 +519,7 @@ function SpareMasterBulk({ onClose }) {
               <button
                 className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "results"
-                    ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("results")}
@@ -527,7 +527,7 @@ function SpareMasterBulk({ onClose }) {
               >
                 Results
                 {processingData.status === "completed" && (
-                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-green-600 text-white rounded-full">
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full">
                     ✓
                   </span>
                 )}
@@ -571,9 +571,9 @@ function SpareMasterBulk({ onClose }) {
                   <div
                     className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
                       isDragging
-                        ? "border-indigo-500 bg-indigo-50 scale-105"
+                        ? "border-blue-500 bg-blue-50 scale-105"
                         : file
-                        ? "border-green-500 bg-green-50"
+                        ? "border-blue-500 bg-blue-50"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
                     onDragOver={handleDragOver}
@@ -583,7 +583,7 @@ function SpareMasterBulk({ onClose }) {
                     <div className="flex flex-col items-center justify-center py-12">
                       {file ? (
                         <div className="flex flex-col items-center gap-4">
-                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="32"
@@ -594,7 +594,7 @@ function SpareMasterBulk({ onClose }) {
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="text-green-600"
+                              className="text-blue-600"
                             >
                               <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                               <polyline points="14 2 14 8 20 8"></polyline>
@@ -636,7 +636,7 @@ function SpareMasterBulk({ onClose }) {
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="32"
@@ -647,7 +647,7 @@ function SpareMasterBulk({ onClose }) {
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="text-indigo-600"
+                              className="text-blue-600"
                             >
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                               <polyline points="17 8 12 3 7 8"></polyline>
@@ -663,8 +663,8 @@ function SpareMasterBulk({ onClose }) {
                           <p className="text-sm text-center text-gray-500">
                             CSV or Excel files only (max 50MB)
                           </p>
-                          <p className="text-xs text-center text-indigo-600 mt-2">
-                            Required columns: Sub_GRp, Part Number, Description, Type, Rate (MRP), DP, Charges (Exchange Price), Sl No. status
+                          <p className="text-xs text-center text-blue-600 mt-2">
+                            Required columns: Warranty Code, Description, Months
                           </p>
                         </>
                       )}
@@ -698,8 +698,8 @@ function SpareMasterBulk({ onClose }) {
                       disabled={!file}
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
                         !file
-                          ? "bg-indigo-400 cursor-not-allowed"
-                          : "bg-indigo-600 hover:bg-indigo-700"
+                          ? "bg-blue-400 cursor-not-allowed"
+                          : "bg-blue-600 hover:bg-blue-700"
                       } text-white transition-colors`}
                     >
                       <svg
@@ -717,7 +717,7 @@ function SpareMasterBulk({ onClose }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Process Spare Master Data
+                      Upload & Process Warranty Code Data
                     </button>
                   </div>
                 </div>
@@ -730,7 +730,7 @@ function SpareMasterBulk({ onClose }) {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
+                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                         Processing Status
                       </h3>
                       <div className="space-y-4">
@@ -740,9 +740,9 @@ function SpareMasterBulk({ onClose }) {
                               <div
                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                                   step.status === "completed"
-                                    ? "bg-green-500 text-white"
+                                    ? "bg-blue-500 text-white"
                                     : step.status === "active"
-                                    ? "bg-indigo-500 text-white"
+                                    ? "bg-blue-500 text-white"
                                     : "bg-gray-200 text-gray-500"
                                 }`}
                               >
@@ -789,7 +789,7 @@ function SpareMasterBulk({ onClose }) {
                               <h4
                                 className={`font-medium ${
                                   step.status === "active"
-                                    ? "text-indigo-600"
+                                    ? "text-blue-600"
                                     : "text-gray-800"
                                 }`}
                               >
@@ -809,7 +809,7 @@ function SpareMasterBulk({ onClose }) {
                   <div className="space-y-6">
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         Live Updates
                       </h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
@@ -821,10 +821,10 @@ function SpareMasterBulk({ onClose }) {
                                 update.type === "error"
                                   ? "bg-red-50 text-red-700"
                                   : update.type === "success"
-                                  ? "bg-green-50 text-green-700"
+                                  ? "bg-blue-50 text-blue-700"
                                   : update.type === "warning"
                                   ? "bg-yellow-50 text-yellow-700"
-                                  : "bg-indigo-50 text-indigo-700"
+                                  : "bg-blue-50 text-blue-700"
                               }`}
                             >
                               <div className="flex justify-between items-start">
@@ -848,7 +848,7 @@ function SpareMasterBulk({ onClose }) {
             </div>
           )}
 
-          {/* Results Tab - Enhanced with 5 cards for SpareMaster */}
+          {/* Results Tab - Enhanced with 5 cards for WarrantyCode */}
           {activeTab === "results" && processingData.status === "completed" && (
             <div className="space-y-6 h-[400px] overflow-y-auto px-2">
               {/* Enhanced Summary Cards - 5 cards layout */}
@@ -859,14 +859,14 @@ function SpareMasterBulk({ onClose }) {
                       <p className="text-sm font-medium text-green-700">
                         Records Created
                       </p>
-                      <p className="text-2xl font-bold text-green-800 mt-2">
+                      <p className="text-2xl font-bold text-blue-800 mt-2">
                         {processingData.summary.created}
                       </p>
                     </div>
-                    <div className="bg-green-200 p-2 rounded-full">
+                    <div className="bg-blue-200 p-2 rounded-full">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-green-700"
+                        className="h-6 w-6 text-blue-700"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -1057,7 +1057,7 @@ function SpareMasterBulk({ onClose }) {
                         className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2
           ${
             resultFilter === tab.value
-              ? "border-indigo-600 text-indigo-600"
+              ? "border-blue-600 text-blue-600"
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
                       >
@@ -1085,19 +1085,15 @@ function SpareMasterBulk({ onClose }) {
                                   Row {item.row}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  {item.partnumber} | {item.type}
+                                  {item.warrantycodeid} | {item.months} months
                                 </span>
                               </div>
                               <div className="text-sm text-gray-600 mb-1">
                                 <div><strong>Description:</strong> {item.description || "N/A"}</div>
-                                <div><strong>Rate (MRP):</strong> ₹{item.rate || 0}</div>
-                                <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div><strong>DP:</strong> ₹{item.dp || 0}</div>
-                                  <div><strong>Charges:</strong> ₹{item.charges || 0}</div>
-                                </div>
+                                <div><strong>Warranty Period:</strong> {item.months || 0} months</div>
                               </div>
                               {item.action && (
-                                <div className="text-xs text-indigo-600">
+                                <div className="text-xs text-blue-600">
                                   {item.action}
                                 </div>
                               )}
@@ -1144,4 +1140,4 @@ function SpareMasterBulk({ onClose }) {
   );
 }
 
-export default SpareMasterBulk;
+export default WarrantyCodeBulk;

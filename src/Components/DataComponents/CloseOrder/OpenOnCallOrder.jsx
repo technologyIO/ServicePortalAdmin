@@ -460,25 +460,25 @@ function OpenOnCallOrder() {
                 <div>
                   <span className="font-medium text-gray-700">Name:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedOnCall?.customer.customername}
+                    {selectedOnCall?.customer?.customername}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">City:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedOnCall?.customer.city}
+                    {selectedOnCall?.customer?.city}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Phone:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedOnCall?.customer.telephone}
+                    {selectedOnCall?.customer?.telephone}
                   </span>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Email:</span>
                   <span className="ml-2 text-gray-900">
-                    {selectedOnCall?.customer.email}
+                    {selectedOnCall?.customer?.email}
                   </span>
                 </div>
               </div>

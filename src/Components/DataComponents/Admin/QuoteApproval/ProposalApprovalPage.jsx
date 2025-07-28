@@ -297,7 +297,7 @@ const ProposalApprovalPage = () => {
                 <p className="text-blue-600 font-medium text-sm">Customer</p>
               </div>
               <p className="font-bold text-gray-900 text-lg">
-                {proposal.customer.customername}
+                {proposal.customer?.customername}
               </p>
             </div>
 
@@ -464,7 +464,7 @@ const ProposalApprovalPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {proposal.customer.customername}
+                      {proposal.customer?.customername}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                       {rev.changes.discountPercentage}%

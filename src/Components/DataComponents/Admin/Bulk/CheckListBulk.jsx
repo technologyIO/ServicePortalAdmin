@@ -98,13 +98,7 @@ function CheckListBulk() {
     }
   };
 
-  // CheckList sample CSV content with 5 rows (fields per schema)
-  const csvContent = `checklisttype,status,checkpointtype,checkpoint,prodGroup,result,resulttype
-Safety,Active,Inspection,Fire Extinguisher Check,Building A,Passed,Numeric
-Safety,Active,Inspection,Emergency Exit Check,Building A,Failed,Text
-Quality,Inactive,Verification,Product Quality Audit,Electronics,Passed,Boolean
-Maintenance,Active,Routine,Air Filter Replacement,HVAC,Pending,Text
-Compliance,Active,Audit,Safety Audit,Corporate,Completed,Text`;
+  const csvContent = `checklisttype,status,checkpointtype,checkpoint,prodGroup,result,resulttype`;
 
   const handleDownload = () => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -435,15 +429,18 @@ Compliance,Active,Audit,Safety Audit,Corporate,Completed,Text`;
                     >
                       <div>
                         <p className="font-medium text-gray-800">
-                          {item.checklisttype} - {item.checkpoint} - {item.prodGroup}
+                          {item.checklisttype} - {item.checkpoint} -{" "}
+                          {item.prodGroup}
                         </p>
                         {item.message && (
-                          <p className="text-sm text-gray-500">{item.message}</p>
+                          <p className="text-sm text-gray-500">
+                            {item.message}
+                          </p>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {(item.status === "Created" ||
-                          item.status === "Skipped") ? (
+                        {item.status === "Created" ||
+                        item.status === "Skipped" ? (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="20"
@@ -479,7 +476,8 @@ Compliance,Active,Audit,Safety Audit,Corporate,Completed,Text`;
                         )}
                         <span
                           className={
-                            item.status === "Created" || item.status === "Skipped"
+                            item.status === "Created" ||
+                            item.status === "Skipped"
                               ? "text-green-600"
                               : "text-red-600"
                           }

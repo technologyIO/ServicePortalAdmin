@@ -293,10 +293,10 @@ const QuoteTemplate = () => {
             {/* Customer Details */}
             <div className="mb-6 selectable-text">
               <div className="font-bold text-base mb-1">
-                {quoteData.customer.customername}
+                {quoteData?.customer?.customername}
               </div>
               <div className="text-sm text-gray-700 leading-relaxed">
-                {quoteData.customer.city} - {quoteData.customer.postalcode}
+                {quoteData.customer?.city} - {quoteData.customer?.postalcode}
               </div>
             </div>
 
@@ -455,9 +455,9 @@ const QuoteTemplate = () => {
               <h3 className="text-lg font-bold mb-4">Contact</h3>
               <div className="space-y-1 text-sm">
                 <p className="font-semibold">{quoteData.createdBy}</p>
-                <p>{quoteData.customer.telephone}</p>
+                <p>{quoteData.customer?.telephone}</p>
                 <p className="text-black underline">
-                  {quoteData.customer.email}
+                  {quoteData.customer?.email}
                 </p>
               </div>
             </div>

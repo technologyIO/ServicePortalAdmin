@@ -147,7 +147,7 @@ useEffect(() => {
     const searchFiltered = oncallList.filter(
       (item) =>
         (item.onCallNumber?.toString().toLowerCase().includes(query) ||
-          item.customer.customername
+          item.customer?.customername
             ?.toString()
             .toLowerCase()
             .includes(query) ||

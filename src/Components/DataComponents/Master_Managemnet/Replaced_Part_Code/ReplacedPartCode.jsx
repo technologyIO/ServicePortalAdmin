@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import ReplacePartCodeBulk from "./ReplacePartCodeBulk";
 
 function ReplacedPartCode() {
   const [showModal, setShowModal] = useState(false);
@@ -25,7 +26,14 @@ function ReplacedPartCode() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+
+    // ✅ Refresh data when modal is closed
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -268,18 +276,12 @@ function ReplacedPartCode() {
               {/* Modal Content */}
 
               <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <BulkModal />
+                <ReplacePartCodeBulk onClose={closeModal} isOpen={openModal} />
               </div>
             </div>
           )}
           <div className="relative  w-full overflow-x-auto">
-            <table className="w-full  border  border min-w-max caption-bottom text-sm">
+            <table className="w-full  border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
                 <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">

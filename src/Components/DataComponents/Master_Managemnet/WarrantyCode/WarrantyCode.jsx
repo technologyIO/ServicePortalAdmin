@@ -11,6 +11,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import WarrantyCodeBulk from "./WarrantyCodeBulk";
 
 function WarrantyCode() {
   const [showModal, setShowModal] = useState(false);
@@ -25,7 +26,10 @@ function WarrantyCode() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+    getData();
+  };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
 
@@ -461,13 +465,7 @@ function WarrantyCode() {
               {/* Modal Content */}
 
               <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <BulkModal />
+                <WarrantyCodeBulk onClose={closeModal} />
               </div>
             </div>
           )}
