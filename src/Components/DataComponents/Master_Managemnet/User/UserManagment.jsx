@@ -8,7 +8,14 @@ import Step1RoleInfo from "./steps/Step1RoleInfo";
 import Step2UserDetails from "./steps/Step2UserDetails";
 import Step3Skills from "./steps/Step3Skills";
 import { Autocomplete, TextField } from "@mui/joy";
-import { ArrowLeft, ArrowRight, Save, UserPlus } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  UserPlus,
+  CheckSquare,
+  Square,
+} from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import moment from "moment";
 
@@ -837,6 +844,101 @@ export default function UserManagement() {
     }
   };
 
+  // Handle Select All functionality
+  const handleSelectAll = (selection, options) => {
+    if (selection.selectionType !== "multi") return;
+
+    switch (selection.name.toLowerCase()) {
+      case "geo":
+        setSelectedGeo([...options]);
+        // Reset dependent fields
+        setSelectedCountries([]);
+        setSelectedRegions([]);
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "country":
+        setSelectedCountries([...options]);
+        // Reset dependent fields
+        setSelectedRegions([]);
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "region":
+        setSelectedRegions([...options]);
+        // Reset dependent fields
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "state":
+        setSelectedStates([...options]);
+        // Reset dependent fields
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "branch":
+        setSelectedBranches([...options]);
+        // Reset dependent fields
+        setSelectedCities([]);
+        break;
+      case "city":
+        setSelectedCities([...options]);
+        break;
+    }
+
+    // Clear error if exists
+    setErrors((prev) => ({ ...prev, [selection.name]: undefined }));
+  };
+
+  // Handle Deselect All functionality
+  const handleDeselectAll = (selection) => {
+    if (selection.selectionType !== "multi") return;
+
+    switch (selection.name.toLowerCase()) {
+      case "geo":
+        setSelectedGeo([]);
+        // Reset dependent fields
+        setSelectedCountries([]);
+        setSelectedRegions([]);
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "country":
+        setSelectedCountries([]);
+        // Reset dependent fields
+        setSelectedRegions([]);
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "region":
+        setSelectedRegions([]);
+        // Reset dependent fields
+        setSelectedStates([]);
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "state":
+        setSelectedStates([]);
+        // Reset dependent fields
+        setSelectedBranches([]);
+        setSelectedCities([]);
+        break;
+      case "branch":
+        setSelectedBranches([]);
+        // Reset dependent fields
+        setSelectedCities([]);
+        break;
+      case "city":
+        setSelectedCities([]);
+        break;
+    }
+  };
+
   const renderLocationControls = () => {
     return permissions?.demographicSelections?.map((selection) => {
       if (!selection.isEnabled) return null;
@@ -1015,70 +1117,18 @@ export default function UserManagement() {
       }
 
       return (
-        <div key={selection.name} className="group">
-          <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
-            <svg
-              className="w-4 h-4 mr-2 text-blue-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            {selection.selectionType === "multi"
-              ? `Select Multiple ${pluralize(selection.name)}`
-              : `Select a ${selection.name}`}{" "}
-            <span className="text-red-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <Autocomplete
-              multiple={selection.selectionType === "multi"}
-              options={options}
-              getOptionLabel={(option) => {
-                if (selection.name.toLowerCase() === "branch") {
-                  return option.name || option.branchShortCode;
-                }
-                return option.name || option.geoName || option.regionName;
-              }}
-              value={selectedValue}
-              onChange={onChangeHandler}
-              isOptionEqualToValue={(option, value) => option._id === value._id}
-              disabled={isDisabled}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="outlined"
-                  placeholder={
-                    selection.selectionType === "multi"
-                      ? `Search and select ${pluralize(
-                          selection.name.toLowerCase()
-                        )}`
-                      : `Search and select a ${selection.name.toLowerCase()}`
-                  }
-                  className={`transition-all duration-300 ${
-                    errors[selection.name]
-                      ? "border-red-400 focus:border-red-500"
-                      : "border-gray-200 focus:border-blue-500"
-                  }`}
-                />
-              )}
-            />
-            {selectedValue && (
-              <div className="absolute top-1/2 right-12 transform -translate-y-1/2">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+        <div
+          key={selection.name}
+          className="group relative bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+        >
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-blue-50 to-gray-50 px-4 py-3 border-b border-gray-100">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <label className="text-sm font-semibold text-gray-800 flex items-center">
                   <svg
-                    className="w-4 h-4 text-white"
+                    className="w-4 h-4 mr-2 text-blue-600"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1087,29 +1137,163 @@ export default function UserManagement() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M5 13l4 4L19 7"
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                     />
                   </svg>
-                </div>
+                  {selection.selectionType === "multi"
+                    ? `${pluralize(selection.name)}`
+                    : `${selection.name}`}
+                  <span className="text-red-500 ml-1 text-xs">*</span>
+                </label>
+              </div>
+
+              {/* Action Buttons */}
+              {selection.selectionType === "multi" &&
+                options.length > 0 &&
+                !isDisabled && (
+                  <div className="flex space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAll(selection, options)}
+                      className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors duration-200 flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={
+                        (Array.isArray(selectedValue) &&
+                          selectedValue.length === options.length) ||
+                        isDisabled
+                      }
+                    >
+                      <CheckSquare className="w-3 h-3" />
+                      <span>All</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeselectAll(selection)}
+                      className="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors duration-200 flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={
+                        (Array.isArray(selectedValue) &&
+                          selectedValue.length === 0) ||
+                        isDisabled
+                      }
+                    >
+                      <Square className="w-3 h-3" />
+                      <span>Clear</span>
+                    </button>
+                  </div>
+                )}
+            </div>
+          </div>
+
+          {/* Input Section */}
+          <div className="p-4">
+            <div className="relative">
+              <Autocomplete
+                multiple={selection.selectionType === "multi"}
+                options={options}
+                className="p-2"
+                getOptionLabel={(option) => {
+                  if (selection.name.toLowerCase() === "branch") {
+                    return option.name || option.branchShortCode;
+                  }
+                  return option.name || option.geoName || option.regionName;
+                }}
+                value={selectedValue}
+                onChange={onChangeHandler}
+                isOptionEqualToValue={(option, value) =>
+                  option._id === value._id
+                }
+                disabled={isDisabled}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: isDisabled ? "#f8f9fa" : "white",
+                    border: errors[selection.name]
+                      ? "2px solid #ef4444"
+                      : "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    "&:hover": {
+                      borderColor: errors[selection.name]
+                        ? "#ef4444"
+                        : "#3b82f6",
+                    },
+                    "&.Mui-focused": {
+                      borderColor: errors[selection.name]
+                        ? "#ef4444"
+                        : "#3b82f6",
+                      boxShadow: errors[selection.name]
+                        ? "0 0 0 3px rgba(239, 68, 68, 0.1)"
+                        : "0 0 0 3px rgba(59, 130, 246, 0.1)",
+                    },
+                    "&.Mui-disabled": {
+                      backgroundColor: "#f8f9fa",
+                      borderColor: "#d1d5db",
+                    },
+                  },
+                  "& .MuiOutlinedInput-notchedOutline": {
+                    border: "none",
+                  },
+                  "& .MuiChip-root": {
+                    backgroundColor: "#eff6ff",
+                    color: "#1e40af",
+                    border: "1px solid #bfdbfe",
+                    fontSize: "12px",
+                    "& .MuiChip-deleteIcon": {
+                      color: "#6b7280",
+                      "&:hover": {
+                        color: "#374151",
+                      },
+                    },
+                  },
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder={
+                      isDisabled
+                        ? `Select ${dependsOn} first`
+                        : selection.selectionType === "multi"
+                        ? `Search ${pluralize(selection.name.toLowerCase())}`
+                        : `Search ${selection.name.toLowerCase()}`
+                    }
+                  />
+                )}
+              />
+            </div>
+
+            {/* Error Message */}
+            {errors[selection.name] && (
+              <div className="mt-2 flex items-center text-red-500 text-xs">
+                <svg
+                  className="w-3 h-3 mr-1 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>{errors[selection.name]}</span>
               </div>
             )}
           </div>
-          {errors[selection.name] && (
-            <div className="mt-2 flex items-center text-red-500 text-sm">
-              <svg
-                className="w-4 h-4 mr-1"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              {errors[selection.name]}
-            </div>
-          )}
+
+          {/* Status Indicator */}
+          <div
+            className={`absolute left-0 top-0 w-1 h-full transition-all duration-300 ${
+              errors[selection.name]
+                ? "bg-red-500"
+                : isDisabled
+                ? "bg-gray-300"
+                : "bg-blue-500"
+            }`}
+          ></div>
         </div>
       );
     });
