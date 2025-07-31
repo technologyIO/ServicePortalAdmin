@@ -42,7 +42,7 @@ function Customer() {
   const [region, setregion] = useState([]);
   const [country, setCountry] = useState([]);
   const [cityList, setCityList] = useState([]);
-
+  const [regionOptions, setRegionOptions] = useState([]);
   // Get All City
   useEffect(() => {
     const getCities = async () => {
@@ -71,13 +71,17 @@ function Customer() {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allstate`
         );
-        const State = res.data.map((state) => ({
-          label: state.name,
-          id: state._id,
-          country: state.country,
-          status: state.status,
+        const allStates = res.data;
+
+        // 1. Extract only region strings
+        const regionLabels = allStates.map((state) => state.stateId);
+
+        // 2. Create unique region list
+        const uniqueRegions = [...new Set(regionLabels)].map((region) => ({
+          label: region,
         }));
-        setstate(State);
+
+        setRegionOptions(uniqueRegions);
       } catch (err) {
         console.error(err);
       }
@@ -85,6 +89,8 @@ function Customer() {
 
     getState();
   }, []);
+
+  console.log(regionOptions, "regionOptions");
   useEffect(() => {
     const getRegion = async () => {
       try {
@@ -813,10 +819,10 @@ function Customer() {
                       </label>
                       <Autocomplete
                         className="h-10 w-full"
-                        options={region} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
+                        options={regionOptions} // ✅ from unique regions
+                        getOptionLabel={(option) => option.label}
                         renderInput={(params) => (
-                          <TextField {...params} name="region" label="region" />
+                          <TextField {...params} name="region" label="Region" />
                         )}
                         sx={{ width: 300 }}
                         onChange={(event, value) =>

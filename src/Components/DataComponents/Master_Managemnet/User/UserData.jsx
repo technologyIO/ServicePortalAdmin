@@ -326,8 +326,8 @@ const UserData = () => {
 
                   <th className="px-4 text-left font-medium">Manager Email</th>
                   <th className="px-4 text-left font-medium">Dealer </th>
+                  <th className="px-4 text-left font-medium">Dealer Email</th>  
                   <th className="px-4 text-left font-medium">Dealer Code</th>
-                  <th className="px-4 text-left font-medium">Dealer Email</th>
                   <th className="px-4 text-left font-medium">Skills</th>
                   <th className="px-4 text-left font-medium">Device ID</th>
                   <th className="px-4 text-left font-medium">

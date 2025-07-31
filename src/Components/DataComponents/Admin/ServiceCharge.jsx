@@ -280,7 +280,7 @@ function ServiceCharge() {
         </div>
       )}
       {/* Table */}
-      <div className="overflow-x-auto w-full">
+      <div className="overflow-x-auto w-full rounded shadow-sm">
         <table className="w-full border text-sm min-w-max">
           <thead className="bg-blue-700">
             <tr className="text-white">
