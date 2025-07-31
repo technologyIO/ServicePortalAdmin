@@ -262,7 +262,7 @@ export default function EquipmentBulk({ onClose }) {
   };
 
   // Updated CSV template with all required fields matching backend field mappings
-  const csvTemplate = `Material Code,Material Description,Serial Number,Current Customer,End Customer,CustWarrantyStart,CustWarrantyEnd,DealerWarrantyStart,DealerWarrantyEnd,Dealer,PAL number,IR Number
+  const csvTemplate = `Material Code,Material Description,Serial Number,Equipment,Current Customer,End Customer,CustWarrantyStart,CustWarrantyEnd,DealerWarrantyStart,DealerWarrantyEnd,Dealer,PAL number,IR Number
 ,,,,,,,,,,`;
 
   const handleDownloadTemplate = () => {
