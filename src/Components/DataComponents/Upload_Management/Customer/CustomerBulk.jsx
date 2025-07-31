@@ -36,7 +36,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       totalBatches: 0,
       batchSize: 1000,
       currentBatchRecords: 0,
-    }
+    },
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
 
@@ -85,6 +85,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       setFile(null);
       return;
     }
+
     if (selectedFile.size > 50 * 1024 * 1024) {
       setError("File size exceeds 50MB limit");
       setFile(null);
@@ -141,7 +142,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         totalBatches: 0,
         batchSize: 1000,
         currentBatchRecords: 0,
-      }
+      },
     });
 
     const formData = new FormData();
@@ -210,7 +211,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   };
 
                   // Batch processing updates
-                  if (data.batchProgress?.currentBatch > prev.batchProgress?.currentBatch) {
+                  if (
+                    data.batchProgress?.currentBatch >
+                    prev.batchProgress?.currentBatch
+                  ) {
                     addLiveUpdate(
                       `Starting batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches} (${data.batchProgress.batchSize} records)`,
                       "info"
@@ -219,10 +223,11 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
                   // Individual record processing updates
                   if (data.processedRecords > prev.processedRecords) {
-                    const newlyProcessed = data.processedRecords - prev.processedRecords;
-                    const batchInfo = data.batchProgress?.currentBatch 
+                    const newlyProcessed =
+                      data.processedRecords - prev.processedRecords;
+                    const batchInfo = data.batchProgress?.currentBatch
                       ? ` [Batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches}]`
-                      : '';
+                      : "";
                     addLiveUpdate(
                       `Processed ${newlyProcessed} Customer record(s) (${data.processedRecords}/${data.totalRecords})${batchInfo}`,
                       "success"
@@ -231,17 +236,23 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
                   // Real-time individual record updates
                   if (data.latestRecords && data.latestRecords.length > 0) {
-                    const latestRecord = data.latestRecords[data.latestRecords.length - 1];
+                    const latestRecord =
+                      data.latestRecords[data.latestRecords.length - 1];
                     addLiveUpdate(
                       `${latestRecord.status}: ${latestRecord.customercodeid} (${latestRecord?.customername})`,
-                      latestRecord.status === 'Created' ? 'success' : 
-                      latestRecord.status === 'Updated' ? 'info' :
-                      latestRecord.status === 'Failed' ? 'error' : 'info'
+                      latestRecord.status === "Created"
+                        ? "success"
+                        : latestRecord.status === "Updated"
+                        ? "info"
+                        : latestRecord.status === "Failed"
+                        ? "error"
+                        : "info"
                     );
                   }
 
                   if (data.summary?.created > prev.summary?.created) {
-                    const newCreated = data.summary.created - prev.summary.created;
+                    const newCreated =
+                      data.summary.created - prev.summary.created;
                     addLiveUpdate(
                       `Created ${newCreated} new Customer records (Total: ${data.summary.created})`,
                       "success"
@@ -249,23 +260,34 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   }
 
                   if (data.summary?.updated > prev.summary?.updated) {
-                    const newUpdated = data.summary.updated - prev.summary.updated;
+                    const newUpdated =
+                      data.summary.updated - prev.summary.updated;
                     addLiveUpdate(
                       `Updated ${newUpdated} existing Customer records (Total: ${data.summary.updated})`,
                       "info"
                     );
                   }
 
-                  if (data.summary?.duplicatesInFile > prev.summary?.duplicatesInFile) {
-                    const newDuplicates = data.summary.duplicatesInFile - prev.summary.duplicatesInFile;
+                  if (
+                    data.summary?.duplicatesInFile >
+                    prev.summary?.duplicatesInFile
+                  ) {
+                    const newDuplicates =
+                      data.summary.duplicatesInFile -
+                      prev.summary.duplicatesInFile;
                     addLiveUpdate(
                       `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
                       "warning"
                     );
                   }
 
-                  if (data.summary?.existingRecords > prev.summary?.existingRecords) {
-                    const newExisting = data.summary.existingRecords - prev.summary.existingRecords;
+                  if (
+                    data.summary?.existingRecords >
+                    prev.summary?.existingRecords
+                  ) {
+                    const newExisting =
+                      data.summary.existingRecords -
+                      prev.summary.existingRecords;
                     addLiveUpdate(
                       `Processing ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
                       "info"
@@ -283,7 +305,11 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   // Batch completion updates
                   if (data.batchCompleted) {
                     addLiveUpdate(
-                      `Batch ${data.batchProgress.currentBatch} completed: ${data.batchSummary?.created || 0} created, ${data.batchSummary?.updated || 0} updated, ${data.batchSummary?.failed || 0} failed`,
+                      `Batch ${data.batchProgress.currentBatch} completed: ${
+                        data.batchSummary?.created || 0
+                      } created, ${data.batchSummary?.updated || 0} updated, ${
+                        data.batchSummary?.failed || 0
+                      } failed`,
                       "info"
                     );
                   }
@@ -291,7 +317,9 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   if (data.status === "completed") {
                     addLiveUpdate(
                       `Customer batch upload completed in ${data.duration}! ` +
-                        `Total Batches: ${data.batchProgress?.totalBatches || 0}, ` +
+                        `Total Batches: ${
+                          data.batchProgress?.totalBatches || 0
+                        }, ` +
                         `Created: ${data.summary.created}, ` +
                         `Updated: ${data.summary.updated}, ` +
                         `Skipped: ${data.summary.skippedTotal}, ` +
@@ -408,7 +436,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         totalBatches: 0,
         batchSize: 1000,
         currentBatchRecords: 0,
-      }
+      },
     });
   };
 
@@ -469,9 +497,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       {
         id: 3,
         title: "Batch Processing Customer Records",
-        description: processingData.batchProgress.totalBatches > 0
-          ? `Batch ${processingData.batchProgress.currentBatch}/${processingData.batchProgress.totalBatches} - ${processingData.processedRecords}/${processingData.totalRecords} records processed`
-          : `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
+        description:
+          processingData.batchProgress.totalBatches > 0
+            ? `Batch ${processingData.batchProgress.currentBatch}/${processingData.batchProgress.totalBatches} - ${processingData.processedRecords}/${processingData.totalRecords} records processed`
+            : `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
             ? processingData.processedRecords === processingData.totalRecords
@@ -484,9 +513,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       {
         id: 4,
         title: "Finalizing Process",
-        description: processingData.batchProgress.totalBatches > 0
-          ? `Completed ${processingData.batchProgress.totalBatches} batches - Finalizing Customer bulk upload`
-          : "Completing Customer bulk upload operation",
+        description:
+          processingData.batchProgress.totalBatches > 0
+            ? `Completed ${processingData.batchProgress.totalBatches} batches - Finalizing Customer bulk upload`
+            : "Completing Customer bulk upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -510,7 +540,8 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 Bulk Customer Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage Customer data efficiently with batch processing
+                Import and manage Customer data efficiently with batch
+                processing
               </p>
             </div>
             <button
@@ -527,8 +558,9 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           <div>
             <h3 className="font-semibold text-blue-900">Need a template?</h3>
             <p className="text-sm text-blue-700">
-              Download our CSV template with all required Customer columns: Customer Code (required)
-              and optional fields like Name, Hospital Name..
+              Download our CSV template with all required Customer columns:
+              Customer Code (required) and optional fields like Name, Hospital
+              Name..
             </p>
           </div>
           <button
@@ -711,7 +743,8 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                             Required column: Customer Code
                           </p>
                           <p className="text-xs text-center text-gray-600 mt-1">
-                            Optional: Name, Hospital Name, Street, City, Email, etc.
+                            Optional: Name, Hospital Name, Street, City, Email,
+                            etc.
                           </p>
                         </>
                       )}
@@ -723,6 +756,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                       accept=".csv,.xls,.xlsx"
                       onChange={handleFileChange}
                     />
+
                     <label
                       htmlFor="file-upload"
                       className="absolute inset-0 cursor-pointer"
@@ -780,7 +814,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                         <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                         Batch Processing Status
                       </h3>
-                      
+
                       {/* Batch Progress Indicator */}
                       {processingData.batchProgress.totalBatches > 0 && (
                         <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -789,23 +823,29 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                               Batch Progress
                             </span>
                             <span className="text-sm text-blue-600">
-                              {processingData.batchProgress.currentBatch}/{processingData.batchProgress.totalBatches}
+                              {processingData.batchProgress.currentBatch}/
+                              {processingData.batchProgress.totalBatches}
                             </span>
                           </div>
                           <div className="w-full bg-blue-200 rounded-full h-2">
                             <div
                               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                               style={{
-                                width: `${(processingData.batchProgress.currentBatch / processingData.batchProgress.totalBatches) * 100}%`
+                                width: `${
+                                  (processingData.batchProgress.currentBatch /
+                                    processingData.batchProgress.totalBatches) *
+                                  100
+                                }%`,
                               }}
                             ></div>
                           </div>
                           <div className="text-xs text-blue-600 mt-1">
-                            Processing {processingData.batchProgress.batchSize} records per batch
+                            Processing {processingData.batchProgress.batchSize}{" "}
+                            records per batch
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="space-y-4">
                         {getProcessingSteps().map((step) => (
                           <div key={step.id} className="flex items-start gap-4">
@@ -1088,7 +1128,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     <div>
                       <span className="text-gray-600">Total Batches:</span>
                       <span className="ml-2 font-medium">
-                        {processingData.batchProgress.totalBatches || 'N/A'}
+                        {processingData.batchProgress.totalBatches || "N/A"}
                       </span>
                     </div>
                     <div>
