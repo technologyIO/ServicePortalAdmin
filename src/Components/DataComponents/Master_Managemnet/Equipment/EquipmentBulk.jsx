@@ -13,7 +13,7 @@ import {
   TrendingUp,
   Calendar,
   Settings,
-  Database
+  Database,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -182,52 +182,71 @@ export default function EquipmentBulk({ onClose }) {
         );
       }
 
-      addLiveUpdate("✅ File uploaded successfully. Processing data...", "success");
+      addLiveUpdate(
+        "✅ File uploaded successfully. Processing data...",
+        "success"
+      );
 
       // Handle JSON response (not streaming)
       const data = await response.json();
-      
+
       setProcessingData((prev) => {
         const newData = {
           ...prev,
           ...data,
           equipmentResults: data.equipmentResults || [],
           pmResults: data.pmResults || [],
-          summary: data.summary ? { ...prev.summary, ...data.summary } : prev.summary,
+          summary: data.summary
+            ? { ...prev.summary, ...data.summary }
+            : prev.summary,
           errors: data.errors || [],
-          warnings: data.warnings || []
+          warnings: data.warnings || [],
         };
 
         // Add detailed live updates based on response
         if (data.status === "completed") {
-          addLiveUpdate(`🎉 Processing completed successfully in ${data.duration}!`, "success");
-          addLiveUpdate(`📊 Equipment processed: ${data.totalRecords} records`, "info");
-          addLiveUpdate(`⚙️ PM tasks created: ${data.summary?.totalPMCreated || 0}`, "success");
-          
+          addLiveUpdate(
+            `🎉 Processing completed successfully in ${data.duration}!`,
+            "success"
+          );
+          addLiveUpdate(
+            `📊 Equipment processed: ${data.totalRecords} records`,
+            "info"
+          );
+          addLiveUpdate(
+            `⚙️ PM tasks created: ${data.summary?.totalPMCreated || 0}`,
+            "success"
+          );
+
           // PM Type breakdown
           if (data.summary?.pmTypeBreakdown) {
             const { WPM, EPM, CPM, NPM } = data.summary.pmTypeBreakdown;
             if (WPM > 0) addLiveUpdate(`🔧 Warranty PMs (WPM): ${WPM}`, "info");
             if (EPM > 0) addLiveUpdate(`🔧 Extended PMs (EPM): ${EPM}`, "info");
-            if (CPM > 0) addLiveUpdate(`🔧 Comprehensive PMs (CPM): ${CPM}`, "info");
-            if (NPM > 0) addLiveUpdate(`🔧 Non-comprehensive PMs (NPM): ${NPM}`, "info");
+            if (CPM > 0)
+              addLiveUpdate(`🔧 Comprehensive PMs (CPM): ${CPM}`, "info");
+            if (NPM > 0)
+              addLiveUpdate(`🔧 Non-comprehensive PMs (NPM): ${NPM}`, "info");
           }
 
           // Status breakdown
           if (data.summary?.statusBreakdown) {
             const { Due, Overdue, Lapsed } = data.summary.statusBreakdown;
             if (Due > 0) addLiveUpdate(`📅 Due tasks: ${Due}`, "warning");
-            if (Overdue > 0) addLiveUpdate(`⚠️ Overdue tasks: ${Overdue}`, "error");
-            if (Lapsed > 0) addLiveUpdate(`❌ Lapsed tasks: ${Lapsed}`, "error");
+            if (Overdue > 0)
+              addLiveUpdate(`⚠️ Overdue tasks: ${Overdue}`, "error");
+            if (Lapsed > 0)
+              addLiveUpdate(`❌ Lapsed tasks: ${Lapsed}`, "error");
           }
 
           setIsProcessing(false);
           setTimeout(() => setActiveTab("results"), 2000);
-          
         } else if (data.status === "failed") {
           addLiveUpdate("❌ Processing failed!", "error");
           if (data.errors?.length > 0) {
-            data.errors.forEach((err) => addLiveUpdate(`Error: ${err}`, "error"));
+            data.errors.forEach((err) =>
+              addLiveUpdate(`Error: ${err}`, "error")
+            );
           }
           setIsProcessing(false);
         }
@@ -241,7 +260,6 @@ export default function EquipmentBulk({ onClose }) {
 
         return newData;
       });
-
     } catch (err) {
       console.error("Upload error:", err);
       const errorMessage =
@@ -452,7 +470,8 @@ export default function EquipmentBulk({ onClose }) {
                 Equipment Bulk Upload & PM Generation
               </h2>
               <p className="text-blue-100 mt-1">
-                Import equipment data with intelligent field mapping and automatic PM task generation
+                Import equipment data with intelligent field mapping and
+                automatic PM task generation
               </p>
             </div>
             <button
@@ -473,26 +492,9 @@ export default function EquipmentBulk({ onClose }) {
               Download Template with Smart Field Mapping
             </h3>
             <p className="text-sm text-blue-700 mb-3">
-              Get the Excel/CSV template with all required fields. Our system supports flexible field naming!
+              Get the Excel/CSV template with all required fields. Our system
+              supports flexible field naming!
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-blue-600">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 size={12} />
-                <span>Material Code variations</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 size={12} />
-                <span>Date format flexibility</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 size={12} />
-                <span>Warranty fields included</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle2 size={12} />
-                <span>PM auto-generation</span>
-              </div>
-            </div>
           </div>
           <button
             onClick={handleDownloadTemplate}
@@ -504,7 +506,7 @@ export default function EquipmentBulk({ onClose }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6 overflow-hidden">
+        <div className="flex-1 p-6  h-[350px] overflow-y-auto">
           {/* Tabs */}
           <div className="mb-6">
             <div className="flex border-b border-gray-200">
@@ -542,7 +544,7 @@ export default function EquipmentBulk({ onClose }) {
 
           {/* Upload Tab */}
           {activeTab === "upload" && (
-            <div className="space-y-6 h-[500px] overflow-y-auto">
+            <div className="space-y-6 ">
               {/* Error Display */}
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
@@ -561,7 +563,7 @@ export default function EquipmentBulk({ onClose }) {
 
               {/* File Upload Section */}
               {!isProcessing && (
-                <div className="space-y-6">
+                <div className="space-y-6 ">
                   <div
                     className={`relative border-2 border-dashed rounded-xl transition-all duration-300 ${
                       isDragging
@@ -618,7 +620,9 @@ export default function EquipmentBulk({ onClose }) {
                             Upload Equipment Data
                           </h3>
                           <p className="text-gray-600 mb-4 text-center max-w-md">
-                            Select or drag & drop your Excel/CSV file. Our intelligent system will automatically map fields and generate PM tasks.
+                            Select or drag & drop your Excel/CSV file. Our
+                            intelligent system will automatically map fields and
+                            generate PM tasks.
                           </p>
                           <div className="flex flex-wrap gap-2 text-sm text-gray-500">
                             <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
@@ -685,7 +689,10 @@ export default function EquipmentBulk({ onClose }) {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 border border-blue-200">
                       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <Settings className="text-blue-600 animate-spin" size={20} />
+                        <Settings
+                          className="text-blue-600 animate-spin"
+                          size={20}
+                        />
                         Processing Status
                       </h3>
                       <div className="space-y-4">
@@ -763,7 +770,8 @@ export default function EquipmentBulk({ onClose }) {
                         </div>
                         <div className="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
                           <div className="text-2xl font-bold text-red-600">
-                            {processingData.warnings?.length + processingData.errors?.length || 0}
+                            {processingData.warnings?.length +
+                              processingData.errors?.length || 0}
                           </div>
                           <div className="text-sm text-gray-600">Issues</div>
                         </div>
@@ -954,15 +962,23 @@ export default function EquipmentBulk({ onClose }) {
                       <div className="text-3xl font-bold text-blue-600 mb-1">
                         {processingData.summary.pmTypeBreakdown.WPM}
                       </div>
-                      <div className="text-sm font-medium text-blue-700">Warranty PM</div>
-                      <div className="text-xs text-blue-600 mt-1">Customer warranty period</div>
+                      <div className="text-sm font-medium text-blue-700">
+                        Warranty PM
+                      </div>
+                      <div className="text-xs text-blue-600 mt-1">
+                        Customer warranty period
+                      </div>
                     </div>
                     <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                       <div className="text-3xl font-bold text-green-600 mb-1">
                         {processingData.summary.pmTypeBreakdown.EPM}
                       </div>
-                      <div className="text-sm font-medium text-green-700">Extended PM</div>
-                      <div className="text-xs text-green-600 mt-1">Dealer/Extended warranty</div>
+                      <div className="text-sm font-medium text-green-700">
+                        Extended PM
+                      </div>
+                      <div className="text-xs text-green-600 mt-1">
+                        Dealer/Extended warranty
+                      </div>
                     </div>
                     <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
                       <div className="text-3xl font-bold text-purple-600 mb-1">
@@ -971,7 +987,9 @@ export default function EquipmentBulk({ onClose }) {
                       <div className="text-sm font-medium text-purple-700">
                         Comprehensive PM
                       </div>
-                      <div className="text-xs text-purple-600 mt-1">ZDRC AMC contracts</div>
+                      <div className="text-xs text-purple-600 mt-1">
+                        ZDRC AMC contracts
+                      </div>
                     </div>
                     <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
                       <div className="text-3xl font-bold text-orange-600 mb-1">
@@ -980,7 +998,9 @@ export default function EquipmentBulk({ onClose }) {
                       <div className="text-sm font-medium text-orange-700">
                         Non-comprehensive PM
                       </div>
-                      <div className="text-xs text-orange-600 mt-1">ZDRN AMC contracts</div>
+                      <div className="text-xs text-orange-600 mt-1">
+                        ZDRN AMC contracts
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -997,22 +1017,34 @@ export default function EquipmentBulk({ onClose }) {
                     <div className="text-3xl font-bold text-yellow-600 mb-1">
                       {processingData.summary.statusBreakdown.Due}
                     </div>
-                    <div className="text-sm font-medium text-yellow-700">Due Tasks</div>
-                    <div className="text-xs text-yellow-600 mt-1">Current/upcoming month</div>
+                    <div className="text-sm font-medium text-yellow-700">
+                      Due Tasks
+                    </div>
+                    <div className="text-xs text-yellow-600 mt-1">
+                      Current/upcoming month
+                    </div>
                   </div>
                   <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
                     <div className="text-3xl font-bold text-red-600 mb-1">
                       {processingData.summary.statusBreakdown.Overdue}
                     </div>
-                    <div className="text-sm font-medium text-red-700">Overdue Tasks</div>
-                    <div className="text-xs text-red-600 mt-1">1-2 months past due</div>
+                    <div className="text-sm font-medium text-red-700">
+                      Overdue Tasks
+                    </div>
+                    <div className="text-xs text-red-600 mt-1">
+                      1-2 months past due
+                    </div>
                   </div>
                   <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="text-3xl font-bold text-gray-600 mb-1">
                       {processingData.summary.statusBreakdown.Lapsed}
                     </div>
-                    <div className="text-sm font-medium text-gray-700">Lapsed Tasks</div>
-                    <div className="text-xs text-gray-600 mt-1">More than 2 months past</div>
+                    <div className="text-sm font-medium text-gray-700">
+                      Lapsed Tasks
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1">
+                      More than 2 months past
+                    </div>
                   </div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -1021,9 +1053,15 @@ export default function EquipmentBulk({ onClose }) {
                     <span className="font-medium">PM Logic Applied:</span>
                   </div>
                   <ul className="text-xs text-blue-600 mt-2 space-y-1 ml-5">
-                    <li>• Shows PM as "Due" one month in advance (May shows June PM)</li>
+                    <li>
+                      • Shows PM as "Due" one month in advance (May shows June
+                      PM)
+                    </li>
                     <li>• 2-month grace period for overdue tasks</li>
-                    <li>• Frequency based on product master (2x/year, 4x/year, etc.)</li>
+                    <li>
+                      • Frequency based on product master (2x/year, 4x/year,
+                      etc.)
+                    </li>
                     <li>• Preserves already completed PM tasks</li>
                   </ul>
                 </div>
@@ -1031,7 +1069,9 @@ export default function EquipmentBulk({ onClose }) {
 
               {/* Processing Summary */}
               <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-medium text-gray-800 mb-4">Processing Summary</h3>
+                <h3 className="font-medium text-gray-800 mb-4">
+                  Processing Summary
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">File Processed:</span>
@@ -1057,7 +1097,7 @@ export default function EquipmentBulk({ onClose }) {
               {/* Detailed Results */}
               <div className="grid grid-cols-1  ">
                 {/* Equipment Results */}
-               
+
                 {/* PM Results */}
                 <div className="bg-white border border-gray-200 rounded-lg">
                   <div className="p-4 border-b border-gray-200 bg-gray-50">
@@ -1081,10 +1121,14 @@ export default function EquipmentBulk({ onClose }) {
                               <p className="text-xs text-gray-500 mt-1">
                                 Due: {item.dueMonth || "N/A"}
                                 {item.dueDate && (
-                                  <span className="ml-2">• Date: {item.dueDate}</span>
+                                  <span className="ml-2">
+                                    • Date: {item.dueDate}
+                                  </span>
                                 )}
                                 {item.created && (
-                                  <span className="ml-2">• Status: {item.created}</span>
+                                  <span className="ml-2">
+                                    • Status: {item.created}
+                                  </span>
                                 )}
                               </p>
                               {item.error && (
