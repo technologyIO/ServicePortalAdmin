@@ -19,7 +19,8 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     processedRecords: 0,
     successfulRecords: 0,
     failedRecords: 0,
-    results: [],
+    results: [], // Full results from server, only failed records pushed by backend anyway
+    failedDetails: [],
     summary: {
       created: 0,
       updated: 0,
@@ -50,23 +51,29 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
   };
 
+  // Count statuses from results (which mainly contain failed records)
   const statusCounts = processingData.results.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
     return acc;
   }, {});
 
+  // Filter tabs: let user choose All (all failed records), or just Failed
   const filterTabs = [
-    { label: "All", value: "All", count: processingData.results.length },
-    { label: "Created", value: "Created", count: statusCounts.Created || 0 },
-    { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
-    { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
+    {
+      label: "All Failed",
+      value: "All Failed",
+      count: processingData.results.length,
+    },
     { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
   ];
 
+  // Filter results to show in detailed list (NEEche)
+  // We will show only failed records; since backend sends only failed records,
+  // filtering is mostly for UX.
   const filteredResults =
-    resultFilter === "All"
+    resultFilter === "All Failed"
       ? processingData.results
-      : processingData.results.filter((r) => r.status === resultFilter);
+      : processingData.results.filter((r) => r.status === "Failed");
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -200,6 +207,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   const newData = {
                     ...prev,
                     ...data,
+                    // Replace results with only failed records from server
                     results: data.results || prev.results,
                     summary: data.summary
                       ? { ...prev.summary, ...data.summary }
@@ -210,7 +218,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     batchProgress: data.batchProgress || prev.batchProgress,
                   };
 
-                  // Batch processing updates
+                  // Live updates for progress
                   if (
                     data.batchProgress?.currentBatch >
                     prev.batchProgress?.currentBatch
@@ -221,7 +229,6 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     );
                   }
 
-                  // Individual record processing updates
                   if (data.processedRecords > prev.processedRecords) {
                     const newlyProcessed =
                       data.processedRecords - prev.processedRecords;
@@ -234,22 +241,23 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     );
                   }
 
-                  // Real-time individual record updates
+                  // Show only failed record messages
                   if (data.latestRecords && data.latestRecords.length > 0) {
-                    const latestRecord =
-                      data.latestRecords[data.latestRecords.length - 1];
-                    addLiveUpdate(
-                      `${latestRecord.status}: ${latestRecord.customercodeid} (${latestRecord?.customername})`,
-                      latestRecord.status === "Created"
-                        ? "success"
-                        : latestRecord.status === "Updated"
-                        ? "info"
-                        : latestRecord.status === "Failed"
-                        ? "error"
-                        : "info"
+                    // Check if latest record is failed
+                    const failedRecords = data.latestRecords.filter(
+                      (r) => r.status === "Failed"
                     );
+                    failedRecords.forEach((record) => {
+                      addLiveUpdate(
+                        `Failed: ${record.customercodeid} (${
+                          record.customername || "N/A"
+                        }) - ${record.error}`,
+                        "error"
+                      );
+                    });
                   }
 
+                  // Show counts for created, updated, failed etc. in live updates
                   if (data.summary?.created > prev.summary?.created) {
                     const newCreated =
                       data.summary.created - prev.summary.created;
@@ -302,14 +310,12 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     );
                   }
 
-                  // Batch completion updates
                   if (data.batchCompleted) {
                     addLiveUpdate(
-                      `Batch ${data.batchProgress.currentBatch} completed: ${
-                        data.batchSummary?.created || 0
-                      } created, ${data.batchSummary?.updated || 0} updated, ${
-                        data.batchSummary?.failed || 0
-                      } failed`,
+                      `Batch ${data.batchProgress.currentBatch} completed: ` +
+                        `${data.batchSummary?.created || 0} created, ${
+                          data.batchSummary?.updated || 0
+                        } updated, ${data.batchSummary?.failed || 0} failed`,
                       "info"
                     );
                   }
@@ -388,6 +394,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     }
   };
 
+  // CSV template content & download function unchanged
   const csvContent = `CustomerCode,Name1,Name2,Street,City,PostalCode,District,Region,Country,Telephone,Tax Number1,Tax Number2,Email
 ,,,,,,,,,,,,,
 ,,,,,,,,,,,,,
@@ -573,7 +580,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 flex-1 flex flex-col">
           {/* Tabs */}
           <div className="mb-6">
             <div className="flex border-b border-gray-200">
@@ -613,7 +620,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
           {/* Upload Tab */}
           {activeTab === "upload" && (
-            <div className="space-y-6 h-[400px] overflow-y-auto">
+            <div className="space-y-6 h-[400px] overflow-y-auto flex flex-col">
               {/* File Upload Section */}
               {!isProcessing && (
                 <div className="space-y-6">
@@ -756,7 +763,6 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                       accept=".csv,.xls,.xlsx"
                       onChange={handleFileChange}
                     />
-
                     <label
                       htmlFor="file-upload"
                       className="absolute inset-0 cursor-pointer"
@@ -806,9 +812,9 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
               {/* Processing Status Section */}
               {isProcessing && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-auto">
                   {/* Processing Steps */}
-                  <div className="lg:col-span-2 space-y-6">
+                  <div className="lg:col-span-2 space-y-6 overflow-y-auto">
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
@@ -919,41 +925,39 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   </div>
 
                   {/* Live Updates */}
-                  <div className="space-y-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        Real-time Updates
-                      </h4>
-                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {liveUpdates.length > 0 ? (
-                          liveUpdates.map((update) => (
-                            <div
-                              key={update.id}
-                              className={`p-2 rounded text-xs ${
-                                update.type === "error"
-                                  ? "bg-red-50 text-red-700"
-                                  : update.type === "success"
-                                  ? "bg-green-50 text-green-700"
-                                  : update.type === "warning"
-                                  ? "bg-yellow-50 text-yellow-700"
-                                  : "bg-blue-50 text-blue-700"
-                              }`}
-                            >
-                              <div className="flex justify-between items-start">
-                                <span>{update.message}</span>
-                                <span className="text-gray-500 ml-2">
-                                  {update.timestamp}
-                                </span>
-                              </div>
+                  <div className="space-y-6 overflow-y-auto rounded-lg bg-white border border-gray-200 p-4 max-h-[400px]">
+                    <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      Real-time Updates
+                    </h4>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {liveUpdates.length > 0 ? (
+                        liveUpdates.map((update) => (
+                          <div
+                            key={update.id}
+                            className={`p-2 rounded text-xs ${
+                              update.type === "error"
+                                ? "bg-red-50 text-red-700"
+                                : update.type === "success"
+                                ? "bg-green-50 text-green-700"
+                                : update.type === "warning"
+                                ? "bg-yellow-50 text-yellow-700"
+                                : "bg-blue-50 text-blue-700"
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <span>{update.message}</span>
+                              <span className="text-gray-500 ml-2">
+                                {update.timestamp}
+                              </span>
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-sm text-gray-500 text-center py-4">
-                            Batch processing will start soon...
                           </div>
-                        )}
-                      </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-gray-500 text-center py-4">
+                          Batch processing will start soon...
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -963,34 +967,37 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
           {/* Results Tab */}
           {activeTab === "results" && processingData.status === "completed" && (
-            <div className="space-y-6 h-[400px] overflow-y-auto px-2">
+            <div className="space-y-6 h-[400px] overflow-y-auto px-2 flex flex-col">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Total Records
+                      </p>
+                      <p className="text-2xl font-bold text-gray-800 mt-2">
+                        {processingData.totalRecords}
+                      </p>
+                    </div>
+                    <div className="bg-gray-200 p-2 rounded-full">
+                      <Database size={24} className="text-gray-700" />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-green-700">
-                        Records Created
+                        Created
                       </p>
                       <p className="text-2xl font-bold text-green-800 mt-2">
                         {processingData.summary.created}
                       </p>
                     </div>
                     <div className="bg-green-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-green-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
+                      <Database size={24} className="text-green-700" />
                     </div>
                   </div>
                 </div>
@@ -999,27 +1006,30 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-blue-700">
-                        Records Updated
+                        Updated
                       </p>
                       <p className="text-2xl font-bold text-blue-800 mt-2">
                         {processingData.summary.updated}
                       </p>
                     </div>
                     <div className="bg-blue-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-blue-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
+                      <Database size={24} className="text-blue-700" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-yellow-700">
+                        Skipped
+                      </p>
+                      <p className="text-2xl font-bold text-yellow-800 mt-2">
+                        {processingData.summary.skippedTotal}
+                      </p>
+                    </div>
+                    <div className="bg-yellow-200 p-2 rounded-full">
+                      <Database size={24} className="text-yellow-700" />
                     </div>
                   </div>
                 </div>
@@ -1035,49 +1045,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                       </p>
                     </div>
                     <div className="bg-orange-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-orange-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        Existing Records
-                      </p>
-                      <p className="text-2xl font-bold text-gray-800 mt-2">
-                        {processingData.summary.existingRecords}
-                      </p>
-                    </div>
-                    <div className="bg-gray-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-gray-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                      <Database size={24} className="text-orange-700" />
                     </div>
                   </div>
                 </div>
@@ -1093,76 +1061,20 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                       </p>
                     </div>
                     <div className="bg-red-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-red-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
+                      <Database size={24} className="text-red-700" />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Processing Summary */}
-              {processingData.duration && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-medium text-sm text-gray-800 mb-2">
-                    Batch Processing Summary
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Total Records:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.totalRecords}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Total Batches:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.batchProgress.totalBatches || "N/A"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Processing Time:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.duration}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Total Skipped:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.summary.skippedTotal}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Completed At:</span>
-                      <span className="ml-2 font-medium">
-                        {new Date(processingData.endTime).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Detailed Results */}
-              <div className="bg-white border border-gray-200 rounded-lg">
-                <div className="p-4 border-b border-gray-200">
+              {/* Detailed Results: Show only failed records with error reasons */}
+              {/* Detailed Results: Show only failed records with error reasons */}
+              {/* <div className="bg-white border border-gray-200 rounded-lg flex-1 flex flex-col">
+                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-800">
-                    Detailed Results ({filteredResults.length} records)
+                    Failed Records Details ({filteredResults.length} records)
                   </h3>
-                </div>
-
-                <div className="border-b border-gray-200 mb-4">
-                  <nav className="flex -mb-px">
+                  <nav className="flex space-x-2">
                     {filterTabs.map((tab) => (
                       <button
                         key={tab.value}
@@ -1182,60 +1094,58 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   </nav>
                 </div>
 
-                <div className="max-h-80 overflow-y-auto">
-                  {processingData.results.length > 0 ? (
+                <div className="overflow-y-auto flex-1 max-h-[300px]">
+                  {filteredResults.length > 0 ? (
                     <div className="divide-y divide-gray-100">
                       {filteredResults.map((item, index) => (
                         <div
                           key={index}
-                          className="p-4 hover:bg-gray-50 transition-colors"
+                          className="p-4 hover:bg-gray-50 transition-colors flex justify-between items-start"
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs text-gray-500">
-                                  Row {item.row}
-                                </span>
-                                <span className="text-sm font-medium text-gray-800">
-                                  Customer Code: {item.customercodeid}
-                                </span>
-                                <span className="text-sm font-medium text-gray-800">
-                                  Name: {item?.customername}
-                                </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-xs text-gray-500">
+                                Row {item.row}
+                              </span>
+                              <span className="text-sm font-medium text-gray-800">
+                                Customer Code: {item.customercodeid}
+                              </span>
+                              <span className="text-sm font-medium text-gray-800">
+                                Name: {item.customername || "N/A"}
+                              </span>
+                            </div>
+                            {item.action && (
+                              <div className="text-xs text-blue-600">
+                                {item.action}
                               </div>
-                              {item.action && (
-                                <div className="text-xs text-blue-600">
-                                  {item.action}
-                                </div>
-                              )}
-                              {item.error && (
-                                <div className="text-xs text-red-500 mt-1">
-                                  Error: {item.error}
-                                </div>
-                              )}
-                              {item.warnings && item.warnings.length > 0 && (
-                                <div className="text-xs text-yellow-600 mt-1">
-                                  Warnings: {item.warnings.join(", ")}
-                                </div>
-                              )}
-                            </div>
-                            <div className="ml-4">
-                              {renderStatusBadge(item.status)}
-                            </div>
+                            )}
+                            {item.error && (
+                              <div className="text-xs text-red-600 mt-1">
+                                Error: {item.error}
+                              </div>
+                            )}
+                            {item.warnings && item.warnings.length > 0 && (
+                              <div className="text-xs text-yellow-600 mt-1">
+                                Warnings: {item.warnings.join(", ")}
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            {renderStatusBadge(item.status)}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="p-8 text-center text-gray-500">
-                      No results to display
+                      No failed records to display
                     </div>
                   )}
                 </div>
-              </div>
+              </div> */}
 
               {/* Action Buttons */}
-              <div className="flex justify-end pb-4 gap-3">
+              <div className="flex justify-end pb-4 gap-3 mt-4">
                 <button
                   onClick={resetForm}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
