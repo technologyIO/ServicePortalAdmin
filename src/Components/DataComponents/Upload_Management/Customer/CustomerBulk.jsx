@@ -1142,7 +1142,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     </div>
                   )}
                 </div>
-              </div> */}
+              </div> */} 
 
               {/* Action Buttons */}
               <div className="flex justify-end pb-4 gap-3 mt-4">
