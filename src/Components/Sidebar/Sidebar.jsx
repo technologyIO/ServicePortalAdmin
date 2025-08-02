@@ -85,6 +85,7 @@ export default function Sidebar({ onSidebarItemClick }) {
         { component: "Product", path: "/product" },
         { component: "Checklist", path: "/admin-checklist" },
         { component: "Equipment", path: "/equipment" },
+        { component: "Complaint Type", path: "/complaint-type" },
         { component: "Spare Master", path: "/spare" },
         { component: "PM Doc Master", path: "/pm-doc-master" },
         { component: "Format Master", path: "/formatmaster" },

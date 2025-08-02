@@ -78,6 +78,7 @@ import OpenOnCallOrder from './Components/DataComponents/CloseOrder/OpenOnCallOr
 import CloseOncallOrder from './Components/DataComponents/CloseOrder/CloseOncallOrder';
 import QuoteTemplate from './Components/Template/OnCallQuoteTemplate';
 import ProposalQuoteTemplate from './Components/Template/ProposalQuoteTemplate';
+import ComplaintType from './Components/DataComponents/Master_Managemnet/ComplaintType/ComplaintType';
 
 
 const PrivateRoute = ({ children }) => {
@@ -334,6 +335,11 @@ const AppContent = () => {
             <Route path="/hub-stock" element={<ProtectedRoute
               component={HubStock}
               componentName="Hub Stock"
+              requiredPermission="read"
+            />} />
+            <Route path="/complaint-type" element={<ProtectedRoute
+              component={ComplaintType}
+              componentName="Complaint Type"
               requiredPermission="read"
             />} />
             <Route path="/pending-complaint" element={<ProtectedRoute
