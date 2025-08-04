@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-
 import SearchIcon from "@mui/icons-material/Search";
-
 import { Modal, ModalDialog, Option, Select, TextField } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -29,174 +25,201 @@ function Customer() {
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
-
-    // ✅ Refresh data when modal is closed
     if (typeof getData === "function") {
       getData();
     }
   };
   const [selectedRows, setSelectedRows] = useState([]);
 
-  const [BranchData, setBranchData] = useState([]);
-  const [state, setstate] = useState([]);
-  const [region, setregion] = useState([]);
-  const [country, setCountry] = useState([]);
-  const [cityList, setCityList] = useState([]);
+  // For cascading selects
+  const [countryOptions, setCountryOptions] = useState([]);
   const [regionOptions, setRegionOptions] = useState([]);
-  // Get All City
+  const [cityOptions, setCityOptions] = useState([]);
+
+  const [selectedCountries, setSelectedCountries] = useState([]);
+  const [filteredRegions, setFilteredRegions] = useState([]);
+  const [selectedRegions, setSelectedRegions] = useState([]);
+  const [filteredCities, setFilteredCities] = useState([]);
+  const [selectedCities, setSelectedCities] = useState([]);
+
+  // --- Data Fetch ---
   useEffect(() => {
-    const getCities = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allcity`
-        );
-        const cities = res.data.map((city) => ({
-          label: city.name,
-          id: city._id,
-          state: city.state,
-          status: city.status,
-        }));
-        setCityList(cities);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    getCities();
-  }, []);
-  // Get All State/state
-  useEffect(() => {
-    const getState = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allstate`
-        );
-        const allStates = res.data;
-
-        // 1. Extract only region strings
-        const regionLabels = allStates.map((state) => state.stateId);
-
-        // 2. Create unique region list
-        const uniqueRegions = [...new Set(regionLabels)].map((region) => ({
-          label: region,
-        }));
-
-        setRegionOptions(uniqueRegions);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    getState();
-  }, []);
-
-  console.log(regionOptions, "regionOptions");
-  useEffect(() => {
-    const getRegion = async () => {
-      try {
-        const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/api/allregion`
-        );
-        const Region = res.data.regions.map((regions) => ({
-          label: regions.regionName,
-          id: regions._id,
-          country: regions.country,
-          status: regions.status,
-        }));
-        setregion(Region);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    getRegion();
-  }, []);
-  //Get All country
-  useEffect(() => {
-    const getCountry = async () => {
+    async function getCountry() {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allCountries`
         );
-
-        // Map the API response to match Autocomplete's expected format
         const Country = res.data.map((country) => ({
           label: country.name,
           id: country._id,
           status: country.status,
         }));
-
-        setCountry(Country);
+        setCountryOptions(Country);
       } catch (err) {
         console.error(err);
       }
-    };
-
+    }
     getCountry();
   }, []);
+
   useEffect(() => {
-    const getBranch = async () => {
+    async function getRegions() {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/allbranch`
+          `${process.env.REACT_APP_BASE_URL}/collections/api/allregion`
         );
-        const cities = res.data.map((branches) => ({
-          label: branches.name,
-          id: branches._id,
-          state: branches.state,
-          status: branches.status,
-          city: branches.city,
-          branchShortCode: branches.branchShortCode,
+        const regionsData = res.data.regions.map((reg) => ({
+          label: reg.regionName,
+          id: reg._id,
+          country: reg.country,
+          status: reg.status,
         }));
-        setBranchData(cities);
+        setRegionOptions(regionsData);
       } catch (err) {
         console.error(err);
       }
-    };
-
-    getBranch();
+    }
+    getRegions();
   }, []);
+
+  useEffect(() => {
+    async function getCities() {
+      try {
+        const res = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/allcitybystate`
+        );
+        const cities = Array.isArray(res.data)
+          ? res.data.map((city) => ({
+              label: city.name,
+              id: city._id,
+              region: city.region,
+              state: city.state,
+              status: city.status,
+            }))
+          : [];
+        setCityOptions(cities);
+      } catch (err) {
+        console.error(err);
+        setCityOptions([]);
+      }
+    }
+    getCities();
+  }, []);
+
+  // --- Cascading Selects ---
+  useEffect(() => {
+    if (!selectedCountries.length) {
+      setFilteredRegions(regionOptions);
+    } else {
+      setFilteredRegions(
+        regionOptions.filter((region) =>
+          selectedCountries.some((country) => region.country === country.label)
+        )
+      );
+    }
+    setSelectedRegions([]);
+    setFilteredCities([]);
+    setSelectedCities([]);
+    setCurrentData((prev) => ({
+      ...prev,
+      country: selectedCountries.map((c) => c.label).join(", "),
+      region: "",
+      city: "",
+    }));
+    // eslint-disable-next-line
+  }, [selectedCountries, regionOptions]);
+
+  useEffect(() => {
+    if (!selectedRegions.length) {
+      setFilteredCities(cityOptions);
+    } else {
+      setFilteredCities(
+        cityOptions.filter((city) =>
+          selectedRegions.some((region) => city.region === region.label)
+        )
+      );
+    }
+    setSelectedCities([]);
+    setCurrentData((prev) => ({
+      ...prev,
+      region: selectedRegions.map((r) => r.label).join(", "),
+      city: "",
+    }));
+    // eslint-disable-next-line
+  }, [selectedRegions, cityOptions]);
+
+  useEffect(() => {
+    setCurrentData((prev) => ({
+      ...prev,
+      city: selectedCities.map((c) => c.label).join(", "),
+    }));
+    // eslint-disable-next-line
+  }, [selectedCities]);
+
+  // Table and CRUD Logic (no removal)
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
       setSelectedRows(data?.map((country) => country._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
 
   const handleRowSelect = (countryId) => {
     if (selectedRows.includes(countryId)) {
-      // Deselect the row
       setSelectedRows(selectedRows.filter((id) => id !== countryId));
     } else {
-      // Select the row
       setSelectedRows([...selectedRows, countryId]);
     }
   };
 
   const handleCloseModal = () => {
-    setShowModal((prev) => !prev);
+    setShowModal(false);
     setEditModal(false);
     setCurrentData({});
+    setSelectedCountries([]);
+    setSelectedRegions([]);
+    setSelectedCities([]);
   };
 
   const handleOpenModal = (country) => {
     setCurrentData(country);
     setEditModal(true);
     setShowModal(true);
+
+    // autofill cascading fields for edit
+    // Country
+    const foundCountries = countryOptions.filter((c) =>
+      (country?.country || "").split(", ").includes(c.label)
+    );
+    setSelectedCountries(foundCountries);
+    // Region
+    const rOptions = regionOptions.filter((r) =>
+      foundCountries.map((c) => c.label).includes(r.country)
+    );
+    setFilteredRegions(rOptions);
+    const foundRegions = rOptions.filter((r) =>
+      (country?.region || "").split(", ").includes(r.label)
+    );
+    setSelectedRegions(foundRegions);
+    // City
+    const cOptions = cityOptions.filter((c) =>
+      foundRegions.map((r) => r.label).includes(c.region)
+    );
+    setFilteredCities(cOptions);
+    const foundCities = cOptions.filter((c) =>
+      (country?.city || "").split(", ").includes(c.label)
+    );
+    setSelectedCities(foundCities);
   };
 
   const handleFormData = (name, value) => {
-    setCurrentData((prev) => {
-      return {
-        ...prev,
-        [name]: value,
-      };
-    });
+    setCurrentData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleDelete = (id) => {
@@ -264,10 +287,14 @@ function Customer() {
   useEffect(() => {
     getData();
   }, []);
-
   useEffect(() => {
     getData();
   }, [page]);
+   useEffect(() => {
+      if (!searchQuery) {
+        getData();
+      }
+    }, [searchQuery]);
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -294,6 +321,7 @@ function Customer() {
         toast.error(message);
       });
   };
+
   const handleEditCountry = (id) => {
     axios
       .put(
@@ -311,6 +339,14 @@ function Customer() {
         toast.error(message);
       });
   };
+  const handleShowCreateModal = () => {
+    setEditModal(false);
+    setCurrentData({});
+    setShowModal(true);
+    setSelectedCountries([]);
+    setSelectedRegions([]);
+    setSelectedCities([]);
+  };
 
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
@@ -318,6 +354,29 @@ function Customer() {
 
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
+  };
+
+  // --- Select All logic for cascaded fields ---
+  const handleCountrySelectAll = () => {
+    if (selectedCountries.length === countryOptions.length) {
+      setSelectedCountries([]);
+    } else {
+      setSelectedCountries([...countryOptions]);
+    }
+  };
+  const handleRegionSelectAll = () => {
+    if (selectedRegions.length === filteredRegions.length) {
+      setSelectedRegions([]);
+    } else {
+      setSelectedRegions([...filteredRegions]);
+    }
+  };
+  const handleCitySelectAll = () => {
+    if (selectedCities.length === filteredCities.length) {
+      setSelectedCities([]);
+    } else {
+      setSelectedCities([...filteredCities]);
+    }
   };
   return (
     <>
@@ -360,7 +419,7 @@ function Customer() {
                 Upload
               </button>
               <button
-                onClick={handleCloseModal}
+                onClick={handleShowCreateModal}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
@@ -575,8 +634,9 @@ function Customer() {
                           </svg>
                         </button>
                         <button
-                          onClick={() => handleDelete(item?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          onClick={() => handleDelete(item._id)}
+                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          title="Delete"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -728,6 +788,117 @@ function Customer() {
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          Country
+                        </label>
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleCountrySelectAll}
+                        >
+                          {selectedCountries.length === countryOptions.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        className=" w-full"
+                        options={countryOptions}
+                        value={selectedCountries}
+                        getOptionLabel={(option) =>
+                          option ? option.label : ""
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            name="country"
+                            label="Select country"
+                          />
+                        )}
+                        sx={{ width: 300 }}
+                        onChange={(event, value) => setSelectedCountries(value)}
+                        disableCloseOnSelect
+                      />
+                    </div>
+                    {/* REGION FIELD + BUTTON */}
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          Region
+                        </label>
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleRegionSelectAll}
+                          disabled={!filteredRegions.length}
+                        >
+                          {selectedRegions.length === filteredRegions.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        className=" w-full"
+                        options={filteredRegions}
+                        value={selectedRegions}
+                        getOptionLabel={(option) =>
+                          option ? option.label : ""
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            name="region"
+                            label="Select region"
+                          />
+                        )}
+                        sx={{ width: 300 }}
+                        onChange={(event, value) => setSelectedRegions(value)}
+                        disableCloseOnSelect
+                        disabled={!selectedCountries.length}
+                      />
+                    </div>
+                    {/* CITY FIELD + BUTTON */}
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          City
+                        </label>
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleCitySelectAll}
+                          disabled={!filteredCities.length}
+                        >
+                          {selectedCities.length === filteredCities.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        className=" w-full"
+                        options={filteredCities}
+                        value={selectedCities}
+                        getOptionLabel={(option) =>
+                          option ? option.label : ""
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            name="city"
+                            label="Select city"
+                          />
+                        )}
+                        sx={{ width: 300 }}
+                        onChange={(event, value) => setSelectedCities(value)}
+                        disableCloseOnSelect
+                        disabled={!selectedRegions.length}
+                      />
+                    </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Street{" "}
@@ -740,28 +911,6 @@ function Customer() {
                         id="street"
                         value={currentData?.street}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2  text-sm font-medium text-gray-900 ">
-                        City{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={cityList} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="city"
-                            label="Select City"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("city", value ? value.label : "")
-                        }
                       />
                     </div>
                     <div className="relative  w-full mb-5 group">
@@ -813,44 +962,7 @@ function Customer() {
                         }
                       />
                     </div> */}
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Region{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={regionOptions} // ✅ from unique regions
-                        getOptionLabel={(option) => option.label}
-                        renderInput={(params) => (
-                          <TextField {...params} name="region" label="Region" />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("region", value ? value.label : "")
-                        }
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Country{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={country} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="country"
-                            label="Select country"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("country", value ? value.label : "")
-                        }
-                      />
-                    </div>
+
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Telephone{" "}

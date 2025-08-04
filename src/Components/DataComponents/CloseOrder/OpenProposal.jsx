@@ -106,7 +106,11 @@ function OpenProposal() {
 
     setFilteredData(filtered);
   };
-
+ useEffect(() => {
+    if (!searchQuery) {
+      fetchProposals();
+    }
+  }, [searchQuery]);
   /* ───────────────────────── MODALS ───────────────────────── */
   const handleOpenApprovalModal = (proposal) => {
     setSelectedProposal(proposal);

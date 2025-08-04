@@ -415,7 +415,8 @@ function Aerb() {
                           </button>
                           <button
                             onClick={() => handleDelete(item?._id)}
-                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"

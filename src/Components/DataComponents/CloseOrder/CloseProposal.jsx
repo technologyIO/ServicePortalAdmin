@@ -97,7 +97,11 @@ function CloseProposal() {
 
     setFilteredData(filtered);
   };
-
+ useEffect(() => {
+    if (!searchQuery) {
+      fetchProposals();
+    }
+  }, [searchQuery]);
   /* ───────────────────────── MODALS ───────────────────────── */
   const handleOpenViewModal = (proposal) => {
     setSelectedProposal(proposal);

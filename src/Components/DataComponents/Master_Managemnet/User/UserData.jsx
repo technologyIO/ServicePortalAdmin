@@ -147,6 +147,11 @@ const UserData = () => {
   useEffect(() => {
     getData();
   }, []);
+  useEffect(() => {
+      if (!searchQuery) {
+        getData();
+      }
+    }, [searchQuery]);
 
   useEffect(() => {
     getData();
@@ -305,18 +310,23 @@ const UserData = () => {
                       </label>
                     </div>
                   </th>
+                  <th className="px-4 text-left font-medium">Employee ID</th>
+
                   <th className="px-4 text-left font-medium">First Name</th>
                   <th className="px-4 text-left font-medium">Last Name</th>
-                  <th className="px-4 text-left font-medium">User Type</th>
-                  <th className="px-4 text-left font-medium">Role</th>
                   <th className="px-4 text-left font-medium">Email</th>
                   <th className="px-4 text-left font-medium">Mobile Number</th>
-                  <th className="px-4 text-left font-medium">Branch</th>
+                  <th className="px-4 text-left font-medium">User Type</th>
+                  <th className="px-4 text-left font-medium">Role</th>
+                  <th className="px-4 text-left font-medium">Manager Email</th>
+                  <th className="px-4 text-left font-medium">Dealer </th>
+                  <th className="px-4 text-left font-medium">Skills</th>
+                  <th className="px-4 text-left font-medium">Status</th>
+                  {/* <th className="px-4 text-left font-medium">Branch</th>
                   <th className="px-4 text-left font-medium">
                     Login Expiry Date
                   </th>
-                  <th className="px-4 text-left font-medium">Status</th>
-                  <th className="px-4 text-left font-medium">Employee ID</th>
+
                   <th className="px-4 text-left font-medium">Geo</th>
                   <th className="px-4 text-left font-medium">Region</th>
                   <th className="px-4 text-left font-medium">Country</th>
@@ -324,17 +334,15 @@ const UserData = () => {
                   <th className="px-4 text-left font-medium">City</th>
                   <th className="px-4 text-left font-medium">Department</th>
 
-                  <th className="px-4 text-left font-medium">Manager Email</th>
-                  <th className="px-4 text-left font-medium">Dealer </th>
-                  <th className="px-4 text-left font-medium">Dealer Email</th>  
-                  <th className="px-4 text-left font-medium">Dealer Code</th>
-                  <th className="px-4 text-left font-medium">Skills</th>
+                  <th className="px-4 text-left font-medium">Dealer Email</th>
+                  <th className="px-4 text-left font-medium">Dealer Code</th> */}
+
                   <th className="px-4 text-left font-medium">Device ID</th>
-                  <th className="px-4 text-left font-medium">
+                  {/* <th className="px-4 text-left font-medium">
                     Device Reg Date
                   </th>
                   <th className="px-4 text-left font-medium">Created Date</th>
-                  <th className="px-4 text-left font-medium">Modified Date</th>
+                  <th className="px-4 text-left font-medium">Modified Date</th> */}
                   <th className="px-4 text-left font-medium">Action</th>
                 </tr>
               </thead>
@@ -360,8 +368,12 @@ const UserData = () => {
                           </label>
                         </div>
                       </th>
+                      <td className="p-4">{item?.employeeid}</td>
                       <td className="p-4 capitalize">{item?.firstname}</td>
                       <td className="p-4 capitalize">{item?.lastname}</td>
+                      <td className="p-4">{item?.email}</td>
+                      <td className="p-4">{item?.mobilenumber}</td>
+
                       <td className="p-4">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
@@ -374,16 +386,9 @@ const UserData = () => {
                       </td>
 
                       <td className="p-4 capitalize">{item?.role?.roleName}</td>
-                      <td className="p-4">{item?.email}</td>
-                      <td className="p-4">{item?.mobilenumber}</td>
-                      <td className="p-4">
-                        {Array.isArray(item?.branch)
-                          ? item?.branch.join(", ")
-                          : item?.branch}
-                      </td>
-                      <td className="p-4">
-                        {moment(item?.loginexpirydate).format("MMM D, YYYY")}
-                      </td>
+                      <td className="p-4">{item?.manageremail?.join(", ")}</td>
+                      <td className="p-4">{item?.dealerInfo?.dealerName}</td>
+                      <td className="p-4">{formatSkills(item?.skills)}</td>
                       <td className="p-4">
                         <span
                           className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
@@ -397,7 +402,15 @@ const UserData = () => {
                           {item?.status}
                         </span>
                       </td>
-                      <td className="p-4">{item?.employeeid}</td>
+                      {/* <td className="p-4">
+                        {Array.isArray(item?.branch)
+                          ? item?.branch.join(", ")
+                          : item?.branch}
+                      </td> */}
+                      {/* <td className="p-4">
+                        {moment(item?.loginexpirydate).format("MMM D, YYYY")}
+                      </td>
+
                       <td className="p-4">
                         {getDemographicNames(item, "geo")}
                       </td>
@@ -416,11 +429,9 @@ const UserData = () => {
 
                       <td className="p-4">{item?.department}</td>
 
-                      <td className="p-4">{item?.manageremail?.join(", ")}</td>
-                      <td className="p-4">{item?.dealerInfo?.dealerName}</td>
                       <td className="p-4">{item?.dealerInfo?.dealerEmail}</td>
-                      <td className="p-4">{item?.dealerInfo?.dealerCode}</td>
-                      <td className="p-4">{formatSkills(item?.skills)}</td>
+                      <td className="p-4">{item?.dealerInfo?.dealerCode}</td> */}
+
                       <td className="p-4">
                         <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 shadow-sm rounded-md w-fit min-w-[250px]">
                           <span className="text-sm text-blue-900 font-medium">
@@ -435,7 +446,7 @@ const UserData = () => {
                         </div>
                       </td>
 
-                      <td className="p-4">
+                      {/* <td className="p-4">
                         {item?.deviceregistereddate &&
                           moment(item?.deviceregistereddate).format(
                             "MMM D, YYYY [at] h:mm A"
@@ -446,7 +457,7 @@ const UserData = () => {
                       </td>
                       <td className="p-4">
                         {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                      </td>
+                      </td> */}
                       <td className="p-4">
                         <div className="flex gap-4">
                           <button
@@ -470,7 +481,7 @@ const UserData = () => {
                           </button>
                           <button
                             onClick={() => handleDelete(item?._id)}
-                            className="border p-2 bg-blue-700 text-white rounded hover:bg-blue-500"
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"

@@ -79,7 +79,11 @@ function OpenOnCallOrder() {
       setLoading(false);
     }
   };
-
+ useEffect(() => {
+    if (!searchQuery) {
+      fetchOnCalls();
+    }
+  }, [searchQuery]);
   // Open modal
   const openModal = (oc) => {
     setSelected(oc);

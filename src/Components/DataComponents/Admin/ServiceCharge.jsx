@@ -97,7 +97,11 @@ function ServiceCharge() {
     }
     handleCloseModal();
   };
-
+  useEffect(() => {
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
   // Update
   const handleEdit = async (id) => {
     try {

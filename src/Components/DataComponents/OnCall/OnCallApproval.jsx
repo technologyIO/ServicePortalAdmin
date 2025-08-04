@@ -106,20 +106,22 @@ function OnCallApproval() {
     });
     return rows;
   };
-// After fetching all data:
-useEffect(() => {
-  // get only >5% discount OnCalls, recalculate page
-  const filtered = oncallList.filter(
-    (item) =>
-      typeof item.discountPercentage === "number" &&
-      !Number.isNaN(item.discountPercentage) &&
-      item.discountPercentage > 5
-  );
-  setFilteredOncallList(filtered);
-  setTotalPages(Math.ceil(filtered.length / limit));
-  // Set what rows to show on this page
-  setDisplayedRows(processOnCalls(filtered.slice((page - 1) * limit, page * limit)));
-}, [oncallList, page]);
+  // After fetching all data:
+  useEffect(() => {
+    // get only >5% discount OnCalls, recalculate page
+    const filtered = oncallList.filter(
+      (item) =>
+        typeof item.discountPercentage === "number" &&
+        !Number.isNaN(item.discountPercentage) &&
+        item.discountPercentage > 5
+    );
+    setFilteredOncallList(filtered);
+    setTotalPages(Math.ceil(filtered.length / limit));
+    // Set what rows to show on this page
+    setDisplayedRows(
+      processOnCalls(filtered.slice((page - 1) * limit, page * limit))
+    );
+  }, [oncallList, page]);
 
   useEffect(() => {
     fetchOnCalls();
@@ -162,7 +164,11 @@ useEffect(() => {
       processOnCalls(searchFiltered.slice((page - 1) * limit, page * limit))
     );
   };
-
+  useEffect(() => {
+    if (!searchQuery) {
+      fetchOnCalls();
+    }
+  }, [searchQuery]);
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSearch();

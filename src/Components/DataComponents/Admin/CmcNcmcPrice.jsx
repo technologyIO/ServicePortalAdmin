@@ -121,7 +121,7 @@ function CmcNcmcPrice() {
         item.status?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     });
-    
+
     setFilteredData(filtered);
   };
 
@@ -143,7 +143,11 @@ function CmcNcmcPrice() {
         console.log(error);
       });
   };
-
+  useEffect(() => {
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
   useEffect(() => {
     getData();
   }, []);
@@ -211,7 +215,7 @@ function CmcNcmcPrice() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleSearch();
                     }
                   }}
@@ -401,8 +405,9 @@ function CmcNcmcPrice() {
                           </svg>
                         </button>
                         <button
-                          onClick={() => handleDelete(item?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          onClick={() => handleDelete(item._id)}
+                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          title="Delete"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"

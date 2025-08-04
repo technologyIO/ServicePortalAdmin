@@ -181,6 +181,11 @@ const AdminDepartment = () => {
     // getAllCitys()
   }, []);
   useEffect(() => {
+    if (!searchQuery) {
+      getAllData();
+    }
+  }, [searchQuery]);
+  useEffect(() => {
     getAllData();
     getAllCountries();
   }, [page]);
@@ -382,7 +387,7 @@ const AdminDepartment = () => {
                         </button>
                         <button
                           onClick={() => handleDelete(i?._id)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -402,57 +407,57 @@ const AdminDepartment = () => {
               </tbody>
             </table>
           </div>
-         <div
-                    className="Pagination-laptopUp"
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "16px",
-                    }}
-                  >
+          <div
+            className="Pagination-laptopUp"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "16px",
+            }}
+          >
+            <button
+              className={`border rounded p-1 ${
+                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+              } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
+              onClick={handlePreviousPage}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              {Array.from({ length: totalPages }, (_, index) => index + 1)
+                .filter((p) => {
+                  // Show the first page, last page, and pages around the current page
+                  return (
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 3 && p <= page + 3)
+                  );
+                })
+                .map((p, i, array) => (
+                  <React.Fragment key={p}>
+                    {/* Add ellipsis for skipped ranges */}
+                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
-                      className={`border rounded p-1 ${
-                        page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-                      } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-                      onClick={handlePreviousPage}
-                      disabled={page === 1}
+                      className={`border px-3 rounded ${
+                        p === page ? "bg-blue-700 text-white" : ""
+                      }`}
+                      onClick={() => setPage(p)}
+                      disabled={p === page}
                     >
-                      Previous
+                      {p}
                     </button>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      {Array.from({ length: totalPages }, (_, index) => index + 1)
-                        .filter((p) => {
-                          // Show the first page, last page, and pages around the current page
-                          return (
-                            p === 1 ||
-                            p === totalPages ||
-                            (p >= page - 3 && p <= page + 3)
-                          );
-                        })
-                        .map((p, i, array) => (
-                          <React.Fragment key={p}>
-                            {/* Add ellipsis for skipped ranges */}
-                            {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                            <button
-                              className={`border px-3 rounded ${
-                                p === page ? "bg-blue-700 text-white" : ""
-                              }`}
-                              onClick={() => setPage(p)}
-                              disabled={p === page}
-                            >
-                              {p}
-                            </button>
-                          </React.Fragment>
-                        ))}
-                    </div>
-                    <button
-                      className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-                      onClick={handleNextPage}
-                      disabled={page === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
+                  </React.Fragment>
+                ))}
+            </div>
+            <button
+              className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
+              onClick={handleNextPage}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
 
           <Modal
             open={showModal}
@@ -462,7 +467,7 @@ const AdminDepartment = () => {
           >
             <ModalDialog size="lg" className="p-2 ">
               <div className="flex items-start justify-between p-2  px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
-               <h3 className="text-xl font-semibold">
+                <h3 className="text-xl font-semibold">
                   {editModal ? "Update Department" : "Create Department"}
                 </h3>
                 <div
@@ -540,7 +545,7 @@ const AdminDepartment = () => {
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                      {editModal ? "Update Department" : "Create Department"} 
+                    {editModal ? "Update Department" : "Create Department"}
                   </button>
                 </div>
               </form>

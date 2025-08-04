@@ -79,7 +79,9 @@ function CheckPointType() {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(`${process.env.REACT_APP_BASE_URL}/collections/CheckPointType/${id}`)
+          .delete(
+            `${process.env.REACT_APP_BASE_URL}/collections/CheckPointType/${id}`
+          )
           .then((res) => {
             Swal.fire("Deleted!", "Countrys has been deleted.", "success");
           })
@@ -131,6 +133,11 @@ function CheckPointType() {
   useEffect(() => {
     getAllCountries();
   }, []);
+  useEffect(() => {
+    if (!searchQuery) {
+      getAllCountries();
+    }
+  }, [searchQuery]);
 
   useEffect(() => {
     getAllCountries();
@@ -190,46 +197,46 @@ function CheckPointType() {
         ) : (
           <>
             <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center">
-              <FormControl sx={{ flex: 1 }} size="sm">
-                <Input
-                  size="sm"
-                  placeholder="Search"
-                  startDecorator={<SearchIcon />}
-                  value={searchQuery}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </FormControl>
-              <button
-                onClick={handleSearch}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
-              >
-                Search
-              </button>
-            </div>
+              <div className="flex gap-3 justify-center">
+                <FormControl sx={{ flex: 1 }} size="sm">
+                  <Input
+                    size="sm"
+                    placeholder="Search"
+                    startDecorator={<SearchIcon />}
+                    value={searchQuery}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch();
+                      }
+                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </FormControl>
+                <button
+                  onClick={handleSearch}
+                  type="button"
+                  className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                >
+                  Search
+                </button>
+              </div>
 
-            <div className="flex gap-3 ">
-              <button
-                onClick={handleCloseModal}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
-              >
-                Create
-              </button>
-              <button
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
-              >
-                Filter
-              </button>
+              <div className="flex gap-3 ">
+                <button
+                  onClick={handleCloseModal}
+                  type="button"
+                  className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                >
+                  Create
+                </button>
+                <button
+                  type="button"
+                  className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                >
+                  Filter
+                </button>
+              </div>
             </div>
-          </div>
             {selectedRows?.length > 0 && (
               <div className="flex justify-center">
                 <button
@@ -321,7 +328,9 @@ function CheckPointType() {
                         {moment(checkListType?.createdAt).format("MMM D, YYYY")}
                       </td>
                       <td className="p-4 align-middle whitespace-nowrap">
-                        {moment(checkListType?.modifiedAt).format("MMM D, YYYY")}
+                        {moment(checkListType?.modifiedAt).format(
+                          "MMM D, YYYY"
+                        )}
                       </td>
 
                       <td className="p-4 align-middle whitespace-nowrap">
@@ -349,7 +358,7 @@ function CheckPointType() {
                           </button>
                           <button
                             onClick={() => handleDelete(checkListType?._id)}
-                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -501,7 +510,9 @@ function CheckPointType() {
                       type="submit"
                       className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5   :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                     >
-                          {editModal ? "Update CheckPoint Type " : "Create CheckPoint Type "} 
+                      {editModal
+                        ? "Update CheckPoint Type "
+                        : "Create CheckPoint Type "}
                     </button>
                   </div>
                 </form>

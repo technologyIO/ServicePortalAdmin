@@ -49,7 +49,9 @@ function CloseOnCallOrder() {
   const fetchOnCalls = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/phone/oncall/pagecallcompleted?page=${page}&limit=${limit}`);
+      const res = await api.get(
+        `/phone/oncall/pagecallcompleted?page=${page}&limit=${limit}`
+      );
 
       const data = res.data.data || res.data;
       const pagesCount =
@@ -98,7 +100,11 @@ function CloseOnCallOrder() {
 
     setFilteredData(filtered);
   };
-
+  useEffect(() => {
+    if (!searchQuery) {
+      fetchOnCalls();
+    }
+  }, [searchQuery]);
   /* ───────────────────────── MODALS ───────────────────────── */
   const handleOpenViewModal = (onCall) => {
     setSelectedOnCall(onCall);

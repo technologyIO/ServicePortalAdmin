@@ -19,29 +19,28 @@ function Dealer() {
   const [currentData, setCurrentData] = useState({});
 
   // Location / dropdown data
-  const [state, setState] = useState([]); // all states options, format [{label, id, ...}]
-  const [allCities, setAllCities] = useState([]); // all cities raw, ensure array
+  const [state, setState] = useState([]); // all states options [{label, id, ...}]
+  const [allCities, setAllCities] = useState([]); // all cities raw
 
-  // Filtered data based on selections
+  // Filtered data and selections
   const [filteredCities, setFilteredCities] = useState([]);
+  const [selectedStates, setSelectedStates] = useState([]);
+  const [selectedCities, setSelectedCities] = useState([]);
 
-  // Multiple selection states for cascading dropdowns
-  const [selectedStates, setSelectedStates] = useState([]); // array of selected states {label,id}
-  const [selectedCities, setSelectedCities] = useState([]); // array of selected cities {label,id}
-
-  // Person responsible & user search
+  // Person responsible
   const [allUsers, setAllUsers] = useState([]);
   const [selectedPersons, setSelectedPersons] = useState([]);
   const [personSearchQuery, setPersonSearchQuery] = useState("");
 
-  // Dropdown states
+  // Dropdown states for multi-selects
   const [stateDropdownOpen, setStateDropdownOpen] = useState(false);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+  const [personDropdownOpen, setPersonDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const limit = 10;
 
-  // Custom Multi-Select Dropdown Component
+  // Reusable MultiSelectDropdown with Select All/Deselect All
   const MultiSelectDropdown = ({
     options,
     selectedItems,
@@ -54,11 +53,40 @@ function Dealer() {
   }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Filtering options as per search term
     const filteredOptions = searchable
       ? options.filter((option) =>
           option.label.toLowerCase().includes(searchTerm.toLowerCase())
         )
       : options;
+
+    // Are all currently shown filtered items selected
+    const allFilteredSelected =
+      filteredOptions.length &&
+      filteredOptions.every((option) =>
+        selectedItems.some((sel) => sel.id === option.id)
+      );
+
+    // Select or Deselect All
+    const handleSelectAll = () => {
+      if (allFilteredSelected) {
+        // Deselect all filtered
+        onSelectionChange(
+          selectedItems.filter(
+            (item) => !filteredOptions.some((opt) => opt.id === item.id)
+          )
+        );
+      } else {
+        // Select all filtered, add any not already in selection
+        const newSelected = [
+          ...selectedItems,
+          ...filteredOptions.filter(
+            (opt) => !selectedItems.some((item) => item.id === opt.id)
+          ),
+        ];
+        onSelectionChange(newSelected);
+      }
+    };
 
     const handleToggleItem = (item) => {
       const isSelected = selectedItems.some(
@@ -80,7 +108,8 @@ function Dealer() {
     };
 
     return (
-      <div className="relative">
+      <div className="relative dropdown-container">
+        {/* Dropdown Input */}
         <div
           className={`w-full p-2.5 border border-gray-300 rounded cursor-pointer bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             disabled ? "bg-gray-100 cursor-not-allowed" : ""
@@ -135,6 +164,8 @@ function Dealer() {
             </svg>
           </div>
         </div>
+
+        {/* Dropdown menu */}
         {isOpen && !disabled && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
             {searchable && (
@@ -151,28 +182,47 @@ function Dealer() {
             )}
             <div className="py-1">
               {filteredOptions.length > 0 ? (
-                filteredOptions.map((option) => {
-                  const isSelected = selectedItems.some(
-                    (item) => item.id === option.id
-                  );
-                  return (
-                    <div
-                      key={option.id}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleToggleItem(option)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {option.label}
-                      </span>
-                    </div>
-                  );
-                })
+                <>
+                  <div
+                    className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer border-b font-bold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectAll();
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      readOnly
+                      checked={allFilteredSelected}
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {allFilteredSelected ? "Deselect All" : "Select All"}
+                    </span>
+                  </div>
+                  {filteredOptions.map((option) => {
+                    const isSelected = selectedItems.some(
+                      (item) => item.id === option.id
+                    );
+                    return (
+                      <div
+                        key={option.id}
+                        className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => handleToggleItem(option)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          readOnly
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mr-2"
+                        />
+                        <span className="text-sm text-gray-700">
+                          {option.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 <div className="px-3 py-2 text-sm text-gray-500">
                   No options found
@@ -185,7 +235,7 @@ function Dealer() {
     );
   };
 
-  // Custom Single Select Dropdown Component
+  // Reusable Single select (for status)
   const SingleSelectDropdown = ({
     options,
     selectedValue,
@@ -195,13 +245,14 @@ function Dealer() {
     setIsOpen,
   }) => {
     return (
-      <div className="relative">
+      <div className="relative dropdown-container">
         <div
           className="w-full p-2.5 border border-gray-300 rounded cursor-pointer bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           onClick={() => setIsOpen(!isOpen)}
         >
           <span className={selectedValue ? "text-gray-900" : "text-gray-500"}>
-            {selectedValue || placeholder}
+            {options.find((opt) => opt.value === selectedValue)?.label ||
+              placeholder}
           </span>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
             <svg
@@ -239,7 +290,7 @@ function Dealer() {
     );
   };
 
-  // Fetch users for person responsible field
+  // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -247,7 +298,6 @@ function Dealer() {
           `${process.env.REACT_APP_BASE_URL}/collections/alluser`
         );
         let users = res.data.users || res.data;
-        // Normalize users to array safely
         if (!Array.isArray(users)) {
           if (users && typeof users === "object") {
             users = Object.values(users);
@@ -266,14 +316,13 @@ function Dealer() {
         );
         setAllUsers(users);
       } catch (error) {
-        console.error("Failed to fetch users:", error);
         setAllUsers([]);
       }
     };
     fetchUsers();
   }, []);
 
-  // Filter users by search term
+  // Filter users by personSearchQuery for Person Responsible dropdown
   const filteredUsers = useMemo(() => {
     if (!personSearchQuery.trim()) return allUsers;
     const q = personSearchQuery.toLowerCase();
@@ -283,7 +332,7 @@ function Dealer() {
     });
   }, [personSearchQuery, allUsers]);
 
-  // Fetch states with proper mapping
+  // Fetch states
   useEffect(() => {
     const fetchStates = async () => {
       try {
@@ -301,17 +350,15 @@ function Dealer() {
           setState(statesMapped);
         } else {
           setState([]);
-          console.error("allstate response is not array:", res.data);
         }
       } catch (err) {
-        console.error("Error fetching states:", err);
         setState([]);
       }
     };
     fetchStates();
   }, []);
 
-  // Fetch cities and ensure array data structure
+  // Fetch cities
   useEffect(() => {
     const fetchCities = async () => {
       try {
@@ -321,36 +368,29 @@ function Dealer() {
         let cities = Array.isArray(res.data) ? res.data : [];
         setAllCities(cities);
       } catch (err) {
-        console.error("Error fetching cities:", err);
         setAllCities([]);
       }
     };
     fetchCities();
   }, []);
 
-  // Cascading filter: from selectedStates, filter cities directly by state name
+  // Filter cities based on selected states
   useEffect(() => {
     if (!Array.isArray(allCities)) {
       setFilteredCities([]);
       setSelectedCities([]);
       return;
     }
-
     if (!selectedStates.length) {
       setFilteredCities([]);
       setSelectedCities([]);
       handleFormData("city", []);
       return;
     }
-
-    // Get selected state labels
     const selectedStateLabels = selectedStates.map((s) => s.label);
-
-    // Filter cities whose state matches selectedStates directly
     const filteredCityList = allCities.filter((city) =>
       selectedStateLabels.includes(city.state)
     );
-
     setFilteredCities(filteredCityList);
 
     // Clear selected cities that are no longer valid
@@ -366,10 +406,10 @@ function Dealer() {
     });
   }, [selectedStates, allCities]);
 
-  // Fetch dealers for table with pagination and reset on search clear
+  // Fetch dealers with pagination
   const getData = () => {
     setLoader(true);
-    setSearchQuery(""); // Reset search query on fresh data fetch
+    setSearchQuery(""); // Reset on fetch
     axios
       .get(
         `${process.env.REACT_APP_BASE_URL}/collections/dealer?page=${page}&limit=${limit}`
@@ -379,20 +419,18 @@ function Dealer() {
         setData(res.data.dealers || []);
         setTotalPages(res.data.totalPages || 1);
       })
-      .catch((error) => {
+      .catch(() => {
         setLoader(false);
-        console.error(error);
       });
   };
 
-  // Fetch data on first render and on page changes if no search
   useEffect(() => {
     if (!searchQuery) {
       getData();
     }
   }, [searchQuery, page]);
 
-  // Search dealers by query
+  // Dealer search
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       getData();
@@ -418,30 +456,15 @@ function Dealer() {
       setPage(1);
     } catch (error) {
       setData([]);
-      console.error("Error searching dealers:", error);
     } finally {
       setLoader(false);
     }
   };
-
-  // Handle person responsible toggle
-  const handlePersonToggle = (user) => {
-    setSelectedPersons((prev) => {
-      const exists = prev.some((p) => p.employeeid === user.employeeid);
-      const updated = exists
-        ? prev.filter((p) => p.employeeid !== user.employeeid)
-        : [
-            ...prev,
-            {
-              name: `${user.firstname} ${user.lastname}`,
-              employeeid: user.employeeid,
-            },
-          ];
-      handleFormData("personresponsible", updated);
-      return updated;
-    });
-  };
-
+  useEffect(() => {
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
   // Select all/deselect all rows toggle
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -461,7 +484,7 @@ function Dealer() {
     }
   };
 
-  // Open create modal with cleared form
+  // Open create modal
   const openCreateModal = () => {
     setCurrentData({});
     setSelectedStates([]);
@@ -505,7 +528,6 @@ function Dealer() {
     setShowModal(true);
   };
 
-  // Close/Reset modal
   const handleCloseModal = () => {
     setShowModal(false);
     setEditModal(false);
@@ -515,15 +537,15 @@ function Dealer() {
     setSelectedPersons([]);
     setStateDropdownOpen(false);
     setCityDropdownOpen(false);
+    setPersonDropdownOpen(false);
     setStatusDropdownOpen(false);
   };
 
-  // Update form data state
   const handleFormData = (name, value) => {
     setCurrentData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Delete dealer with confirmation popup
+  // Delete single dealer
   const handleDelete = (id) => {
     if (
       window.confirm(
@@ -583,7 +605,7 @@ function Dealer() {
     if (page < totalPages) setPage(page + 1);
   };
 
-  // Bulk modal handlers
+  // Bulk upload modals
   const openBulkModal = () => setIsOpen(true);
   const closeBulkModal = () => {
     setIsOpen(false);
@@ -596,6 +618,7 @@ function Dealer() {
       if (!event.target.closest(".dropdown-container")) {
         setStateDropdownOpen(false);
         setCityDropdownOpen(false);
+        setPersonDropdownOpen(false);
         setStatusDropdownOpen(false);
       }
     };
@@ -604,6 +627,17 @@ function Dealer() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Select Person Responsible: use MultiSelectDropdown
+  const personOptions = filteredUsers.map((user) => ({
+    label: `${user.firstname} ${user.lastname} (${user.employeeid})`,
+    id: user.employeeid,
+  }));
+
+  const personSelectedItems = selectedPersons.map((person) => ({
+    label: `${person.name} (${person.employeeid})`,
+    id: person.employeeid,
+  }));
 
   return (
     <>
@@ -677,6 +711,7 @@ function Dealer() {
               <button
                 type="button"
                 className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-md text-sm px-5 py-2.5 text-center"
+                // Add bulk delete logic here if needed
               >
                 Delete Selected ({selectedRows.length})
               </button>
@@ -702,16 +737,13 @@ function Dealer() {
                       </label>
                     </div>
                   </th>
+                  <th className="h-12 px-4 text-left font-medium">Dealer ID</th>
                   <th className="h-12 px-4 text-left font-medium">Name</th>
                   <th className="h-12 px-4 text-left font-medium">Email</th>
-                  <th className="h-12 px-4 text-left font-medium">Status</th>
-                  <th className="h-12 px-4 text-left font-medium">Dealer ID</th>
                   <th className="h-12 px-4 text-left font-medium">
                     Person Responsible
                   </th>
-                  <th className="h-12 px-4 text-left font-medium">State</th>
-                  <th className="h-12 px-4 text-left font-medium">City</th>
-                  <th className="h-12 px-4 text-left font-medium">Pincode</th>
+                  <th className="h-12 px-4 text-left font-medium">Status</th>
                   <th className="h-12 px-4 text-left font-medium">
                     Created Date
                   </th>
@@ -745,10 +777,18 @@ function Dealer() {
                       </div>
                     </td>
                     <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
+                      {item.dealercode}
+                    </td>
+                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
                       {item.name}
                     </td>
                     <td className="p-4 font-medium text-md align-middle whitespace-nowrap">
                       {item.email}
+                    </td>
+                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
+                      {Array.isArray(item.personresponsible)
+                        ? item.personresponsible.map((p) => p.name).join(", ")
+                        : item.personresponsible}
                     </td>
                     <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
                       <span
@@ -762,28 +802,6 @@ function Dealer() {
                       >
                         {item.status}
                       </span>
-                    </td>
-                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
-                      {item.dealercode}
-                    </td>
-                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
-                      {Array.isArray(item.personresponsible)
-                        ? item.personresponsible.map((p) => p.name).join(", ")
-                        : item.personresponsible}
-                    </td>
-                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
-                      {Array.isArray(item.state)
-                        ? item.state.join(", ")
-                        : item.state}
-                    </td>
-                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
-                      {Array.isArray(item.city)
-                        ? item.city.join(", ")
-                        : item.city}
-                    </td>
-
-                    <td className="p-4 font-medium text-md capitalize align-middle whitespace-nowrap">
-                      {item.pincode}
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item.createdAt).format("MMM D, YYYY")}
@@ -914,7 +932,6 @@ function Dealer() {
                     </svg>
                   </button>
                 </div>
-
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -937,7 +954,6 @@ function Dealer() {
                         className="w-full p-2.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-
                     {/* Dealer Code */}
                     <div>
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -954,7 +970,6 @@ function Dealer() {
                         className="w-full p-2.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-
                     {/* Email */}
                     <div>
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -971,7 +986,6 @@ function Dealer() {
                         className="w-full p-2.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-
                     {/* State (multiple select) */}
                     <div className="dropdown-container">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -992,7 +1006,6 @@ function Dealer() {
                         setIsOpen={setStateDropdownOpen}
                       />
                     </div>
-
                     {/* City (multiple select filtered by state selections) */}
                     <div className="dropdown-container">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -1021,7 +1034,6 @@ function Dealer() {
                         disabled={selectedStates.length === 0}
                       />
                     </div>
-
                     {/* Pincode */}
                     <div>
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -1038,7 +1050,6 @@ function Dealer() {
                         className="w-full p-2.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-
                     {/* Status */}
                     <div className="dropdown-container">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -1059,63 +1070,44 @@ function Dealer() {
                         setIsOpen={setStatusDropdownOpen}
                       />
                     </div>
-
                     {/* Person Responsible */}
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 dropdown-container">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
                         Person Responsible{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      <input
+                      <MultiSelectDropdown
+                        options={personOptions}
+                        selectedItems={personSelectedItems}
+                        onSelectionChange={(items) => {
+                          setSelectedPersons(
+                            items.map((item) => ({
+                              name: item.label.replace(/\s\(.+\)$/, ""),
+                              employeeid: item.id,
+                            }))
+                          );
+                          handleFormData(
+                            "personresponsible",
+                            items.map((i) => ({
+                              name: i.label.replace(/\s\(.+\)$/, ""),
+                              employeeid: i.id,
+                            }))
+                          );
+                        }}
+                        placeholder="Select Person Responsible(s)"
+                        isOpen={personDropdownOpen}
+                        setIsOpen={setPersonDropdownOpen}
+                        searchable={true}
+                      />
+                      {/* Search input for user filtering */}
+                      {/* <input
                         type="text"
                         placeholder="Search by name or ID..."
                         value={personSearchQuery}
                         onChange={(e) => setPersonSearchQuery(e.target.value)}
-                        className="w-full p-2 mb-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      />
-                      {selectedPersons.length > 0 && (
-                        <div className="mb-2 text-xs text-blue-600">
-                          {selectedPersons.length} person(s) selected
-                        </div>
-                      )}
-                      <div className="border border-gray-300 rounded-md p-2 max-h-48 overflow-y-auto bg-white">
-                        {filteredUsers.length > 0 ? (
-                          filteredUsers.map((user) => {
-                            const fullName = `${user.firstname} ${user.lastname}`;
-                            const isChecked = selectedPersons.some(
-                              (p) => p.employeeid === user.employeeid
-                            );
-                            return (
-                              <div
-                                key={user._id}
-                                className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                                onClick={() => handlePersonToggle(user)}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => {}}
-                                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                />
-                                <span className="text-sm text-gray-700">
-                                  {fullName}{" "}
-                                  <span className="text-gray-500">
-                                    ({user.employeeid})
-                                  </span>
-                                </span>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <div className="text-center py-4 text-gray-500 text-sm">
-                            {personSearchQuery
-                              ? "No users found"
-                              : "No users available"}
-                          </div>
-                        )}
-                      </div>
+                        className="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      /> */}
                     </div>
-
                     {/* Address */}
                     <div className="md:col-span-2">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -1133,8 +1125,6 @@ function Dealer() {
                       />
                     </div>
                   </div>
-
-                  {/* Modal buttons */}
                   <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
                     <button
                       type="button"
