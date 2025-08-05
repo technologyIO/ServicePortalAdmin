@@ -706,7 +706,7 @@ function Dealer() {
           </div>
 
           {/* Delete Selected Button */}
-          {selectedRows?.length > 0 && (
+          {/* {selectedRows?.length > 0 && (
             <div className="flex justify-center mt-4">
               <button
                 type="button"
@@ -716,7 +716,7 @@ function Dealer() {
                 Delete Selected ({selectedRows.length})
               </button>
             </div>
-          )}
+          )} */}
 
           {/* Data Table */}
           <div className="relative w-full overflow-x-auto mt-4">

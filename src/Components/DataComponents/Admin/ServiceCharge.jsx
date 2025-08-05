@@ -272,7 +272,7 @@ function ServiceCharge() {
         </button>
       </div>
       {/* Bulk delete */}
-      {selectedRows.length > 0 && (
+      {/* {selectedRows.length > 0 && (
         <div className="flex justify-center">
           <button
             type="button"
@@ -282,7 +282,7 @@ function ServiceCharge() {
             Delete Selected
           </button>
         </div>
-      )}
+      )} */}
       {/* Table */}
       <div className="overflow-x-auto w-full rounded shadow-sm">
         <table className="w-full border text-sm min-w-max">

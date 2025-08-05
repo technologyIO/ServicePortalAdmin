@@ -249,7 +249,7 @@ function CmcNcmcGst() {
               </button>
             </div>
           </div>
-          {selectedRows?.length > 0 && (
+          {/* {selectedRows?.length > 0 && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -258,7 +258,7 @@ function CmcNcmcGst() {
                 Delete Selected
               </button>
             </div>
-          )}
+          )} */}
           <div className="relative w-full overflow-x-auto">
             <table className="w-full   border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">

@@ -241,14 +241,14 @@ function FormatMaster() {
             </div>
           </div>
           <div className="flex justify-end ">
-            {selectedRows?.length > 0 && (
+            {/* {selectedRows?.length > 0 && (
               <button
                 type="button"
                 className="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-[4px] text-sm px-5 py-2.5 mb-2"
               >
                 Delete Selected
               </button>
-            )}
+            )} */}
           </div>
           <div className="relative w-full overflow-x-auto border">
             <table className="w-full border min-w-max caption-bottom text-sm">

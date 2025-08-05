@@ -261,7 +261,7 @@ function ReplacedPartCode() {
               </button>
             </div>
           </div>
-          {selectedRows?.length > 0 && (
+          {/* {selectedRows?.length > 0 && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -270,7 +270,7 @@ function ReplacedPartCode() {
                 Delete Selected
               </button>
             </div>
-          )}
+          )} */}
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}

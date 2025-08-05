@@ -421,7 +421,7 @@ function PreventiveMaintenance() {
             </div>
           </div>
 
-          {selectedRows?.length > 0 && (
+          {/* {selectedRows?.length > 0 && (
             <div className="flex justify-center">
               <button
                 type="button"
@@ -430,7 +430,7 @@ function PreventiveMaintenance() {
                 Delete Selected
               </button>
             </div>
-          )}
+          )} */}
 
           {/* Updated total records display */}
           <div className="flex items-center justify-between bg-gray-50 p-3 rounded mb-3">
