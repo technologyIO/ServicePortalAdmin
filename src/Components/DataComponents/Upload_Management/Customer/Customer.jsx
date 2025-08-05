@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 function Customer() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState({ customers: [] });
   const [currentData, setCurrentData] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -259,42 +259,68 @@ function Customer() {
       const response = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/collections/searchcustomer?q=${searchQuery}`
       );
-      setData(response.data);
+      // Check if response.data is an array or has a customers property
+      if (Array.isArray(response.data)) {
+        setData(response.data);
+      } else if (response.data.customers) {
+        setData(response.data.customers);
+      } else {
+        setData([]);
+      }
       setLoader(false);
     } catch (err) {
-      console.err("Error searching Customers:", err);
+      console.error("Error searching Customers:", err);
+      setData([]); // Set empty array on error
       setLoader(false);
     }
   };
 
   const getData = () => {
+    console.log("getData called with page:", page); // Debug log
     setLoader(true);
     setSearchQuery("");
+
     axios
       .get(
         `${process.env.REACT_APP_BASE_URL}/collections/customer?page=${page}&limit=${limit}`
       )
       .then((res) => {
+        console.log("Full API Response:", res.data);
+
+        // Check if the response has the expected structure
+        if (
+          res.data &&
+          res.data.customers &&
+          Array.isArray(res.data.customers)
+        ) {
+          setData(res.data.customers);
+          setTotalPages(res.data.totalPages || 1);
+          console.log("Data set successfully:", res.data.customers);
+        } else {
+          console.warn("Unexpected response structure:", res.data);
+          setData([]);
+        }
+
         setLoader(false);
-        setData(res.data.customers);
-        setTotalPages(res.data.totalPages);
       })
       .catch((error) => {
         setLoader(false);
-        console.log(error);
+        console.error("API Error:", error);
+        setData([]);
       });
   };
+
   useEffect(() => {
     getData();
   }, []);
   useEffect(() => {
     getData();
   }, [page]);
-   useEffect(() => {
-      if (!searchQuery) {
-        getData();
-      }
-    }, [searchQuery]);
+  useEffect(() => {
+    if (!searchQuery) {
+      getData();
+    }
+  }, [searchQuery]);
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -521,138 +547,146 @@ function Customer() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((item, index) => (
-                  <tr
-                    key={item?._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(item?._id)}
-                          onChange={() => handleRowSelect(item?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.customercodeid}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.customername}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.hospitalname}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.street}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.city}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.postalcode}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.district}
-                    </td>
-                    {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                {data && data.length > 0 ? (
+                  data.map((item, index) => (
+                    <tr
+                      key={item?._id}
+                      className="border-b transition-colors  data-[state=selected]:bg-muted"
+                    >
+                      <th scope="col" className="p-4">
+                        <div className="flex items-center">
+                          <input
+                            id={`checkbox-${index}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                            checked={selectedRows?.includes(item?._id)}
+                            onChange={() => handleRowSelect(item?._id)}
+                          />
+                          <label
+                            htmlFor={`checkbox-${index}`}
+                            className="sr-only"
+                          >
+                            checkbox
+                          </label>
+                        </div>
+                      </th>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.customercodeid}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.customername}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.hospitalname}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.street}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.city}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.postalcode}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.district}
+                      </td>
+                      {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.state}
                     </td> */}
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.region}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.country}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.telephone}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.taxnumber1}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.taxnumber2}
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.email}
-                    </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.region}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.country}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.telephone}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.taxnumber1}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.taxnumber2}
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.email}
+                      </td>
 
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                          item?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
-                        }`}
-                      >
-                        {item?.status}
-                      </span>
-                    </td>
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.customertype}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
-                        <button
-                          onClick={() => {
-                            handleOpenModal(item);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                            item?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : item?.status === "Inactive"
+                              ? "bg-red-100 text-red-800  border-red-400"
+                              : "bg-orange-100 text-orange-800  border-orange-400"
+                          }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
+                          {item?.status}
+                        </span>
+                      </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.customertype}
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.createdAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.modifiedAt).format("MMM D, YYYY")}
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <div className="flex gap-4 ">
+                          <button
+                            onClick={() => {
+                              handleOpenModal(item);
+                            }}
+                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
                           >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                          title="Delete"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-pencil-square"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                              <path
+                                fill-rule="evenodd"
+                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item._id)}
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            title="Delete"
                           >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
-                        </button>
-                      </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-trash3-fill"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="20" className="text-center p-4">
+                      No customers found
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
