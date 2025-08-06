@@ -8,6 +8,7 @@ import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import SpareMasterBulk from "./SpareMasterBulk";
+import LoadingSpinner from "../../../../LoadingSpinner";
 
 function Spare() {
   const [showModal, setShowModal] = useState(false);
@@ -23,7 +24,42 @@ function Spare() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingSpareMaster, setIsDownloadingSpareMaster] =
+    useState(false);
 
+  const downloadSpareMasterExcel = async () => {
+    setIsDownloadingSpareMaster(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/sparemaster/export-sparemaster`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `spare_master_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Spare Master Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingSpareMaster(false);
+    }
+  };
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
@@ -247,6 +283,26 @@ function Spare() {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingSpareMaster
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadSpareMasterExcel}
+                disabled={isDownloadingSpareMaster}
+              >
+                {isDownloadingSpareMaster ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

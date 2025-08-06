@@ -10,6 +10,7 @@ import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 function CheckListType() {
   const [showModal, setShowModal] = useState(false);
@@ -24,7 +25,42 @@ function CheckListType() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingCheckListType, setIsDownloadingCheckListType] =
+    useState(false);
 
+  const downloadCheckListTypeExcel = async () => {
+    setIsDownloadingCheckListType(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/checklisttypes/export-checklisttypes`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `checklist_types_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download CheckList Type Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingCheckListType(false);
+    }
+  };
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -79,7 +115,9 @@ function CheckListType() {
     }).then((result) => {
       if (result.isConfirmed) {
         axios
-          .delete(`${process.env.REACT_APP_BASE_URL}/collections/CheckListType/${id}`)
+          .delete(
+            `${process.env.REACT_APP_BASE_URL}/collections/CheckListType/${id}`
+          )
           .then((res) => {
             Swal.fire("Deleted!", "Countrys has been deleted.", "success");
           })
@@ -128,11 +166,11 @@ function CheckListType() {
         console.log(error);
       });
   };
-    useEffect(() => {
-      if (!searchQuery) {
-        getAllCountries();
-      }
-    }, [searchQuery]);
+  useEffect(() => {
+    if (!searchQuery) {
+      getAllCountries();
+    }
+  }, [searchQuery]);
   useEffect(() => {
     getAllCountries();
   }, []);
@@ -203,10 +241,10 @@ function CheckListType() {
                     startDecorator={<SearchIcon />}
                     value={searchQuery}
                     onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
+                      if (e.key === "Enter") {
+                        handleSearch();
+                      }
+                    }}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </FormControl>
@@ -231,6 +269,26 @@ function CheckListType() {
                   className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
                 >
                   Filter
+                </button>
+                <button
+                  className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                    isDownloadingCheckListType
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                  }`}
+                  onClick={downloadCheckListTypeExcel}
+                  disabled={isDownloadingCheckListType}
+                >
+                  {isDownloadingCheckListType ? (
+                    <>
+                      <div className="flex items-center">
+                        <LoadingSpinner />
+                        Downloading...
+                      </div>
+                    </>
+                  ) : (
+                    <>Download Excel</>
+                  )}
                 </button>
               </div>
             </div>
@@ -325,7 +383,9 @@ function CheckListType() {
                         {moment(checkListType?.createdAt).format("MMM D, YYYY")}
                       </td>
                       <td className="p-4 align-middle whitespace-nowrap">
-                        {moment(checkListType?.modifiedAt).format("MMM D, YYYY")}
+                        {moment(checkListType?.modifiedAt).format(
+                          "MMM D, YYYY"
+                        )}
                       </td>
 
                       <td className="p-4 align-middle whitespace-nowrap">
@@ -354,7 +414,6 @@ function CheckListType() {
                           <button
                             onClick={() => handleDelete(checkListType?._id)}
                             className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -506,7 +565,9 @@ function CheckListType() {
                       type="submit"
                       className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                     >
-                         {editModal ? "Update CheckList Type " : "Create CheckList Type "} 
+                      {editModal
+                        ? "Update CheckList Type "
+                        : "Create CheckList Type "}
                     </button>
                   </div>
                 </form>

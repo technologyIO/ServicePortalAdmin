@@ -6,6 +6,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 // API root
 
@@ -34,7 +35,42 @@ function ServiceCharge() {
   const [loader, setLoader] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [isDownloadingServiceCharge, setIsDownloadingServiceCharge] =
+    useState(false);
 
+  const downloadServiceChargeExcel = async () => {
+    setIsDownloadingServiceCharge(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/servicecharges/export-servicecharges`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `service_charges_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Service Charge Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingServiceCharge(false);
+    }
+  };
   // Data fetch
   const getData = async (newPage = page) => {
     setLoader(true);
@@ -264,12 +300,34 @@ function ServiceCharge() {
             Search
           </button>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="text-white bg-blue-700 rounded px-5 py-1.5 text-sm"
-        >
-          Create
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => handleOpenModal()}
+            className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+          >
+            Create
+          </button>
+          <button
+            className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+              isDownloadingServiceCharge
+                ? "bg-gray-500 cursor-not-allowed"
+                : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+            }`}
+            onClick={downloadServiceChargeExcel}
+            disabled={isDownloadingServiceCharge}
+          >
+            {isDownloadingServiceCharge ? (
+              <>
+                <div className="flex items-center">
+                  <LoadingSpinner />
+                  Downloading...
+                </div>
+              </>
+            ) : (
+              <>Download Excel</>
+            )}
+          </button>
+        </div>
       </div>
       {/* Bulk delete */}
       {/* {selectedRows.length > 0 && (

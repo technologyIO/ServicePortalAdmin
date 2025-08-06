@@ -10,6 +10,7 @@ import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 function CheckPointType() {
   const [showModal, setShowModal] = useState(false);
@@ -24,7 +25,42 @@ function CheckPointType() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingCheckPointType, setIsDownloadingCheckPointType] =
+    useState(false);
 
+  const downloadCheckPointTypeExcel = async () => {
+    setIsDownloadingCheckPointType(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/checkpointtypes/export-checkpointtypes`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `checkpoint_types_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download CheckPoint Type Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingCheckPointType(false);
+    }
+  };
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -234,6 +270,26 @@ function CheckPointType() {
                   className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
                 >
                   Filter
+                </button>
+                <button
+                  className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                    isDownloadingCheckPointType
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                  }`}
+                  onClick={downloadCheckPointTypeExcel}
+                  disabled={isDownloadingCheckPointType}
+                >
+                  {isDownloadingCheckPointType ? (
+                    <>
+                      <div className="flex items-center">
+                        <LoadingSpinner />
+                        Downloading...
+                      </div>
+                    </>
+                  ) : (
+                    <>Download Excel</>
+                  )}
                 </button>
               </div>
             </div>

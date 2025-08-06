@@ -9,6 +9,7 @@ import moment from "moment";
 import { Autocomplete } from "@mui/joy";
 import CustomerBulk from "./CustomerBulk";
 import toast from "react-hot-toast";
+import LoadingSpinner from "../../../../LoadingSpinner";
 
 function Customer() {
   const [showModal, setShowModal] = useState(false);
@@ -41,6 +42,41 @@ function Customer() {
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
   const [selectedCities, setSelectedCities] = useState([]);
+  const [isDownloadingCustomer, setIsDownloadingCustomer] = useState(false);
+
+  const downloadCustomerExcel = async () => {
+    setIsDownloadingCustomer(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/customers/export-customers`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `customers_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Customer Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingCustomer(false);
+    }
+  };
 
   // --- Data Fetch ---
   useEffect(() => {
@@ -456,6 +492,26 @@ function Customer() {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingCustomer
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadCustomerExcel}
+                disabled={isDownloadingCustomer}
+              >
+                {isDownloadingCustomer ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

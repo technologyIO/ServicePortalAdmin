@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import toast from "react-hot-toast";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 const AdminCity = () => {
   const [showModal, setShowModal] = useState(false);
@@ -26,6 +27,41 @@ const AdminCity = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDownloadingCity, setIsDownloadingCity] = useState(false);
+
+  const downloadCityExcel = async () => {
+    setIsDownloadingCity(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/cities/export-cities`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `cities_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download City Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingCity(false);
+    }
+  };
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -236,6 +272,26 @@ const AdminCity = () => {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingCity
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadCityExcel}
+                disabled={isDownloadingCity}
+              >
+                {isDownloadingCity ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

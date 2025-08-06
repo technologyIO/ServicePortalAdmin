@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
+import LoadingSpinner from "../../../../LoadingSpinner";
 
 function FormatMaster() {
   const [showModal, setShowModal] = useState(false);
@@ -48,7 +49,42 @@ function FormatMaster() {
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
+  const [isDownloadingFormatMaster, setIsDownloadingFormatMaster] =
+    useState(false);
 
+  const downloadFormatMasterExcel = async () => {
+    setIsDownloadingFormatMaster(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/formatmaster/export-formatmaster`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `format_master_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Format Master Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingFormatMaster(false);
+    }
+  };
   // Updated Create button handler to open modal for new record creation
   const handleCreateModal = () => {
     setCurrentData({}); // clear form data
@@ -237,6 +273,26 @@ function FormatMaster() {
                 className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingFormatMaster
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadFormatMasterExcel}
+                disabled={isDownloadingFormatMaster}
+              >
+                {isDownloadingFormatMaster ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

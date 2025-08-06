@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import BulkModal from "../BulkUpload.jsx/BulkModal";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 function CmcNcmcPrice() {
   const [showModal, setShowModal] = useState(false);
@@ -38,6 +39,42 @@ function CmcNcmcPrice() {
   useEffect(() => {
     getCities();
   }, []);
+  const [isDownloadingCmcNcmcPrice, setIsDownloadingCmcNcmcPrice] =
+    useState(false);
+
+  const downloadCmcNcmcPriceExcel = async () => {
+    setIsDownloadingCmcNcmcPrice(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/cmcncmcprices/export-cmcncmcprices`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `cmc_ncmc_prices_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download CMC/NCMC Price Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingCmcNcmcPrice(false);
+    }
+  };
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -249,6 +286,26 @@ function CmcNcmcPrice() {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingCmcNcmcPrice
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadCmcNcmcPriceExcel}
+                disabled={isDownloadingCmcNcmcPrice}
+              >
+                {isDownloadingCmcNcmcPrice ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

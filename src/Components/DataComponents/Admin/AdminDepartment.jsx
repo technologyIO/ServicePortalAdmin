@@ -25,6 +25,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
+import LoadingSpinner from "../../../LoadingSpinner";
 
 const AdminDepartment = () => {
   const [showModal, setShowModal] = useState(false);
@@ -88,7 +89,41 @@ const AdminDepartment = () => {
         console.log(error);
       });
   };
+  const [isDownloadingDepartment, setIsDownloadingDepartment] = useState(false);
 
+  const downloadDepartmentExcel = async () => {
+    setIsDownloadingDepartment(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/departments/export-departments`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `departments_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Department Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingDepartment(false);
+    }
+  };
   const handleOpenModal = (country) => {
     setCurrentData(country);
     setEditModal(true);
@@ -276,6 +311,26 @@ const AdminDepartment = () => {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingDepartment
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadDepartmentExcel}
+                disabled={isDownloadingDepartment}
+              >
+                {isDownloadingDepartment ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

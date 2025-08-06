@@ -12,6 +12,7 @@ import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import toast from "react-hot-toast";
+import LoadingSpinner from "../../../../LoadingSpinner";
 
 function ComplaintType() {
   const [showModal, setShowModal] = useState(false);
@@ -37,7 +38,42 @@ function ComplaintType() {
 
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingComplaintType, setIsDownloadingComplaintType] =
+    useState(false);
 
+  const downloadComplaintTypeExcel = async () => {
+    setIsDownloadingComplaintType(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/complainttypes/export-complainttypes`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `complaint_types_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Complaint Type Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingComplaintType(false);
+    }
+  };
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -292,6 +328,26 @@ function ComplaintType() {
               >
                 Filter
               </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingComplaintType
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadComplaintTypeExcel}
+                disabled={isDownloadingComplaintType}
+              >
+                {isDownloadingComplaintType ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
+              </button>
             </div>
           </div>
           {/* {selectedRows?.length > 0 && (
@@ -417,7 +473,6 @@ function ComplaintType() {
                           <button
                             onClick={() => handleDelete(item?._id)}
                             className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"

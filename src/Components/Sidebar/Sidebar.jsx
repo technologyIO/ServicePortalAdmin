@@ -74,7 +74,7 @@ export default function Sidebar({ onSidebarItemClick }) {
   // Define sidebar sections and their items
   const sidebarSections = [
     {
-      title: "Master Management",
+      title: "Master",
       icon: <DashboardRoundedIcon />,
       storageKey: "masterManagementTogglerState",
       items: [
@@ -99,7 +99,7 @@ export default function Sidebar({ onSidebarItemClick }) {
       ],
     },
     {
-      title: "Upload Management",
+      title: "Upload",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"

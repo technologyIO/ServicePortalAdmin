@@ -12,6 +12,7 @@ import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import ReplacePartCodeBulk from "./ReplacePartCodeBulk";
+import LoadingSpinner from "../../../../LoadingSpinner";
 
 function ReplacedPartCode() {
   const [showModal, setShowModal] = useState(false);
@@ -36,6 +37,42 @@ function ReplacedPartCode() {
   };
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingReplacedPartCode, setIsDownloadingReplacedPartCode] =
+    useState(false);
+
+  const downloadReplacedPartCodeExcel = async () => {
+    setIsDownloadingReplacedPartCode(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/replacedpartcodes/export-replacedpartcodes`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `replaced_part_codes_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Replaced Part Code Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingReplacedPartCode(false);
+    }
+  };
 
   const getCities = () => {
     axios
@@ -258,6 +295,26 @@ function ReplacedPartCode() {
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
+                  isDownloadingReplacedPartCode
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                }`}
+                onClick={downloadReplacedPartCodeExcel}
+                disabled={isDownloadingReplacedPartCode}
+              >
+                {isDownloadingReplacedPartCode ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>
