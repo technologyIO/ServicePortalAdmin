@@ -39,7 +39,65 @@ function Dealer() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
 
   const limit = 10;
+  const [isDownloadingDealer, setIsDownloadingDealer] = useState(false);
 
+  const downloadDealerExcel = async () => {
+    setIsDownloadingDealer(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/dealers/export-dealers`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `dealers_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download Dealer Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingDealer(false);
+    }
+  };
+
+  // Loading Spinner Component
+  const LoadingSpinner = () => (
+    <svg
+      className="animate-spin h-4 w-4 mr-2"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      ></path>
+    </svg>
+  );
   // Reusable MultiSelectDropdown with Select All/Deselect All
   const MultiSelectDropdown = ({
     options,
@@ -701,6 +759,26 @@ function Dealer() {
                 className="text-white px-5 bg-blue-700 hover:bg-blue-800 focus:outline-none font-medium rounded-md text-sm py-2 text-center"
               >
                 Filter
+              </button>
+              <button
+                className={`text-white px-5 text-nowrap bg-blue-700 hover:bg-blue-800 focus:outline-none font-medium rounded-md text-sm py-2 text-center ${
+                  isDownloadingDealer
+                    ? "bg-gray-500 cursor-not-allowed"
+                    : "text-white px-5 bg-blue-700 hover:bg-blue-800 focus:outline-none font-medium rounded-md text-sm py-2 text-center"
+                }`}
+                onClick={downloadDealerExcel}
+                disabled={isDownloadingDealer}
+              >
+                {isDownloadingDealer ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
               </button>
             </div>
           </div>

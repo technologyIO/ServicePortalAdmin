@@ -37,7 +37,63 @@ function Aerb() {
 
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingAerb, setIsDownloadingAerb] = useState(false);
 
+  const downloadAerbExcel = async () => {
+    setIsDownloadingAerb(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/excel/aerb/export-aerb`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `aerb_data_${new Date().toISOString().split("T")[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error("Download failed");
+        alert("Failed to download AERB Excel file");
+      }
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      alert("Error downloading file");
+    } finally {
+      setIsDownloadingAerb(false);
+    }
+  };
+
+  // Loading Spinner Component
+  const LoadingSpinner = () => (
+    <svg
+      className="animate-spin h-4 w-4 mr-2"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      ></circle>
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      ></path>
+    </svg>
+  );
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -287,6 +343,27 @@ function Aerb() {
               >
                 Filter
               </button>
+              <button
+                className={`text-white text-nowrap w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2
+          ${
+            isDownloadingAerb
+              ? "bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed"
+              : "text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
+          }`}
+                onClick={downloadAerbExcel}
+                disabled={isDownloadingAerb}
+              >
+                {isDownloadingAerb ? (
+                  <>
+                    <div className="flex items-center">
+                      <LoadingSpinner />
+                      Downloading...
+                    </div>
+                  </>
+                ) : (
+                  <>Download Excel</>
+                )}
+              </button>
             </div>
           </div>
           {/* {selectedRows?.length > 0 && (
@@ -416,7 +493,6 @@ function Aerb() {
                           <button
                             onClick={() => handleDelete(item?._id)}
                             className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
