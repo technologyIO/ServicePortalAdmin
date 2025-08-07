@@ -130,6 +130,38 @@ function AdminRegion() {
       }
     });
   };
+  const handleToggleStatus = async (
+    id,
+    currentStatus,
+    regionName,
+    currentCountry
+  ) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+
+    try {
+      const response = await axios.put(
+        `${process.env.REACT_APP_BASE_URL}/collections/api/region/${id}`,
+        {
+          regionName: regionName,
+          country: currentCountry,
+          status: newStatus,
+        }
+      );
+
+      if (response.status === 200) {
+        toast.success(
+          `Region ${
+            newStatus === "Active" ? "activated" : "deactivated"
+          } successfully!`
+        );
+
+        getAllData();
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
 
   const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
@@ -164,6 +196,7 @@ function AdminRegion() {
   const getAllData = useCallback(
     async (pageNum = page) => {
       try {
+        console.log("🔄 Refreshing data..."); // Debug log
         setLoader(true);
         setPage(pageNum);
 
@@ -171,7 +204,8 @@ function AdminRegion() {
           `${process.env.REACT_APP_BASE_URL}/collections/api/allregion?page=${pageNum}&limit=${limit}`
         );
 
-        setData(res.data.regions); // ✅ store regions array
+        console.log("📊 New data received:", res.data); // Debug log
+        setData(res.data.regions);
         setTotalPages(res.data.totalPages);
         setTotalRegions(res.data.totalRegion || 0);
       } catch (error) {
@@ -353,7 +387,7 @@ function AdminRegion() {
             </div>
           </div>
           {/* Add this div before the table */}
-         <div className="flex justify-between items-center ">
+          <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
@@ -463,17 +497,21 @@ function AdminRegion() {
                           <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                             {country}
                           </td>
-
+                          <td>
+                            <span
+                              className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                                region?.status === "Active"
+                                  ? "bg-green-100 text-green-800 border-green-400"
+                                  : region?.status === "Inactive"
+                                  ? "bg-red-100 text-red-800  border-red-400"
+                                  : "bg-orange-100 text-orange-800  border-orange-400"
+                              }`}
+                            >
+                              {region?.status}
+                            </span>
+                          </td>
                           {stateIndex === 0 && (
                             <>
-                              <td
-                                rowSpan={countries.length}
-                                className="align-middle whitespace-nowrap"
-                              >
-                                <span className="text-xs font-medium px-2.5 py-0.5 rounded border bg-green-100 text-green-800 border-green-400">
-                                  Active
-                                </span>
-                              </td>
                               <td
                                 className="p-4 align-middle whitespace-nowrap"
                                 rowSpan={countries.length}
@@ -527,6 +565,22 @@ function AdminRegion() {
                                       <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
                                     </svg>
                                   </button>
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only peer "
+                                      checked={region?.status === "Active"}
+                                      onChange={() =>
+                                        handleToggleStatus(
+                                          region?._id,
+                                          region?.status,
+                                          region?.regionName,
+                                          region?.country // Pass current country data
+                                        )
+                                      }
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                  </label>
                                 </div>
                               </td>
                             </>

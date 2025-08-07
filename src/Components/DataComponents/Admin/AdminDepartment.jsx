@@ -26,6 +26,7 @@ import Swal from "sweetalert2";
 import axios from "axios";
 import moment from "moment";
 import LoadingSpinner from "../../../LoadingSpinner";
+import toast from "react-hot-toast";
 
 const AdminDepartment = () => {
   const [showModal, setShowModal] = useState(false);
@@ -55,6 +56,32 @@ const AdminDepartment = () => {
       setSelectedRows([]);
     }
   };
+  const handleToggleStatus = async (id, currentStatus, departmentName) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+
+    try {
+      const response = await axios.patch(
+        `${process.env.REACT_APP_BASE_URL}/collections/depart/${id}`,
+        {
+          name: departmentName, // Include name as required by backend
+          status: newStatus,
+        }
+      );
+
+      if (response.status === 200) {
+        toast.success(
+          `Department ${
+            newStatus === "Active" ? "activated" : "deactivated"
+          } successfully!`
+        );
+        getAllData(); // Refresh the data
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
+
   const handleRowSelect = (countryId) => {
     if (selectedRows.includes(countryId)) {
       // Deselect the row
@@ -376,7 +403,7 @@ const AdminDepartment = () => {
             </div>
           </div>
           {/* Add this div before the table */}
-         <div className="flex justify-between items-center ">
+          <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
@@ -515,6 +542,25 @@ const AdminDepartment = () => {
                               <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
                             </svg>
                           </button>
+                          <td className="align-middle whitespace-nowrap">
+                            <div className="flex gap-2 items-center justify-center">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer "
+                                  checked={i?.status === "Active"}
+                                  onChange={() =>
+                                    handleToggleStatus(
+                                      i?._id,
+                                      i?.status,
+                                      i?.name
+                                    )
+                                  }
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                              </label>
+                            </div>
+                          </td>
                         </div>
                       </td>
                     </tr>

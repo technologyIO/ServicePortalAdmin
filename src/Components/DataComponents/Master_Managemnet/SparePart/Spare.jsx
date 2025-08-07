@@ -9,6 +9,7 @@ import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import SpareMasterBulk from "./SpareMasterBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import toast from "react-hot-toast";
 
 function Spare() {
   const [showModal, setShowModal] = useState(false);
@@ -67,6 +68,28 @@ function Spare() {
   const closeModal = () => {
     setIsOpen(false);
     getData();
+  };
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+
+    try {
+      const response = await axios.put(
+        `${process.env.REACT_APP_BASE_URL}/collections/addsparemaster/${id}`,
+        { status: newStatus }
+      );
+
+      if (response.status === 200) {
+        toast.success(
+          `Spare Master ${
+            newStatus === "Active" ? "activated" : "deactivated"
+          } successfully!`
+        );
+        getData();
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
   };
 
   const getCities = () => {
@@ -363,7 +386,7 @@ function Spare() {
             </div>
           )} */}
           {/* Add this div before the table */}
-         <div className="flex justify-between items-center ">
+          <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
@@ -421,6 +444,9 @@ function Spare() {
                     Charges
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium">
+                    Status
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium">
                     Created Date
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium">
@@ -473,6 +499,19 @@ function Spare() {
                       {item?.Charges}
                     </td>
                     <td className="p-4 whitespace-nowrap">
+                      <span
+                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                          item?.status === "Active"
+                            ? "bg-green-100 text-green-800 border-green-400"
+                            : item?.status === "Inactive"
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-orange-100 text-orange-800 border-orange-400"
+                        }`}
+                      >
+                        {item?.status || "Inactive"}
+                      </span>
+                    </td>
+                    <td className="p-4 whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 whitespace-nowrap">
@@ -516,6 +555,17 @@ function Spare() {
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5z" />
                           </svg>
                         </button>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer "
+                            checked={item?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(item?._id, item?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
