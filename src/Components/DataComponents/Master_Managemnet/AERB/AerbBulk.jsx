@@ -2,6 +2,7 @@
 
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 function AerbBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
@@ -33,6 +34,107 @@ function AerbBulk({ onClose, getData }) {
     warnings: [],
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields
+          const requiredFields = {
+            materialcode: [
+              "materialcode",
+              "material_code",
+              "partno",
+              "part_no",
+              "code",
+            ],
+            materialdescription: [
+              "materialdescription",
+              "material_description",
+              "description",
+              "desc",
+            ],
+          };
+
+          const foundFields = {};
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            foundFields[field] = variations.some((variation) =>
+              normalizedHeaders.includes(variation)
+            );
+          }
+
+          const isValid =
+            foundFields.materialcode && foundFields.materialdescription;
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            missingFields: Object.entries(foundFields)
+              .filter(([field, found]) => !found)
+              .map(([field]) => field),
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            missingFields: [],
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          missingFields: [],
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
@@ -66,24 +168,58 @@ function AerbBulk({ onClose, getData }) {
     validateAndSetFile(selectedFile);
   };
 
-  const validateAndSetFile = (selectedFile) => {
+  const validateAndSetFile = async (selectedFile) => {
     setError("");
+    setFileValidation(null);
+
     if (!selectedFile) {
       setFile(null);
       return;
     }
+
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
+
     if (selectedFile.size > 50 * 1024 * 1024) {
       setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
+
+    // Add loading state for validation
     setFile(selectedFile);
+    setError("Validating file structure...");
+
+    // Validate file structure
+    const validation = await validateFileStructure(selectedFile);
+    setFileValidation(validation);
+
+    if (!validation.isValid) {
+      if (validation.error) {
+        setError(validation.error);
+      } else {
+        const missingFieldsText = validation.missingFields
+          .map((field) => {
+            if (field === "materialcode") return "Material Code";
+            if (field === "materialdescription") return "Material Description";
+            return field;
+          })
+          .join(", ");
+
+        setError(
+          `Missing required columns: ${missingFieldsText}. ` +
+            `Found columns: ${validation.headers.join(", ")}`
+        );
+      }
+      setFile(null);
+      return;
+    }
+
+    setError(""); // Clear error if validation passes
   };
 
   const handleDragOver = (e) => {
@@ -692,11 +828,13 @@ function AerbBulk({ onClose, getData }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600  hover:bg-blue-700"
+                          : "bg-blue-600 hover:bg-blue-700"
                       } text-white transition-colors`}
                     >
                       <svg
@@ -714,7 +852,9 @@ function AerbBulk({ onClose, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Process Aerb Data
+                      {fileValidation && fileValidation.isValid
+                        ? "Upload & Process Aerb Data ✓"
+                        : "Upload & Process Aerb Data"}
                     </button>
                   </div>
                 </div>

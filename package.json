@@ -34,7 +34,8 @@
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.12.2",
     "typescript": "latest",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "description": "https://github.com/mui/material-ui/blob/v5.15.15/docs/data/joy/templates/order-dashboard/App.tsx",
   "devDependencies": {
