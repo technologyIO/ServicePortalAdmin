@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import * as XLSX from "xlsx";
 
 function CheckListBulk() {
   const [file, setFile] = useState(null);
@@ -10,30 +11,205 @@ function CheckListBulk() {
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [result, setResult] = useState(null);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison (matching backend logic)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields - ALL 6 FIELDS ARE REQUIRED
+          const requiredFields = {
+            checklisttype: ["checklisttype", "checklisttype", "checklist_type"],
+            checkpointtype: [
+              "checkpointtype",
+              "checkpointtype",
+              "checkpoint_type",
+            ],
+            checkpoint: ["checkpoint", "checkpoint", "check_point"],
+            prodGroup: ["prodgroup", "prodgroup", "prod_group", "productgroup"],
+            resulttype: ["resulttype", "resulttype", "result_type"],
+            status: ["status", "status"],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation)
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              // Find the original header name for this variation
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // All 6 fields are now required
+          const isValid =
+            foundFields.checklisttype &&
+            foundFields.checkpointtype &&
+            foundFields.checkpoint &&
+            foundFields.prodGroup &&
+            foundFields.resulttype &&
+            foundFields.status;
+
+          const missingFields = Object.entries(foundFields)
+            .filter(([field, found]) => !found)
+            .map(([field]) => {
+              const fieldLabels = {
+                checklisttype: "Checklist Type",
+                checkpointtype: "Checkpoint Type",
+                checkpoint: "Checkpoint",
+                prodGroup: "Product Group",
+                resulttype: "Result Type",
+                status: "Status",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.values(foundFields).filter(Boolean).length,
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            totalRequired: 6,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          totalRequired: 6,
+          foundRequired: 0,
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
     validateAndSetFile(selectedFile);
   };
 
-  const validateAndSetFile = (selectedFile) => {
+  const validateAndSetFile = async (selectedFile) => {
     setError(null);
+    setFileValidation(null);
+
     if (!selectedFile) {
       setFile(null);
       return;
     }
+
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
+
     if (selectedFile.size > 5 * 1024 * 1024) {
       setError("File size exceeds 5MB limit");
       setFile(null);
       return;
     }
+
+    // Set file and show validation loading
     setFile(selectedFile);
+    setError("Validating file structure...");
+
+    // Validate file structure
+    const validation = await validateFileStructure(selectedFile);
+    setFileValidation(validation);
+
+    if (!validation.isValid) {
+      if (validation.error) {
+        setError(validation.error);
+      } else {
+        const missingFieldsText = validation.missingFields.join(", ");
+        // Using consistent line break format
+        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
+          validation.foundRequired
+        }/${
+          validation.totalRequired
+        } required columns.\n\nAvailable columns:\n${validation.headers.join(
+          ", "
+        )}`;
+        setError(errorMessage);
+      }
+      setFile(null);
+      return;
+    }
+
+    setError(null); // Clear error if validation passes
+    toast.success(
+      `✅ File validated successfully: ${selectedFile.name} - All required columns found!`
+    );
   };
 
   const handleDragOver = (e) => {
@@ -211,7 +387,9 @@ function CheckListBulk() {
                   </svg>
                   <div>
                     <h3 className="text-sm font-medium text-red-800">Error</h3>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                    <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                      {error}
+                    </p>
                   </div>
                 </div>
               )}
@@ -358,9 +536,15 @@ function CheckListBulk() {
                 )}
                 <button
                   onClick={handleUpload}
-                  disabled={!file || isUploading}
+                  disabled={
+                    !file ||
+                    isUploading ||
+                    (fileValidation && !fileValidation.isValid)
+                  }
                   className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                    !file || isUploading
+                    !file ||
+                    isUploading ||
+                    (fileValidation && !fileValidation.isValid)
                       ? "bg-blue-400 cursor-not-allowed"
                       : "bg-blue-600 hover:bg-blue-700"
                   } text-white transition-colors`}
@@ -380,7 +564,9 @@ function CheckListBulk() {
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
-                  Upload File
+                  {fileValidation && fileValidation.isValid
+                    ? "Upload File ✓"
+                    : "Upload File"}
                 </button>
               </div>
             </div>
