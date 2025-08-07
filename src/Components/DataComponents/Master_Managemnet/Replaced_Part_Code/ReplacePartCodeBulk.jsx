@@ -11,6 +11,7 @@ import {
   Package,
 } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 
 function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
   const [file, setFile] = useState(null);
@@ -53,6 +54,226 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
   });
 
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields (matching backend FIELD_MAPPINGS) - 6 REQUIRED FIELDS
+          const requiredFields = {
+            catalog: ["catalog", "catalogue", "catalog_name", "catalogname"],
+            codegroup: [
+              "codegroup",
+              "code_group",
+              "group",
+              "groupcode",
+              "group_code",
+              "partgroup",
+            ],
+            name: [
+              "name",
+              "partname",
+              "part_name",
+              "componentname",
+              "component_name",
+              "itemname",
+            ],
+            code: [
+              "code",
+              "partcode",
+              "part_code",
+              "itemcode",
+              "item_code",
+              "componentcode",
+            ],
+            shorttextforcode: [
+              "shorttextforcode",
+              "short_text_for_code",
+              "shorttext",
+              "short_text",
+              "description",
+            ],
+            slno: [
+              "slno",
+              "sl_no",
+              "serialno",
+              "serial_no",
+              "serialnumber",
+              "sequence",
+            ],
+          };
+
+          // Optional field
+          const optionalFields = {
+            status: [
+              "status",
+              "record_status",
+              "recordstatus",
+              "state",
+              "condition",
+            ],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          // Check required fields
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // Check optional fields (for better user feedback)
+          for (const [field, variations] of Object.entries(optionalFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // All 6 fields are required
+          const isValid =
+            foundFields.catalog &&
+            foundFields.codegroup &&
+            foundFields.name &&
+            foundFields.code &&
+            foundFields.shorttextforcode &&
+            foundFields.slno;
+
+          const missingFields = Object.entries(requiredFields)
+            .filter(([field]) => !foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                catalog: "Catalog",
+                codegroup: "Code Group",
+                name: "Name",
+                code: "Code",
+                shorttextforcode: "Short Text For Code",
+                slno: "Sl No",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          const optionalFound = Object.entries(optionalFields)
+            .filter(([field]) => foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                status: "Status",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            optionalFound,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.values(requiredFields).reduce(
+              (count, _, index) =>
+                count +
+                (Object.keys(requiredFields)[index] in foundFields &&
+                foundFields[Object.keys(requiredFields)[index]]
+                  ? 1
+                  : 0),
+              0
+            ),
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            optionalFound: [],
+            totalRequired: 6,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          optionalFound: [],
+          totalRequired: 6,
+          foundRequired: 0,
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   // Enhanced live update function with better categorization
   const addLiveUpdate = useCallback((message, type = "info", data = null) => {
@@ -87,8 +308,10 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
 
   // Enhanced file validation with replaced part code specific fields
   const validateAndSetFile = useCallback(
-    (selectedFile) => {
+    async (selectedFile) => {
       setError("");
+      setFileValidation(null);
+
       if (!selectedFile) {
         setFile(null);
         return;
@@ -114,74 +337,62 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
         return;
       }
 
-      // Additional validation for CSV files
-      if (fileExtension === "csv") {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target.result;
-          const lines = text.split("\n");
-          if (lines.length < 2) {
-            setError(
-              "CSV file must contain at least a header row and one data row"
-            );
-            setFile(null);
-            return;
-          }
+      // Set file and show validation loading
+      setFile(selectedFile);
+      setError("Validating file structure...");
+      addLiveUpdate(
+        `File selected: ${selectedFile.name} (${(
+          selectedFile.size / 1024
+        ).toFixed(2)} KB)`,
+        "info"
+      );
 
-          const headers = lines[0].split(",").map((h) =>
-            h
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, "")
-          );
+      // Validate file structure
+      const validation = await validateFileStructure(selectedFile);
+      setFileValidation(validation);
 
-          // Check for required headers for ReplacedPartCode
-          const requiredHeaders = [
-            "catalog",
-            "codegroup",
-            "name",
-            "code",
-            "shorttextforcode",
-            "slno",
-          ];
-          const missingHeaders = requiredHeaders.filter(
-            (h) =>
-              !headers.some(
-                (header) =>
-                  header.includes(h) ||
-                  header.includes(h.replace(/([A-Z])/g, "_$1").toLowerCase()) ||
-                  header.includes(
-                    h.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase()
-                  )
-              )
-          );
-
-          if (missingHeaders.length > 0) {
-            setError(
-              `Missing required columns: ${missingHeaders.join(
-                ", "
-              )}. Please ensure your file contains: Catalog, Code Group, Name, Code, Short Text For Code, Sl No`
-            );
-            setFile(null);
-            return;
-          }
-
-          setFile(selectedFile);
+      if (!validation.isValid) {
+        if (validation.error) {
+          setError(validation.error);
+          addLiveUpdate(`File validation failed: ${validation.error}`, "error");
+        } else {
+          const missingFieldsText = validation.missingFields.join(", ");
+          const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
+            validation.foundRequired
+          }/${
+            validation.totalRequired
+          } required columns.\n\nAvailable columns:\n${validation.headers.join(
+            ", "
+          )}`;
+          setError(errorMessage);
           addLiveUpdate(
-            `File validated: ${selectedFile.name} (${(
-              selectedFile.size / 1024
-            ).toFixed(2)} KB)`,
-            "success"
+            `File validation failed: Missing required columns`,
+            "error"
           );
-        };
-        reader.readAsText(selectedFile.slice(0, 4096)); // Read first 4KB for validation
-      } else {
-        setFile(selectedFile);
+        }
+        setFile(null);
+        return;
+      }
+
+      setError(""); // Clear error if validation passes
+      addLiveUpdate(
+        `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
+        "success"
+      );
+
+      // Show mapped columns
+      if (validation.mappedColumns) {
+        const mappedList = Object.entries(validation.mappedColumns)
+          .map(([field, header]) => `${field}: "${header}"`)
+          .join(", ");
+        addLiveUpdate(`📋 Required columns mapped: ${mappedList}`, "info");
+      }
+
+      // Show optional columns found
+      if (validation.optionalFound && validation.optionalFound.length > 0) {
         addLiveUpdate(
-          `File selected: ${selectedFile.name} (${(
-            selectedFile.size / 1024
-          ).toFixed(2)} KB)`,
-          "success"
+          `📊 Optional columns found: ${validation.optionalFound.join(", ")}`,
+          "info"
         );
       }
     },
@@ -791,7 +1002,9 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                          {error}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -885,15 +1098,19 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-blue-400 cursor-not-allowed"
                           : "bg-blue-600 hover:bg-blue-700"
                       } text-white transition-colors`}
                     >
                       <Upload size={16} />
-                      Start Batch Upload Replaced Part Codes
+                      {fileValidation && fileValidation.isValid
+                        ? "Start Batch Upload Replaced Part Codes ✓"
+                        : "Start Batch Upload Replaced Part Codes"}
                     </button>
                   </div>
                 </div>
