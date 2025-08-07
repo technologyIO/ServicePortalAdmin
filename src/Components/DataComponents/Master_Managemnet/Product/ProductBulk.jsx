@@ -11,6 +11,7 @@ import {
   Package,
 } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
+import * as XLSX from "xlsx";
 
 function ProductBulk({ isOpen, onClose, getData }) {
   const [file, setFile] = useState(null);
@@ -53,6 +54,131 @@ function ProductBulk({ isOpen, onClose, getData }) {
   });
 
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        let headers = [];
+        const fileName = file.name.toLowerCase();
+        
+        if (fileName.endsWith('.csv')) {
+          // Parse CSV headers
+          const text = e.target.result;
+          const firstLine = text.split('\n')[0];
+          headers = firstLine.split(',').map(h => h.trim().replace(/"/g, ''));
+        } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+          // Parse Excel headers
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          headers = jsonData[0] || [];
+        }
+        
+        // Normalize headers for comparison (matching backend logic)
+        const normalizedHeaders = headers.map(h => 
+          h.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+        );
+        
+        // Check for required fields (matching backend MAP) - NOW WITH 5 REQUIRED FIELDS
+        const requiredFields = {
+          partnoid: ['partno', 'partnoid', 'partnumber', 'part_number', 'partno', 'partnoid'],
+          product: ['productdescription', 'productdesc', 'product', 'productdescription1'],
+          productgroup: ['productgroup', 'group', 'productgroup'],
+          subgrp: ['subgrp', 'subgroup', 'sub_grp', 'subgroup'],
+          frequency: ['frequency', 'freq'],
+          installationcheckliststatusboolean: ['installationcheckliststatus', 'installationcheckliststatusboolean', 'installationcheckliststatus'],
+          pmcheckliststatusboolean: ['pmcheckliststatus', 'pmcheckliststatusboolean', 'pmcheckliststatus']
+        };
+        
+        const foundFields = {};
+        const mappedColumns = {};
+        
+        for (const [field, variations] of Object.entries(requiredFields)) {
+          const foundVariation = variations.find(variation => 
+            normalizedHeaders.includes(variation)
+          );
+          foundFields[field] = !!foundVariation;
+          
+          if (foundVariation) {
+            // Find the original header name for this variation
+            const originalHeader = headers.find(h => 
+              h.toLowerCase().replace(/[^a-z0-9]/g, '').trim() === foundVariation
+            );
+            mappedColumns[field] = originalHeader;
+          }
+        }
+        
+        // All 7 fields are now required
+        const isValid = foundFields.partnoid && foundFields.product && 
+                        foundFields.productgroup && foundFields.subgrp && 
+                        foundFields.frequency && foundFields.installationcheckliststatusboolean && 
+                        foundFields.pmcheckliststatusboolean;
+        
+        const missingFields = Object.entries(foundFields)
+          .filter(([field, found]) => !found)
+          .map(([field]) => {
+            const fieldLabels = {
+              'partnoid': 'Part No',
+              'product': 'Product Description', 
+              'productgroup': 'Product Group',
+              'subgrp': 'Sub_GRp',
+              'frequency': 'Frequency',
+              'installationcheckliststatusboolean': 'Installation checklist Status',
+              'pmcheckliststatusboolean': 'PM checklist Status'
+            };
+            return fieldLabels[field] || field;
+          });
+        
+        resolve({
+          isValid,
+          headers: headers,
+          foundFields,
+          mappedColumns,
+          missingFields,
+          totalRequired: Object.keys(requiredFields).length,
+          foundRequired: Object.values(foundFields).filter(Boolean).length
+        });
+        
+      } catch (error) {
+        resolve({
+          isValid: false,
+          error: `File parsing error: ${error.message}`,
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          totalRequired: 5,
+          foundRequired: 0
+        });
+      }
+    };
+    
+    reader.onerror = () => {
+      resolve({
+        isValid: false,
+        error: 'Failed to read file',
+        headers: [],
+        foundFields: {},
+        mappedColumns: {},
+        missingFields: [],
+        totalRequired: 5,
+        foundRequired: 0
+      });
+    };
+    
+    // Read file based on type
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
+    }
+  });
+};
 
   // Enhanced live update function with better categorization
   const addLiveUpdate = useCallback((message, type = "info", data = null) => {
@@ -87,8 +213,10 @@ function ProductBulk({ isOpen, onClose, getData }) {
 
   // Enhanced file validation with product-specific fields
   const validateAndSetFile = useCallback(
-    (selectedFile) => {
+    async (selectedFile) => {
       setError("");
+      setFileValidation(null);
+
       if (!selectedFile) {
         setFile(null);
         return;
@@ -114,55 +242,41 @@ function ProductBulk({ isOpen, onClose, getData }) {
         return;
       }
 
-      // Additional validation for CSV files
-      if (fileExtension === "csv") {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const text = e.target.result;
-          const lines = text.split("\n");
-          if (lines.length < 2) {
-            setError(
-              "CSV file must contain at least a header row and one data row"
-            );
-            setFile(null);
-            return;
-          }
+      // Set file and show validation loading
+      setFile(selectedFile);
+      setError("Validating file structure...");
+      addLiveUpdate(
+        `File selected: ${selectedFile.name} (${(
+          selectedFile.size / 1024
+        ).toFixed(2)} KB)`,
+        "info"
+      );
 
-          const headers = lines[0].split(",").map((h) =>
-            h
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, "")
-          );
-          const requiredHeaders = ["partno", "productdescription"];
-          const missingHeaders = requiredHeaders.filter(
-            (h) => !headers.some((header) => header.includes(h))
-          );
+      // Validate file structure
+      const validation = await validateFileStructure(selectedFile);
+      setFileValidation(validation);
 
-          if (missingHeaders.length > 0) {
-            setError(`Missing required columns: ${missingHeaders.join(", ")}`);
-            setFile(null);
-            return;
-          }
-
-          setFile(selectedFile);
-          addLiveUpdate(
-            `File validated: ${selectedFile.name} (${(
-              selectedFile.size / 1024
-            ).toFixed(2)} KB)`,
-            "success"
-          );
-        };
-        reader.readAsText(selectedFile.slice(0, 2048)); // Read first 2KB for validation
-      } else {
-        setFile(selectedFile);
-        addLiveUpdate(
-          `File selected: ${selectedFile.name} (${(
-            selectedFile.size / 1024
-          ).toFixed(2)} KB)`,
-          "success"
-        );
+      if (!validation.isValid) {
+        if (validation.error) {
+          setError(validation.error);
+          addLiveUpdate(`File validation failed: ${validation.error}`, "error");
+        } else {
+          const missingFieldsText = validation.missingFields.join(", ");
+          const errorMessage = `Missing required columns: ${missingFieldsText}. \nFound columns: ${validation.headers.join(
+            ", "
+          )}.`;
+          setError(errorMessage);
+          addLiveUpdate(`File validation failed: ${errorMessage}`, "error");
+        }
+        setFile(null);
+        return;
       }
+
+      setError(""); // Clear error if validation passes
+      addLiveUpdate(
+        `✅ File validated successfully: ${selectedFile.name} - Required columns found!`,
+        "success"
+      );
     },
     [addLiveUpdate]
   );
@@ -775,7 +889,7 @@ function ProductBulk({ isOpen, onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
                       </div>
                     </div>
                   )}
@@ -911,9 +1025,11 @@ function ProductBulk({ isOpen, onClose, getData }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-blue-400 cursor-not-allowed"
                           : "bg-blue-600 hover:bg-blue-700"
                       } text-white transition-colors`}
@@ -933,7 +1049,9 @@ function ProductBulk({ isOpen, onClose, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Start Batch Upload Product Data
+                      {fileValidation && fileValidation.isValid
+                        ? "Start Batch Upload Product Data ✓"
+                        : "Start Batch Upload Product Data"}
                     </button>
                   </div>
                 </div>

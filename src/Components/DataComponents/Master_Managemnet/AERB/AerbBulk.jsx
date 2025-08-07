@@ -212,7 +212,7 @@ function AerbBulk({ onClose, getData }) {
 
         setError(
           `Missing required columns: ${missingFieldsText}. ` +
-            `Found columns: ${validation.headers.join(", ")}`
+            `\nFound columns: ${validation.headers.join(", ")}`
         );
       }
       setFile(null);
@@ -695,7 +695,7 @@ function AerbBulk({ onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
                       </div>
                     </div>
                   )}
