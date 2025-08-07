@@ -24,6 +24,9 @@ function Spare() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [totalSpareMasters, setTotalSpareMasters] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [isDownloadingSpareMaster, setIsDownloadingSpareMaster] =
     useState(false);
 
@@ -143,36 +146,53 @@ function Spare() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
+      return;
+    }
+
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searched/spare?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searched/spare?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.spareMasters || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalSpareMasters(response.data.totalSpareMasters || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching spare masters:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalSpareMasters(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/addsparemaster/paginated?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/addsparemaster/paginated?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.spareMasters);
         setTotalPages(res.data.totalPages);
+        setTotalSpareMasters(res.data.totalSpareMasters || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalSpareMasters(0);
       });
   };
 
@@ -182,8 +202,12 @@ function Spare() {
     }
   }, [searchQuery]);
   useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -224,11 +248,15 @@ function Spare() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -249,14 +277,32 @@ function Spare() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -316,6 +362,25 @@ function Spare() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalSpareMasters}</span>{" "}
+                  spare masters found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalSpareMasters}</span>{" "}
+                  spare masters
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full border min-w-max caption-bottom text-sm">
               <thead className="[&_tr]:border-b bg-blue-700">
@@ -490,7 +555,7 @@ function Spare() {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}

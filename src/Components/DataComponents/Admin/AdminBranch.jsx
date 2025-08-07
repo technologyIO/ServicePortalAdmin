@@ -34,6 +34,8 @@ const AdminBranch = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalBranches, setTotalBranches] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
@@ -161,60 +163,59 @@ const AdminBranch = () => {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
-      getAllData(); // Load all data if search query is empty
+      getAllData();
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchbranch?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchbranch?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
-      let searchData = [];
-      if (Array.isArray(response.data)) {
-        searchData = response.data;
-      } else if (
-        response.data.results &&
-        Array.isArray(response.data.results)
-      ) {
-        searchData = response.data.results;
-      } else if (response.data.message === "No results found") {
-        searchData = [];
-      } else if (response.data._id) {
-        searchData = [response.data];
-      }
-
-      setData(searchData);
-      setTotalPages(1);
-      setPage(1);
+      setData(response.data.branches || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalBranches(response.data.totalBranches || 0);
+      setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Search error:", error);
       setData([]);
-    } finally {
+      setTotalPages(1);
+      setTotalBranches(0);
       setLoader(false);
     }
   };
 
-  const getAllData = () => {
+  const getAllData = (pageNum = page) => {
     setLoader(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
     setSearchQuery("");
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/branch?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/branch?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.branches);
         setTotalPages(res.data.totalPages);
+        setTotalBranches(res.data.totalBranches || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalBranches(0);
       });
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getAllData();
@@ -269,11 +270,33 @@ const AdminBranch = () => {
       });
   };
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      const newPage = page - 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getAllData(newPage);
+      }
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      const newPage = page + 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getAllData(newPage);
+      }
+    }
+  };
+
+  const handlePageClick = (pageNum) => {
+    if (isSearchMode) {
+      handleSearch(pageNum);
+    } else {
+      getAllData(pageNum);
+    }
   };
 
   return (
@@ -295,13 +318,13 @@ const AdminBranch = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      handleSearch(1);
                     }
                   }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -342,6 +365,24 @@ const AdminBranch = () => {
                   <>Download Excel</>
                 )}
               </button>
+            </div>
+          </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalBranches}</span>{" "}
+                  branches found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalBranches}</span>{" "}
+                  branches
+                </span>
+              )}
             </div>
           </div>
 
@@ -520,7 +561,7 @@ const AdminBranch = () => {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => handlePageClick(p)}
                       disabled={p === page}
                     >
                       {p}

@@ -24,6 +24,9 @@ function WarrantyCode() {
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
   const limit = 10;
+  const [totalWarrantyCodes, setTotalWarrantyCodes] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
@@ -152,41 +155,56 @@ function WarrantyCode() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchwarrantycode?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.warrantyCodes || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalWarrantyCodes(response.data.totalWarrantyCodes || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching warranty codes:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalWarrantyCodes(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/warrantycode?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/warrantycode?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.warrantyCodes);
         setTotalPages(res.data.totalPages);
+        setTotalWarrantyCodes(res.data.totalWarrantyCodes || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalWarrantyCodes(0);
       });
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -194,8 +212,12 @@ function WarrantyCode() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -234,12 +256,17 @@ function WarrantyCode() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
+
   return (
     <>
       {loader ? (
@@ -258,14 +285,32 @@ function WarrantyCode() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -325,6 +370,25 @@ function WarrantyCode() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalWarrantyCodes}</span>{" "}
+                  warranty codes found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalWarrantyCodes}</span>{" "}
+                  warranty codes
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full   border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">

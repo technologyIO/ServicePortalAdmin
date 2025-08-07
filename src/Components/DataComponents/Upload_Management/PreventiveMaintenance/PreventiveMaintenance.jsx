@@ -180,12 +180,9 @@ function PreventiveMaintenance() {
         Array.isArray(response.data.results)
       ) {
         searchData = response.data.results;
-        totalPagesCount =
-          response.data.totalPages ||
-          Math.ceil(response.data.total / limit) ||
-          1;
+        totalPagesCount = response.data.totalPages || 1;
         totalSearchRecords =
-          response.data.total || response.data.results.length;
+          response.data.totalRecords || response.data.results.length;
       } else if (response.data.pms && Array.isArray(response.data.pms)) {
         searchData = response.data.pms;
         totalPagesCount = response.data.totalPages || 1;
@@ -225,7 +222,7 @@ function PreventiveMaintenance() {
       return;
     }
 
-    setPage(1); // Reset to first page when searching
+    setPage(1);  
     setLoader(true);
     setIsSearchMode(true);
 
@@ -247,19 +244,14 @@ function PreventiveMaintenance() {
         Array.isArray(response.data.results)
       ) {
         searchData = response.data.results;
-        totalPagesCount =
-          response.data.totalPages ||
-          Math.ceil(response.data.total / limit) ||
-          1;
+        totalPagesCount = response.data.totalPages || 1;
         totalSearchRecords =
-          response.data.total || response.data.results.length;
+          response.data.totalRecords || response.data.results.length;
       } else if (response.data.pms && Array.isArray(response.data.pms)) {
         searchData = response.data.pms;
         totalPagesCount = response.data.totalPages || 1;
         totalSearchRecords =
-          response.data.totalPms ||
-          response.data.total ||
-          response.data.pms.length;
+          response.data.totalRecords || response.data.pms.length;
       } else if (response.data.message === "No results found") {
         searchData = [];
         totalPagesCount = 1;
@@ -272,7 +264,7 @@ function PreventiveMaintenance() {
 
       setData(searchData);
       setTotalPages(totalPagesCount);
-      setSearchTotalRecords(totalSearchRecords); // Set search total records
+      setSearchTotalRecords(totalSearchRecords); // ✅ now only uses totalRecords
     } catch (error) {
       console.error("Error searching records:", error);
       setData([]);
@@ -486,7 +478,7 @@ function PreventiveMaintenance() {
           )} */}
 
           {/* Updated total records display */}
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded mb-3">
+          <div className="flex items-center justify-between bg-gray-50 p-2 rounded ">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-700">
                 {isSearchMode ? (

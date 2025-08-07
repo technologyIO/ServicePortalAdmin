@@ -39,6 +39,8 @@ const AdminChecklist = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectAll, setSelectAll] = useState(false);
   const [CheckListtype, setCheckListtype] = useState([]);
+  const [totalChecklists, setTotalChecklists] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [checkpointtype, setcheckpointtype] = useState([]);
   const [productgroup, setproductgroup] = useState([]);
@@ -86,7 +88,7 @@ const AdminChecklist = () => {
   };
 
   // Loading Spinner Component
- 
+
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -220,51 +222,73 @@ const AdminChecklist = () => {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery) {
+      // Don't clear search, just return
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchchecklist?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchchecklist?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.checklists || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalChecklists(response.data.totalChecklists || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching checklists:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalChecklists(0);
       setLoader(false);
     }
   };
-  const getAllData = () => {
+
+  const getAllData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/checklist?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/checklist?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-
         setData(res.data.checklists);
         setTotalPages(res.data.totalPages);
+        setTotalChecklists(res.data.totalChecklists || 0);
       })
       .catch((error) => {
         setLoader(false);
-
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalChecklists(0);
       });
   };
+
   useEffect(() => {
-    if (!searchQuery) {
-      getAllData();
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getAllData(page);
+    }
+  }, [page]);
+  // Add this useEffect to automatically refresh when search is cleared
+  useEffect(() => {
+    // Only trigger when search was active and now becomes empty
+    if (searchQuery === "" && isSearchMode) {
+      setIsSearchMode(false);
+      setPage(1);
+      getAllData(1);
     }
   }, [searchQuery]);
-  useEffect(() => {
-    getAllData();
-    // getAllCountries()
-  }, [page]);
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -302,11 +326,15 @@ const AdminChecklist = () => {
       });
   };
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -327,14 +355,31 @@ const AdminChecklist = () => {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setPage(1);
+                        getAllData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getAllData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -383,6 +428,24 @@ const AdminChecklist = () => {
                   <>Download Excel</>
                 )}
               </button>
+            </div>
+          </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalChecklists}</span>{" "}
+                  checklists found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalChecklists}</span>{" "}
+                  checklists
+                </span>
+              )}
             </div>
           </div>
 

@@ -35,6 +35,8 @@ function Aerb() {
       getData();
     }
   };
+  const [totalAerb, setTotalAerb] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -150,61 +152,54 @@ function Aerb() {
   };
 
   // Updated handleSearch function
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
       getData();
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchaerb?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchaerb?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
-      // Handle both array and object response formats
-      let searchData = [];
-      if (Array.isArray(response.data)) {
-        searchData = response.data;
-      } else if (response.data.aerbEntries) {
-        searchData = response.data.aerbEntries;
-      } else if (Array.isArray(response.data.results)) {
-        searchData = response.data.results;
-      } else if (response.data.message === "No results found") {
-        searchData = [];
-      } else {
-        // Handle single object response by putting it in an array
-        if (response.data._id) {
-          searchData = [response.data];
-        }
-      }
-
-      setData(searchData);
-      setTotalPages(1);
-      setPage(1);
+      setData(response.data.aerbEntries || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalAerb(response.data.totalAerb || 0);
+      setLoader(false);
     } catch (error) {
       console.error("Search error:", error);
       setData([]);
-    } finally {
+      setTotalPages(1);
+      setTotalAerb(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/aerb?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/aerb?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setData(res.data.aerbEntries || []);
         setTotalPages(res.data.totalPages || 1);
+        setTotalAerb(res.data.totalAerbEntries || 0);
+        setLoader(false);
       })
       .catch((error) => {
         console.error("Data fetch error:", error);
         setData([]);
-      })
-      .finally(() => {
+        setTotalPages(1);
+        setTotalAerb(0);
         setLoader(false);
       });
   };
@@ -257,12 +252,34 @@ function Aerb() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      const newPage = page - 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      const newPage = page + 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
   };
+  const handlePageClick = (pageNum) => {
+    if (isSearchMode) {
+      handleSearch(pageNum);
+    } else {
+      getData(pageNum);
+    }
+  };
+
   return (
     <>
       {loader ? (
@@ -287,13 +304,13 @@ function Aerb() {
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      handleSearch(1);
                     }
                   }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)} // Change this line
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -354,6 +371,26 @@ function Aerb() {
               </button>
             </div>
           )} */}
+
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalAerb}</span> records
+                  found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalAerb}</span> AERB
+                  entries
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -500,7 +537,7 @@ function Aerb() {
             </table>
           </div>
 
-          {!searchQuery && totalPages > 1 && (
+          {totalPages > 1 && ( // Remove !searchQuery condition
             <div className="Pagination-laptopUp flex justify-between p-4">
               <button
                 className={`border rounded p-1 ${
@@ -526,7 +563,7 @@ function Aerb() {
                         className={`border px-3 rounded ${
                           p === page ? "bg-blue-700 text-white" : ""
                         }`}
-                        onClick={() => setPage(p)}
+                        onClick={() => handlePageClick(p)} // Change this line
                       >
                         {p}
                       </button>
@@ -544,6 +581,7 @@ function Aerb() {
               </button>
             </div>
           )}
+
           <Modal
             open={showModal}
             onClose={handleCloseModal}

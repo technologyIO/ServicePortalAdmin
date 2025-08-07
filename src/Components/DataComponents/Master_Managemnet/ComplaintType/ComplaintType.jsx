@@ -35,6 +35,8 @@ function ComplaintType() {
       getData();
     }
   };
+  const [totalComplaintTypes, setTotalComplaintTypes] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
@@ -154,59 +156,51 @@ function ComplaintType() {
   };
 
   // Updated handleSearch function
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
-      getData();
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/complaints/complainttype/search?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/complaints/complainttype/search?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
-      let searchData = [];
-
-      if (Array.isArray(response.data)) {
-        searchData = response.data;
-      } else if (Array.isArray(response.data.data)) {
-        // ✅ Fix: use the actual data array from your API response
-        searchData = response.data.data;
-      } else if (response.data.aerbEntries) {
-        searchData = response.data.aerbEntries;
-      } else if (Array.isArray(response.data.results)) {
-        searchData = response.data.results;
-      } else if (response.data.message === "No results found") {
-        searchData = [];
-      } else if (response.data._id) {
-        searchData = [response.data];
-      }
-
-      setData(searchData);
-      setTotalPages(1);
-      setPage(1);
+      setData(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalComplaintTypes(response.data.totalComplaintTypes || 0);
+      setLoader(false);
     } catch (error) {
       console.error("Search error:", error);
       setData([]);
-    } finally {
+      setTotalPages(1);
+      setTotalComplaintTypes(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/complaints/complainttype/paginated?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/complaints/complainttype/paginated?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setData(res.data.data || []);
         setTotalPages(res.data.totalPages || 1);
+        setTotalComplaintTypes(res.data.totalComplaintTypes || 0);
       })
       .catch((error) => {
         console.error("Data fetch error:", error);
         setData([]);
+        setTotalPages(1);
+        setTotalComplaintTypes(0);
       })
       .finally(() => {
         setLoader(false);
@@ -221,8 +215,12 @@ function ComplaintType() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -264,12 +262,17 @@ function ComplaintType() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
+
   return (
     <>
       {loader ? (
@@ -286,21 +289,34 @@ function ComplaintType() {
                   placeholder="Search"
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (!e.target.value) {
-                      getData(); // Refresh data when search is cleared
-                    }
-                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
+                    }
+                  }}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
                     }
                   }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -360,6 +376,25 @@ function ComplaintType() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalComplaintTypes}</span>{" "}
+                  complaint types found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalComplaintTypes}</span>{" "}
+                  complaint types
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -502,7 +537,7 @@ function ComplaintType() {
             </table>
           </div>
 
-          {!searchQuery && totalPages > 1 && (
+          {totalPages > 1 && (
             <div className="Pagination-laptopUp flex justify-between p-4">
               <button
                 className={`border rounded p-1 ${
@@ -528,7 +563,7 @@ function ComplaintType() {
                         className={`border px-3 rounded ${
                           p === page ? "bg-blue-700 text-white" : ""
                         }`}
-                        onClick={() => setPage(p)}
+                        onClick={() => setPage(p)} // Change this line
                       >
                         {p}
                       </button>
@@ -555,7 +590,9 @@ function ComplaintType() {
             <ModalDialog size="lg" className="p-2  thin-scroll">
               <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-xl font-semibold">
-                  {editModal ? "Update Aerb" : "Create Aerb"}
+                  {editModal
+                    ? "Update Complaint Type"
+                    : "Create Complaint Type"}{" "}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
@@ -631,7 +668,9 @@ function ComplaintType() {
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                    {editModal ? "Update Aerb" : "Create Aerb"}
+                    {editModal
+                      ? "Update Complaint Type"
+                      : "Create Complaint Type"}
                   </button>
                 </div>
               </form>

@@ -24,6 +24,9 @@ const UserData = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -110,16 +113,20 @@ const UserData = () => {
   const handleEdit = (userId) => {
     navigate(`/user-edit/${userId}`);
   };
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery) return;
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/search?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/usersearch?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
 
-      console.log("response.data", response.data);
+      setData(response.data.users);
+      setTotalPages(response.data.totalPages);
+      setTotalUsers(response.data.totalUsers);
       setLoader(false);
     } catch (error) {
       console.error("Error searching users:", error);
@@ -127,18 +134,20 @@ const UserData = () => {
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setIsSearchMode(false);
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/user?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/user?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.users);
-        console.log("res.data.users", res.data.users);
         setTotalPages(res.data.totalPages);
+        setTotalUsers(res.data.totalUsers);
       })
       .catch((error) => {
         setLoader(false);
@@ -160,11 +169,25 @@ const UserData = () => {
   }, [page]);
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      const newPage = page - 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      const newPage = page + 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
   };
 
   // Helper function to format skills array
@@ -274,12 +297,13 @@ const UserData = () => {
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
                 Search
               </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -349,6 +373,24 @@ const UserData = () => {
               </button>
             )} */}
           </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalUsers}</span> users
+                  found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalUsers}</span> users
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto border">
             <table className="w-full border min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700">

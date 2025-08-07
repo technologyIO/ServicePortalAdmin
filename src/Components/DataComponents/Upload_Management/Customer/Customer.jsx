@@ -21,6 +21,9 @@ function Customer() {
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
   const limit = 10;
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const openModal = () => setIsOpen(true);
@@ -286,44 +289,45 @@ function Customer() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
+
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchcustomer?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchcustomer?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      // Check if response.data is an array or has a customers property
-      if (Array.isArray(response.data)) {
-        setData(response.data);
-      } else if (response.data.customers) {
-        setData(response.data.customers);
-      } else {
-        setData([]);
-      }
+
+      setData(response.data.customers || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCustomers(response.data.totalCustomers || 0);
       setLoader(false);
-    } catch (err) {
-      console.error("Error searching Customers:", err);
-      setData([]); // Set empty array on error
+    } catch (error) {
+      console.error("Error searching customers:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalCustomers(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
-    console.log("getData called with page:", page); // Debug log
+  const getData = (pageNum = page) => {
+    console.log("getData called with page:", pageNum);
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
 
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/customer?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/customer?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         console.log("Full API Response:", res.data);
 
-        // Check if the response has the expected structure
         if (
           res.data &&
           res.data.customers &&
@@ -331,10 +335,13 @@ function Customer() {
         ) {
           setData(res.data.customers);
           setTotalPages(res.data.totalPages || 1);
+          setTotalCustomers(res.data.totalCustomers || 0);
           console.log("Data set successfully:", res.data.customers);
         } else {
           console.warn("Unexpected response structure:", res.data);
           setData([]);
+          setTotalPages(1);
+          setTotalCustomers(0);
         }
 
         setLoader(false);
@@ -343,15 +350,19 @@ function Customer() {
         setLoader(false);
         console.error("API Error:", error);
         setData([]);
+        setTotalPages(1);
+        setTotalCustomers(0);
       });
   };
 
   useEffect(() => {
-    getData();
-  }, []);
-  useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -411,11 +422,15 @@ function Customer() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   // --- Select All logic for cascaded fields ---
@@ -458,14 +473,32 @@ function Customer() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -525,6 +558,25 @@ function Customer() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalCustomers}</span>{" "}
+                  customers found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalCustomers}</span>{" "}
+                  customers
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -781,7 +833,7 @@ function Customer() {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}

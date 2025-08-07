@@ -26,6 +26,8 @@ function AdminRegion() {
   const [selectedStates, setSelectedStates] = useState([]);
   const [country, setcountry] = useState([]);
   const [selectedcountry, setSelectedcountry] = useState([]);
+  const [totalRegions, setTotalRegions] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [loader, setLoader] = useState(true);
   const [page, setPage] = useState(1);
@@ -78,11 +80,9 @@ function AdminRegion() {
     setEditModal(true);
     setShowModal(true);
 
-    const selectedStates = Array.isArray(region.country)
-      ? region.country.map((stateName) => ({ label: stateName }))
-      : [{ label: region.country }];
-
-    setSelectedStates(selectedStates);
+    // Set the selected country for editing
+    const matchedCountry = country.find((c) => c.name === region.country);
+    setSelectedcountry(matchedCountry || null);
   };
 
   useEffect(() => {
@@ -131,39 +131,61 @@ function AdminRegion() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
+      setIsSearchMode(false);
+      setPage(1);
       getAllData();
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchregion?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchregion?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.regions || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalRegions(response.data.totalRegions || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching cities:", error);
+      console.error("Error searching regions:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalRegions(0);
       setLoader(false);
     }
   };
 
-  const getAllData = useCallback(async () => {
-    try {
-      setLoader(true);
-      const res = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/api/allregion?page=${page}&limit=${limit}`
-      );
-      setData(res.data.regions); // ✅ store regions array
-      setTotalPages(res.data.totalPages);
-    } catch (error) {
-      console.error("Failed to fetch region data:", error);
-    } finally {
-      setLoader(false);
-    }
-  }, [page, limit]);
+  const getAllData = useCallback(
+    async (pageNum = page) => {
+      try {
+        setLoader(true);
+        setPage(pageNum);
+
+        const res = await axios.get(
+          `${process.env.REACT_APP_BASE_URL}/collections/api/allregion?page=${pageNum}&limit=${limit}`
+        );
+
+        setData(res.data.regions); // ✅ store regions array
+        setTotalPages(res.data.totalPages);
+        setTotalRegions(res.data.totalRegion || 0);
+      } catch (error) {
+        console.error("Failed to fetch region data:", error);
+        setData([]);
+        setTotalPages(1);
+        setTotalRegions(0);
+      } finally {
+        setLoader(false);
+      }
+    },
+    [page, limit]
+  );
+
   useEffect(() => {
     if (!searchQuery) {
       getAllData();
@@ -172,7 +194,13 @@ function AdminRegion() {
   useEffect(() => {
     getAllData();
   }, [getAllData]);
-
+  useEffect(() => {
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getAllData(page);
+    }
+  }, [page]);
   const handleSubmit = (id) => {
     if (editModal && id) {
       handleEditData(id);
@@ -226,11 +254,15 @@ function AdminRegion() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage((prevPage) => prevPage - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage((prevPage) => prevPage + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -251,14 +283,32 @@ function AdminRegion() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getAllData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getAllData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -302,6 +352,23 @@ function AdminRegion() {
               </button>
             </div>
           </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalRegions}</span> regions
+                  found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalRegions}</span> regions
+                </span>
+              )}
+            </div>
+          </div>
 
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
@@ -342,28 +409,27 @@ function AdminRegion() {
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-                {data?.length > 0 &&
-                  data.map((region, regionIndex) => {
-                    const regionId = region?._id || `region-${regionIndex}`;
-                    const createdAt = region?.createdAt
-                      ? moment(region.createdAt).format("MMM D, YYYY")
-                      : "N/A";
-                    const modifiedAt = region?.modifiedAt
-                      ? moment(region.modifiedAt).format("MMM D, YYYY")
-                      : createdAt;
+                {data && data.length > 0 ? (
+                  <>
+                    {data.map((region, regionIndex) => {
+                      const regionId = region?._id || `region-${regionIndex}`;
+                      const createdAt = region?.createdAt
+                        ? moment(region.createdAt).format("MMM D, YYYY")
+                        : "N/A";
+                      const modifiedAt = region?.modifiedAt
+                        ? moment(region.modifiedAt).format("MMM D, YYYY")
+                        : createdAt;
 
-                    // Ensure country is treated as an array
-                    const countries = Array.isArray(region.country)
-                      ? region.country
-                      : [region.country];
+                      const countries = Array.isArray(region.country)
+                        ? region.country
+                        : [region.country];
 
-                    return countries.map((country, stateIndex) => {
-                      return (
+                      return countries.map((country, stateIndex) => (
                         <tr
                           key={`${regionId}-${stateIndex}`}
                           className="border-b transition-colors data-[state=selected]:bg-muted"
                         >
-                          {/* 🟢 Render Region Name and Details only once using rowSpan */}
+                          {/* 🟢 Only show these fields once using rowSpan */}
                           {stateIndex === 0 && (
                             <>
                               <th
@@ -466,9 +532,18 @@ function AdminRegion() {
                             </>
                           )}
                         </tr>
-                      );
-                    });
-                  })}
+                      ));
+                    })}
+                  </>
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center p-4">
+                      {isSearchMode
+                        ? `No regions found for "${searchQuery}"`
+                        : "No regions found"}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -507,7 +582,7 @@ function AdminRegion() {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}

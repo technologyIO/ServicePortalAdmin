@@ -29,6 +29,8 @@ function Product() {
   const [selectedRows, setSelectedRows] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isDownloadingProduct, setIsDownloadingProduct] = useState(false);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const downloadProductExcel = async () => {
     setIsDownloadingProduct(true);
@@ -154,43 +156,59 @@ function Product() {
     });
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery) {
-      getData(); // Reset to normal data if search is empty
+      getData();
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchProduct?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchProduct?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      // Make sure to set the data properly
-      setData(response.data); // or response.data.product depending on your API response
+
+      setData(response.data.product || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalProducts(response.data.totalProducts || 0);
       setLoader(false);
     } catch (error) {
       console.error("Error searching products:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalProducts(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setIsSearchMode(false); // Add this back to reset search mode
+    setSearchQuery(""); // Add this back to clear search query
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/productbypage?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/productbypage?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.product); // Change this line
+        setData(res.data.product);
         setTotalPages(res.data.totalPages);
+        setTotalProducts(res.data.totalProduct || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalProducts(0);
       });
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -198,7 +216,11 @@ function Product() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
+    if (isSearchMode) {
+      handleSearch(page);
+    } else {
+      getData(page);
+    }
   }, [page]);
 
   const handleSubmit = (id) => {
@@ -238,12 +260,17 @@ function Product() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
+
   return (
     <>
       {loader ? (
@@ -262,14 +289,14 @@ function Product() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      handleSearch(1);
                     }
                   }}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -329,6 +356,25 @@ function Product() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalProducts}</span>{" "}
+                  products found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalProducts}</span>{" "}
+                  products
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -538,11 +584,9 @@ function Product() {
                     {i > 0 && p - 1 !== array[i - 1] && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
-                        p === page
-                          ? "bg-blue-700 text-white"
-                          : "hover:bg-gray-200"
+                        p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Direct page change, useEffect will handle the rest
                     >
                       {p}
                     </button>

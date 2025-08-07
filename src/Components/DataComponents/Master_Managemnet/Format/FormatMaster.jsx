@@ -29,6 +29,8 @@ function FormatMaster() {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const limit = 10;
+  const [totalFormatMasters, setTotalFormatMasters] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [selectedRows, setSelectedRows] = useState([]);
   const handleSelectAll = () => {
@@ -137,38 +139,53 @@ function FormatMaster() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
+      return;
+    }
+
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
-      // Assuming your search endpoint for FormatMaster records exists at this URL
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/master/searchformat?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/master/searchformat?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalFormatMasters(response.data.totalFormatMasters || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching records:", error);
+      console.error("Error searching format masters:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalFormatMasters(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/master/format/paginated?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/master/format/paginated?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
-        // Use res.data.data instead of res.data.formats to match your API response
         setData(res.data.data);
         setTotalPages(res.data.totalPages);
+        setTotalFormatMasters(res.data.totalFormatMasters || 0);
         setLoader(false);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalFormatMasters(0);
       });
   };
 
@@ -179,8 +196,12 @@ function FormatMaster() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -213,10 +234,15 @@ function FormatMaster() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
+
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -237,15 +263,33 @@ function FormatMaster() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                   className="w-full"
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
               >
@@ -306,6 +350,25 @@ function FormatMaster() {
               </button>
             )} */}
           </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalFormatMasters}</span>{" "}
+                  format masters found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalFormatMasters}</span>{" "}
+                  format masters
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto border">
             <table className="w-full border min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700">
@@ -418,48 +481,49 @@ function FormatMaster() {
               </tbody>
             </table>
           </div>
-          <div className="Pagination-laptopUp flex justify-between p-4">
-            <button
-              className={`border rounded p-1 w-[100px] ${
-                page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-              } bg-gray-100 font-semibold hover:bg-gray-300`}
-              onClick={handlePreviousPage}
-              disabled={page === 1}
-            >
-              Previous
-            </button>
-            <div className="flex gap-2">
-              {Array.from({ length: totalPages }, (_, index) => index + 1)
-                .filter(
-                  (p) =>
-                    p === 1 ||
-                    p === totalPages ||
-                    (p >= page - 3 && p <= page + 3)
-                )
-                .map((p, i, array) => (
-                  <React.Fragment key={p}>
-                    {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
-                    <button
-                      className={`border px-3 rounded ${
-                        p === page ? "bg-blue-700 text-white" : ""
-                      }`}
-                      onClick={() => setPage(p)}
-                      disabled={p === page}
-                    >
-                      {p}
-                    </button>
-                  </React.Fragment>
-                ))}
+          {totalPages > 1 && (
+            <div className="Pagination-laptopUp flex justify-between p-4">
+              <button
+                className={`border rounded p-1 w-[100px] ${
+                  page === 1 ? "cursor-not-allowed" : "cursor-pointer"
+                } bg-gray-100 font-semibold hover:bg-gray-300`}
+                onClick={handlePreviousPage}
+                disabled={page === 1}
+              >
+                Previous
+              </button>
+              <div className="flex gap-2">
+                {Array.from({ length: totalPages }, (_, index) => index + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= page - 3 && p <= page + 3)
+                  )
+                  .map((p, i, array) => (
+                    <React.Fragment key={p}>
+                      {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                      <button
+                        className={`border px-3 rounded ${
+                          p === page ? "bg-blue-700 text-white" : ""
+                        }`}
+                        onClick={() => setPage(p)}
+                        disabled={p === page}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  ))}
+              </div>
+              <button
+                className="border rounded p-1 w-[100px] bg-blue-700 text-white font-semibold hover:bg-blue-500"
+                onClick={handleNextPage}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
             </div>
-            <button
-              className="border rounded p-1 w-[100px] bg-blue-700 text-white font-semibold hover:bg-blue-500"
-              onClick={handleNextPage}
-              disabled={page === totalPages}
-            >
-              Next
-            </button>
-          </div>
-
+          )}
           {/* Modal for Create / Edit Record */}
           <Modal
             open={showModal}

@@ -28,6 +28,9 @@ function PmDocMaster() {
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
   const [cityList, setCityList] = useState([]);
+  const [totalPMDocMasters, setTotalPMDocMasters] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [selectedRows, setSelectedRows] = useState([]);
   const [isDownloadingPMDocMaster, setIsDownloadingPMDocMaster] =
     useState(false);
@@ -148,41 +151,53 @@ function PmDocMaster() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/master/pm-doc-master/search-pmdocmaster?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/master/pm-doc-master/search-pmdocmaster?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data.data);
 
+      setData(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalPMDocMasters(response.data.totalPMDocMasters || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching PM Doc Masters:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalPMDocMasters(0);
       setLoader(false);
     }
   };
 
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
 
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/master/pm-doc-master/all?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/master/pm-doc-master/all?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.data); // ✅ Corrected here
+        setData(res.data.data);
         setTotalPages(res.data.totalPages);
+        setTotalPMDocMasters(res.data.totalRecords || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalPMDocMasters(0);
       });
   };
 
@@ -193,8 +208,12 @@ function PmDocMaster() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
-  }, [page]);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]); // Only trigger on page changes
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -233,12 +252,17 @@ function PmDocMaster() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
+
   return (
     <>
       {loader ? (
@@ -257,14 +281,32 @@ function PmDocMaster() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -324,6 +366,25 @@ function PmDocMaster() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalPMDocMasters}</span> PM
+                  Doc Masters found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalPMDocMasters}</span> PM
+                  Doc Masters
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="relative w-full overflow-x-auto">
             <table className="w-full   border  min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -506,7 +567,7 @@ function PmDocMaster() {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}
@@ -546,7 +607,7 @@ function PmDocMaster() {
             <ModalDialog size="lg" className="p-2  thin-scroll">
               <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-xl font-semibold">
-                  {editModal ? "Update Warranty Code" : "Create Warranty Code"}
+                  {editModal ? "Update PM Doc Master" : "Create PM Doc Master"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
@@ -662,7 +723,9 @@ function PmDocMaster() {
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5   :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                    {editModal ? "Update WarrantyCode" : "Create WarrantyCode"}
+                    {editModal
+                      ? "Update PM Doc Master"
+                      : "Create PM Doc Master"}
                   </button>
                 </div>
               </form>

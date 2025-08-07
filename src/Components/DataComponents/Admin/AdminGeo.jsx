@@ -46,6 +46,9 @@ function AdminGeo() {
   const [loader, setLoader] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const limit = 10;
+  const [totalGeoEntries, setTotalGeoEntries] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [region, setRegion] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isDownloadingGeo, setIsDownloadingGeo] = useState(false);
@@ -147,25 +150,33 @@ function AdminGeo() {
       }
     });
   };
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
+      return;
+    }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/api/searchgeo?keyword=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/api/searchgeo?keyword=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
-      const geoArray = response.data?.data?.geoDropdown || [];
-
-      setData({
-        GeoEntries: geoArray,
-        totalPages: 1,
-        totalGeoEntries: geoArray.length,
-      });
+      setData(response.data.data);
+      setTotalPages(response.data.data.totalPages || 1);
+      setTotalGeoEntries(response.data.data.totalGeoEntries || 0);
+      setLoader(false);
     } catch (error) {
       console.error("Error searching geo:", error);
-    } finally {
+      setData({
+        GeoEntries: [],
+        totalPages: 1,
+        totalGeoEntries: 0,
+      });
+      setTotalPages(1);
+      setTotalGeoEntries(0);
       setLoader(false);
     }
   };
@@ -190,23 +201,33 @@ function AdminGeo() {
       });
   };
 
-  const getAllData = () => {
+  const getAllData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/api/pagegeo?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/api/pagegeo?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data);
         setTotalPages(res.data.totalPages);
+        setTotalGeoEntries(res.data.totalGeoEntries || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData({
+          GeoEntries: [],
+          totalPages: 1,
+          totalGeoEntries: 0,
+        });
+        setTotalPages(1);
+        setTotalGeoEntries(0);
       });
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getAllData();
@@ -217,8 +238,11 @@ function AdminGeo() {
     getAllCountries();
   }, []);
   useEffect(() => {
-    getAllData();
-    getAllCountries();
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getAllData(page);
+    }
   }, [page]);
 
   const handleSubmit = (id) => {
@@ -268,11 +292,15 @@ function AdminGeo() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -293,14 +321,32 @@ function AdminGeo() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getAllData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getAllData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -342,6 +388,24 @@ function AdminGeo() {
                   <>Download Excel</>
                 )}
               </button>
+            </div>
+          </div>
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalGeoEntries}</span> geo
+                  entries found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalGeoEntries}</span> geo
+                  entries
+                </span>
+              )}
             </div>
           </div>
 
@@ -521,7 +585,7 @@ function AdminGeo() {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}
@@ -547,7 +611,7 @@ function AdminGeo() {
             <ModalDialog size="lg" className="p-2 ">
               <div className="flex items-start justify-between p-2  px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-xl font-semibold">
-                  {editModal ? "Update State" : "Create State"}
+                  {editModal ? "Update Geo" : "Create Geo"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
@@ -626,7 +690,7 @@ function AdminGeo() {
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
-                    {editModal ? "Update State" : "Create State"}
+                    {editModal ? "Update Geo" : "Create Geo"}
                   </button>
                 </div>
               </form>

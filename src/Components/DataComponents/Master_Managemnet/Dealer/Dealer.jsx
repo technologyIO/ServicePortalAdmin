@@ -14,6 +14,8 @@ function Dealer() {
   const [selectAll, setSelectAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
+  const [totalDealers, setTotalDealers] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   // Data states
   const [data, setData] = useState([]);
@@ -442,21 +444,27 @@ function Dealer() {
     });
   }, [selectedStates, allCities]);
 
-  // Fetch dealers with pagination
-  const getData = () => {
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery(""); // Reset on fetch
+    setIsSearchMode(false);
+    setPage(pageNum);
+    setSearchQuery(""); // Reset search query
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/dealer?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/dealer?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.dealers || []);
         setTotalPages(res.data.totalPages || 1);
+        setTotalDealers(res.data.totalDealers || 0);
       })
       .catch(() => {
         setLoader(false);
+        setData([]);
+        setTotalPages(1);
+        setTotalDealers(0);
       });
   };
 
@@ -467,35 +475,34 @@ function Dealer() {
   }, [searchQuery, page]);
 
   // Dealer search
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
       getData();
       return;
     }
+
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const res = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchdealer?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchdealer?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      let searchData = [];
-      if (Array.isArray(res.data)) {
-        searchData = res.data;
-      } else if (res.data.results && Array.isArray(res.data.results)) {
-        searchData = res.data.results;
-      } else if (res.data.message === "No results found") {
-        searchData = [];
-      } else if (res.data._id) {
-        searchData = [res.data];
-      }
-      setData(searchData);
-      setTotalPages(1);
-      setPage(1);
+
+      setData(res.data.dealers || []);
+      setTotalPages(res.data.totalPages || 1);
+      setTotalDealers(res.data.totalDealers || 0);
+      setLoader(false);
     } catch (error) {
+      console.error("Search error:", error);
       setData([]);
-    } finally {
+      setTotalPages(1);
+      setTotalDealers(0);
       setLoader(false);
     }
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -634,11 +641,33 @@ function Dealer() {
 
   // Pagination controls
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      const newPage = page - 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      const newPage = page + 1;
+      if (isSearchMode) {
+        handleSearch(newPage);
+      } else {
+        getData(newPage);
+      }
+    }
+  };
+
+  const handlePageClick = (pageNum) => {
+    if (isSearchMode) {
+      handleSearch(pageNum);
+    } else {
+      getData(pageNum);
+    }
   };
 
   // Bulk upload modals
@@ -704,13 +733,13 @@ function Dealer() {
                   type="text"
                   placeholder="Search"
                   value={searchQuery}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white px-5 bg-blue-700 hover:bg-blue-800 focus:outline-none font-medium rounded-md text-sm py-2 text-center"
               >
@@ -773,6 +802,23 @@ function Dealer() {
               </button>
             </div>
           )} */}
+          {/* Add this div before the table */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              {isSearchMode ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalDealers}</span> dealers
+                  found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalDealers}</span> dealers
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Data Table */}
           <div className="relative w-full overflow-x-auto mt-4">
@@ -943,7 +989,7 @@ function Dealer() {
                             ? "bg-blue-700 text-white border-blue-700"
                             : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         }`}
-                        onClick={() => setPage(p)}
+                        onClick={() => handlePageClick(p)}
                         disabled={p === page}
                       >
                         {p}
