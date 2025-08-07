@@ -16,6 +16,7 @@ import {
   Database,
 } from "lucide-react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 export default function EquipmentBulk({ onClose }) {
   const [file, setFile] = useState(null);
@@ -54,6 +55,185 @@ export default function EquipmentBulk({ onClose }) {
     warnings: [],
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields (matching backend FIELD_MAPPINGS) - 8 REQUIRED FIELDS
+          const requiredFields = {
+            materialcode: [
+              "materialcode",
+              "material_code",
+              "partnumber",
+              "part_number",
+              "partno",
+            ],
+            materialdescription: [
+              "materialdescription",
+              "material_description",
+              "description",
+              "product_description",
+            ],
+            serialnumber: ["serialnumber", "serial_number", "serial", "sn"],
+            equipmentid: ['equipment', 'equipmentid', 'equipment_id', 'equipmentid'],
+            currentcustomer: [
+              "currentcustomer",
+              "current_customer",
+              "customer_code",
+              "customercode",
+              "customer",
+            ],
+            endcustomer: [
+              "endcustomer",
+              "end_customer",
+              "final_customer",
+              "end_user",
+            ],
+            custWarrantystartdate: [
+              "custwarrantystartdate",
+              "custwarrantystart",
+              "cust_warranty_start_date",
+              "warranty_start",
+              "customer_warranty_start",
+            ],
+            custWarrantyenddate: [
+              "custwarrantyenddate",
+              "custwarrantyend",
+              "cust_warranty_end_date",
+              "warranty_end",
+              "customer_warranty_end",
+            ],
+            dealer: ["dealer", "dealer_name", "distributor", "partner"],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              // Find the original header name for this variation
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // All 8 fields are required
+          const isValid =
+            foundFields.materialcode &&
+            foundFields.materialdescription &&
+            foundFields.serialnumber &&
+            foundFields.equipmentid &&
+            foundFields.currentcustomer &&
+            foundFields.endcustomer &&
+            foundFields.custWarrantystartdate &&
+            foundFields.custWarrantyenddate &&
+            foundFields.dealer;
+
+          const missingFields = Object.entries(foundFields)
+            .filter(([field, found]) => !found)
+            .map(([field]) => {
+              const fieldLabels = {
+                materialcode: "Material Code",
+                materialdescription: "Material Description",
+                serialnumber: "Serial Number",
+                equipmentid: 'Equipment (ID)',
+                currentcustomer: "Current Customer",
+                endcustomer: "End Customer",
+                custWarrantystartdate: "Customer Warranty Start",
+                custWarrantyenddate: "Customer Warranty End",
+                dealer: "Dealer",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.values(foundFields).filter(Boolean).length,
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            totalRequired: 9,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          totalRequired: 9,
+          foundRequired: 0,
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
@@ -70,8 +250,10 @@ export default function EquipmentBulk({ onClose }) {
     validateAndSetFile(selectedFile);
   };
 
-  const validateAndSetFile = (selectedFile) => {
+  const validateAndSetFile = async (selectedFile) => {
     setError("");
+    setFileValidation(null);
+
     if (!selectedFile) {
       setFile(null);
       return;
@@ -85,21 +267,63 @@ export default function EquipmentBulk({ onClose }) {
     }
 
     if (selectedFile.size > 50 * 1024 * 1024) {
-      // 50MB limit
       setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
 
+    // Set file and show validation loading
     setFile(selectedFile);
+    setError("Validating file structure...");
     addLiveUpdate(
       `File selected: ${selectedFile.name} (${(
         selectedFile.size /
         1024 /
         1024
       ).toFixed(2)} MB)`,
+      "info"
+    );
+
+    // Validate file structure
+    const validation = await validateFileStructure(selectedFile);
+    setFileValidation(validation);
+
+    if (!validation.isValid) {
+      if (validation.error) {
+        setError(validation.error);
+        addLiveUpdate(`File validation failed: ${validation.error}`, "error");
+      } else {
+        const missingFieldsText = validation.missingFields.join(", ");
+        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
+          validation.foundRequired
+        }/${
+          validation.totalRequired
+        } required columns.\n\nAvailable columns:\n${validation.headers.join(
+          ", "
+        )}`;
+        setError(errorMessage);
+        addLiveUpdate(
+          `File validation failed: Missing required columns`,
+          "error"
+        );
+      }
+      setFile(null);
+      return;
+    }
+
+    setError(""); // Clear error if validation passes
+    addLiveUpdate(
+      `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
       "success"
     );
+
+    // Show mapped columns
+    if (validation.mappedColumns) {
+      const mappedList = Object.entries(validation.mappedColumns)
+        .map(([field, header]) => `${field}: "${header}"`)
+        .join(", ");
+      addLiveUpdate(`📋 Column mapping: ${mappedList}`, "info");
+    }
   };
 
   const handleDragOver = (e) => {
@@ -556,7 +780,7 @@ export default function EquipmentBulk({ onClose }) {
                     <h3 className="text-sm font-medium text-red-800">
                       Upload Error
                     </h3>
-                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                    <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
                   </div>
                 </div>
               )}
@@ -668,15 +892,19 @@ export default function EquipmentBulk({ onClose }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-8 py-3 rounded-lg flex items-center gap-2 font-medium transition-all ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-gray-300 cursor-not-allowed text-gray-500"
                           : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
                       }`}
                     >
                       <Upload size={16} />
-                      Upload & Process Equipment
+                      {fileValidation && fileValidation.isValid
+                        ? "Upload & Process Equipment ✓"
+                        : "Upload & Process Equipment"}
                     </button>
                   </div>
                 </div>
