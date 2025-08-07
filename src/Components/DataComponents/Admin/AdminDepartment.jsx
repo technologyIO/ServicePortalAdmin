@@ -42,6 +42,8 @@ const AdminDepartment = () => {
   const [loader, setLoader] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRows, setSelectedRows] = useState([]);
+  const [totalDepartments, setTotalDepartments] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -175,45 +177,60 @@ const AdminDepartment = () => {
       });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchdepartment?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchdepartment?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setData(response.data);
+
+      setData(response.data.departments || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalDepartments(response.data.totalDepartments || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching departments:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalDepartments(0);
       setLoader(false);
     }
   };
 
-  const getAllData = () => {
+  const getAllData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/depart?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/depart?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
         setData(res.data.departments);
         setTotalPages(res.data.totalPages);
+        setTotalDepartments(res.data.totalDepartments || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalDepartments(0);
       });
   };
+
   useEffect(() => {
     getAllData();
     getAllRoles();
-    // getAllCitys()
+    getAllCountries();
   }, []);
   useEffect(() => {
     if (!searchQuery) {
@@ -221,10 +238,12 @@ const AdminDepartment = () => {
     }
   }, [searchQuery]);
   useEffect(() => {
-    getAllData();
-    getAllCountries();
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getAllData(page);
+    }
   }, [page]);
-
   const handleSubmit = (id) => {
     if (editModal && id) {
       handleEditData(id);
@@ -258,11 +277,15 @@ const AdminDepartment = () => {
       });
   };
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -283,14 +306,32 @@ const AdminDepartment = () => {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        // If Enter is pressed with empty search, reset to normal data
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getAllData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    // If input is completely cleared, automatically refresh data
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getAllData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -334,6 +375,24 @@ const AdminDepartment = () => {
               </button>
             </div>
           </div>
+          {/* Add this div before the table */}
+         <div className="flex justify-between items-center ">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalDepartments}</span>{" "}
+                  departments found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalDepartments}</span>{" "}
+                  departments
+                </span>
+              )}
+            </div>
+          </div>
 
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
@@ -371,94 +430,104 @@ const AdminDepartment = () => {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {data?.map((i, index) => (
-                  <tr
-                    key={i._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(i?._id)}
-                          onChange={() => handleRowSelect(i?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-                    <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
-                      {i?.name}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <span
-                        className={`text-xs font-medium px-2.5  py-0.5 rounded border ${
-                          i?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : i?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
-                        }`}
-                      >
-                        {i?.status}
-                      </span>
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(i?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(i?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
-                        <button
-                          onClick={() => {
-                            handleOpenModal(i);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
+                {data && data.length > 0 ? (
+                  data.map((i, index) => (
+                    <tr
+                      key={i._id}
+                      className="border-b transition-colors  data-[state=selected]:bg-muted"
+                    >
+                      <th scope="col" className="p-4">
+                        <div className="flex items-center">
+                          <input
+                            id={`checkbox-${index}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                            checked={selectedRows?.includes(i?._id)}
+                            onChange={() => handleRowSelect(i?._id)}
+                          />
+                          <label
+                            htmlFor={`checkbox-${index}`}
+                            className="sr-only"
                           >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(i?._id)}
-                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            checkbox
+                          </label>
+                        </div>
+                      </th>
+                      <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                        {i?.name}
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <span
+                          className={`text-xs font-medium px-2.5  py-0.5 rounded border ${
+                            i?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : i?.status === "Inactive"
+                              ? "bg-red-100 text-red-800  border-red-400"
+                              : "bg-orange-100 text-orange-800  border-orange-400"
+                          }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
+                          {i?.status}
+                        </span>
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(i?.createdAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(i?.modifiedAt).format("MMM D, YYYY")}
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <div className="flex gap-4 ">
+                          <button
+                            onClick={() => {
+                              handleOpenModal(i);
+                            }}
+                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
                           >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
-                        </button>
-                      </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-pencil-square"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                              <path
+                                fill-rule="evenodd"
+                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(i?._id)}
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-trash3-fill"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center p-4">
+                      {isSearchMode
+                        ? `No departments found for "${searchQuery}"`
+                        : "No departments found"}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -497,7 +566,7 @@ const AdminDepartment = () => {
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)}
+                      onClick={() => setPage(p)} // Change this line
                       disabled={p === page}
                     >
                       {p}

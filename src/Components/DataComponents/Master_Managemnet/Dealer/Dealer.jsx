@@ -803,7 +803,7 @@ function Dealer() {
             </div>
           )} */}
           {/* Add this div before the table */}
-          <div className="flex justify-between items-center mb-4">
+         <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode ? (
                 <span>
@@ -821,7 +821,7 @@ function Dealer() {
           </div>
 
           {/* Data Table */}
-          <div className="relative w-full overflow-x-auto mt-4">
+          <div className="relative w-full overflow-x-auto">
             <table className="w-full border min-w-max caption-bottom text-sm">
               <thead className="bg-blue-700">
                 <tr className="border-b transition-colors text-white">
@@ -1251,7 +1251,7 @@ function Dealer() {
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white rounded-lg p-6 w-[80vh] relative">
-                <div className="flex justify-between items-center mb-4">
+               <div className="flex justify-between items-center ">
                   <h3 className="text-lg font-semibold">Bulk Upload</h3>
                   <button
                     onClick={closeBulkModal}

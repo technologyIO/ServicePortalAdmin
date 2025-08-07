@@ -35,6 +35,9 @@ function ServiceCharge() {
   const [loader, setLoader] = useState(true);
   const [selectedRows, setSelectedRows] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
+  const [totalServiceCharges, setTotalServiceCharges] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const [isDownloadingServiceCharge, setIsDownloadingServiceCharge] =
     useState(false);
 
@@ -74,43 +77,47 @@ function ServiceCharge() {
   // Data fetch
   const getData = async (newPage = page) => {
     setLoader(true);
+    setPage(newPage);
+
     try {
       const res = await axios.get(
         `${process.env.REACT_APP_BASE_URL}/admin/service-charge/allservicecharge?page=${newPage}&limit=${limit}`
       );
       setData(res.data.serviceCharges || []);
       setTotalPages(res.data.totalPages || 1);
+      setTotalServiceCharges(res.data.totalServiceCharge || 0);
     } catch {
       setData([]);
       setTotalPages(1);
+      setTotalServiceCharges(0);
     }
     setLoader(false);
   };
 
   // Search
-  const handleSearch = async () => {
+  const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
-      getData(1);
-      setPage(1);
       return;
     }
+
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const res = await axios.get(
-        `${
-          process.env.REACT_APP_BASE_URL
-        }/admin/service-charge/search/${encodeURIComponent(searchQuery.trim())}`
+        `${process.env.REACT_APP_BASE_URL}/admin/service-charge/searchservice?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-
       setData(res.data.serviceCharges || []);
-      setTotalPages(1);
-      setPage(1);
+      setTotalPages(res.data.totalPages || 1);
+      setTotalServiceCharges(res.data.totalServiceCharges || 0);
     } catch {
       setData([]);
+      setTotalPages(1);
+      setTotalServiceCharges(0);
     }
     setLoader(false);
   };
-
   // Create
   const handleCreate = async () => {
     try {
@@ -269,9 +276,15 @@ function ServiceCharge() {
   const handleNextPage = () => page < totalPages && setPage(page + 1);
 
   useEffect(() => {
-    if (!searchQuery) getData(page);
-    // eslint-disable-next-line
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
   }, [page]);
+  useEffect(() => {
+    getData();
+  }, []);
   useEffect(() => {
     setPage(1);
     if (!searchQuery) getData(1);
@@ -289,12 +302,32 @@ function ServiceCharge() {
               placeholder="Search"
               startDecorator={<SearchIcon />}
               value={searchQuery}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (searchQuery.trim()) {
+                    handleSearch(1);
+                  } else {
+                    setIsSearchMode(false);
+                    setSearchQuery("");
+                    setPage(1);
+                    getData(1);
+                  }
+                }
+              }}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchQuery(value);
+
+                if (value === "" && isSearchMode) {
+                  setIsSearchMode(false);
+                  setPage(1);
+                  getData(1);
+                }
+              }}
             />
           </FormControl>
           <button
-            onClick={handleSearch}
+            onClick={() => handleSearch(1)}
             className="text-white bg-blue-700 rounded px-5 py-1.5 text-sm"
           >
             Search
@@ -342,6 +375,23 @@ function ServiceCharge() {
         </div>
       )} */}
       {/* Table */}
+     <div className="flex justify-between items-center ">
+        <div className="text-sm text-gray-600">
+          {isSearchMode && searchQuery ? (
+            <span>
+              Search Results:{" "}
+              <span className="font-semibold">{totalServiceCharges}</span>{" "}
+              service charges found for "{searchQuery}"
+            </span>
+          ) : (
+            <span>
+              Total Records:{" "}
+              <span className="font-semibold">{totalServiceCharges}</span>{" "}
+              service charges
+            </span>
+          )}
+        </div>
+      </div>
       <div className="overflow-x-auto w-full rounded shadow-sm">
         <table className="w-full border text-sm min-w-max">
           <thead className="bg-blue-700">

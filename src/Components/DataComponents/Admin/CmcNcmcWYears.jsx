@@ -24,11 +24,14 @@ function CmcNcmcWYears() {
   const limit = 10;
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalCmcNcmcYears, setTotalCmcNcmcYears] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
+
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -75,14 +78,6 @@ function CmcNcmcWYears() {
       alert("Error downloading file");
     } finally {
       setIsDownloadingCmcNcmcYear(false);
-    }
-  };
-  const handleSelectAll = () => {
-    setSelectAll(!selectAll);
-    if (!selectAll) {
-      setSelectedRows(filteredData?.map((country) => country._id));
-    } else {
-      setSelectedRows([]);
     }
   };
 
@@ -143,40 +138,57 @@ function CmcNcmcWYears() {
     });
   };
 
-  const handleSearch = () => {
-    if (!searchQuery) {
-      setFilteredData(data);
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
 
-    const filtered = data.filter((item) => {
-      return (
-        item.year?.toString().includes(searchQuery) ||
-        item.status?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    });
+    setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
 
-    setFilteredData(filtered);
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear/searchyears?q=${searchQuery}&page=${pageNum}&limit=${limit}`
+      );
+
+      setData(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCmcNcmcYears(response.data.totalCmcNcmcYears || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error searching CMC/NCMC years:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalCmcNcmcYears(0);
+      setLoader(false);
+    }
   };
 
-  const getData = () => {
+  // Replace the getData function
+  const getData = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setData(res.data.data); // Assuming the response has data array
-        setFilteredData(res.data.data); // Set filteredData to the same as data initially
-        setTotalPages(res.data.totalPages || 1); // Fallback to 1 if totalPages is undefined
+        setData(res.data.data);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalCmcNcmcYears(res.data.total || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setData([]);
+        setTotalPages(1);
+        setTotalCmcNcmcYears(0);
       });
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -184,12 +196,16 @@ function CmcNcmcWYears() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getData();
-  }, []);
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getData(page);
+    }
+  }, [page]);
 
   useEffect(() => {
     getData();
-  }, [page]);
+  }, []);
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -225,11 +241,15 @@ function CmcNcmcWYears() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1);
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
   };
   return (
     <>
@@ -249,14 +269,30 @@ function CmcNcmcWYears() {
                   value={searchQuery}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      handleSearch();
+                      if (searchQuery.trim()) {
+                        handleSearch(1);
+                      } else {
+                        setIsSearchMode(false);
+                        setSearchQuery("");
+                        setPage(1);
+                        getData(1);
+                      }
                     }
                   }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchQuery(value);
+
+                    if (value === "" && isSearchMode) {
+                      setIsSearchMode(false);
+                      setPage(1);
+                      getData(1);
+                    }
+                  }}
                 />
               </FormControl>
               <button
-                onClick={handleSearch}
+                onClick={() => handleSearch(1)}
                 type="button"
                 className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
@@ -316,6 +352,23 @@ function CmcNcmcWYears() {
               </button>
             </div>
           )} */}
+         <div className="flex justify-between items-center ">
+            <div className="text-sm text-gray-600">
+              {isSearchMode && searchQuery ? (
+                <span>
+                  Search Results:{" "}
+                  <span className="font-semibold">{totalCmcNcmcYears}</span>{" "}
+                  departments found for "{searchQuery}"
+                </span>
+              ) : (
+                <span>
+                  Total Records:{" "}
+                  <span className="font-semibold">{totalCmcNcmcYears}</span>{" "}
+                  departments
+                </span>
+              )}
+            </div>
+          </div>
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border    min-w-max caption-bottom text-sm">
               <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -327,7 +380,6 @@ function CmcNcmcWYears() {
                         type="checkbox"
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
                         checked={selectAll}
-                        onChange={handleSelectAll}
                       />
                       <label htmlFor="checkbox-all-search" className="sr-only">
                         checkbox
@@ -353,97 +405,107 @@ function CmcNcmcWYears() {
                 </tr>
               </thead>
               <tbody className="[&amp;_tr:last-child]:border-0  ">
-                {filteredData?.map((item, index) => (
-                  <tr
-                    key={item?._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
-                    <th scope="col" className="p-4">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${index}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                          checked={selectedRows?.includes(item?._id)}
-                          onChange={() => handleRowSelect(item?._id)}
-                        />
-                        <label
-                          htmlFor={`checkbox-${index}`}
-                          className="sr-only"
-                        >
-                          checkbox
-                        </label>
-                      </div>
-                    </th>
-
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.year}
-                    </td>
-
-                    <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      <span
-                        className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                          item?.status === "Active"
-                            ? "bg-green-100 text-green-800 border-green-400"
-                            : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
-                        }`}
-                      >
-                        {item?.status}
-                      </span>
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.createdAt).format("MMM D, YYYY")}
-                    </td>
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      {moment(item?.modifiedAt).format("MMM D, YYYY")}
-                    </td>
-
-                    <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
-                        <button
-                          onClick={() => {
-                            handleOpenModal(item);
-                          }}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-pencil-square"
-                            viewBox="0 0 16 16"
+                {data && data.length > 0 ? (
+                  data.map((item, index) => (
+                    <tr
+                      key={item?._id}
+                      className="border-b transition-colors  data-[state=selected]:bg-muted"
+                    >
+                      <th scope="col" className="p-4">
+                        <div className="flex items-center">
+                          <input
+                            id={`checkbox-${index}`}
+                            type="checkbox"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                            checked={selectedRows?.includes(item?._id)}
+                            onChange={() => handleRowSelect(item?._id)}
+                          />
+                          <label
+                            htmlFor={`checkbox-${index}`}
+                            className="sr-only"
                           >
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                            <path
-                              fill-rule="evenodd"
-                              d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                          title="Delete"
+                            checkbox
+                          </label>
+                        </div>
+                      </th>
+
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        {item?.year}
+                      </td>
+
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                            item?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : item?.status === "Inactive"
+                              ? "bg-red-100 text-red-800  border-red-400"
+                              : "bg-orange-100 text-orange-800  border-orange-400"
+                          }`}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            fill="currentColor"
-                            className="bi bi-trash3-fill"
-                            viewBox="0 0 16 16"
+                          {item?.status}
+                        </span>
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.createdAt).format("MMM D, YYYY")}
+                      </td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        {moment(item?.modifiedAt).format("MMM D, YYYY")}
+                      </td>
+
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <div className="flex gap-4 ">
+                          <button
+                            onClick={() => {
+                              handleOpenModal(item);
+                            }}
+                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
                           >
-                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                          </svg>
-                        </button>
-                      </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-pencil-square"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                              <path
+                                fill-rule="evenodd"
+                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item._id)}
+                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                            title="Delete"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              fill="currentColor"
+                              className="bi bi-trash3-fill"
+                              viewBox="0 0 16 16"
+                            >
+                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="text-center p-4">
+                      {isSearchMode
+                        ? `No years found for "${searchQuery}"`
+                        : "No years found"}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -478,6 +540,7 @@ function CmcNcmcWYears() {
                   <React.Fragment key={p}>
                     {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+
                     <button
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""

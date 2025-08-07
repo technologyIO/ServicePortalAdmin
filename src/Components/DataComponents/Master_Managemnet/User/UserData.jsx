@@ -374,7 +374,7 @@ const UserData = () => {
             )} */}
           </div>
           {/* Add this div before the table */}
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode ? (
                 <span>

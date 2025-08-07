@@ -23,6 +23,8 @@ function CheckPointType() {
   const limit = 10;
   const [loader, setLoader] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [totalCheckPointTypes, setTotalCheckPointTypes] = useState(0);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   const [selectedRows, setSelectedRows] = useState([]);
   const [isDownloadingCheckPointType, setIsDownloadingCheckPointType] =
@@ -131,41 +133,56 @@ function CheckPointType() {
     });
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery) {
+  const handleSearch = async (pageNum = 1) => {
+    if (!searchQuery.trim()) {
       return;
     }
 
     setLoader(true);
+    setIsSearchMode(true);
+    setPage(pageNum);
+
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchCheckPointType?q=${searchQuery}`
+        `${process.env.REACT_APP_BASE_URL}/collections/searchCheckPointType?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
-      setCountries(response.data);
+
+      setCountries(response.data.checkPointTypes || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCheckPointTypes(response.data.totalCheckPointTypes || 0);
       setLoader(false);
     } catch (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching checkpoint types:", error);
+      setCountries([]);
+      setTotalPages(1);
+      setTotalCheckPointTypes(0);
       setLoader(false);
     }
   };
 
-  const getAllCountries = () => {
+  const getAllCountries = (pageNum = page) => {
     setLoader(true);
-    setSearchQuery("");
+    setPage(pageNum);
+
     axios
       .get(
-        `${process.env.REACT_APP_BASE_URL}/collections/CheckPointType?page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/collections/CheckPointType?page=${pageNum}&limit=${limit}`
       )
       .then((res) => {
         setLoader(false);
-        setCountries(res.data.countries);
+        setCountries(res.data.countries || res.data.checkPointTypes || []);
         setTotalPages(res.data.totalPages);
+        setTotalCheckPointTypes(res.data.totalCountries || 0);
       })
       .catch((error) => {
         setLoader(false);
         console.log(error);
+        setCountries([]);
+        setTotalPages(1);
+        setTotalCheckPointTypes(0);
       });
   };
+
   useEffect(() => {
     getAllCountries();
   }, []);
@@ -176,7 +193,11 @@ function CheckPointType() {
   }, [searchQuery]);
 
   useEffect(() => {
-    getAllCountries();
+    if (isSearchMode && searchQuery) {
+      handleSearch(page);
+    } else if (!isSearchMode) {
+      getAllCountries(page);
+    }
   }, [page]);
 
   const handleSubmit = (id) => {
@@ -216,11 +237,15 @@ function CheckPointType() {
   };
 
   const handlePreviousPage = () => {
-    if (page > 1) setPage(page - 1);
+    if (page > 1) {
+      setPage(page - 1); // Let useEffect handle the data loading
+    }
   };
 
   const handleNextPage = () => {
-    if (page < totalPages) setPage(page + 1);
+    if (page < totalPages) {
+      setPage(page + 1); // Let useEffect handle the data loading
+    }
   };
 
   return (
@@ -242,14 +267,32 @@ function CheckPointType() {
                     value={searchQuery}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        handleSearch();
+                        if (searchQuery.trim()) {
+                          handleSearch(1);
+                        } else {
+                          // If Enter is pressed with empty search, reset to normal data
+                          setIsSearchMode(false);
+                          setSearchQuery("");
+                          setPage(1);
+                          getAllCountries(1);
+                        }
                       }
                     }}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearchQuery(value);
+
+                      // If input is completely cleared, automatically refresh data
+                      if (value === "" && isSearchMode) {
+                        setIsSearchMode(false);
+                        setPage(1);
+                        getAllCountries(1);
+                      }
+                    }}
                   />
                 </FormControl>
                 <button
-                  onClick={handleSearch}
+                  onClick={() => handleSearch(1)}
                   type="button"
                   className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
                 >
@@ -303,6 +346,29 @@ function CheckPointType() {
                 </button>
               </div>
             )} */}
+            {/* Add this div before the table */}
+           <div className="flex justify-between items-center mb-2">
+              <div className="text-sm text-gray-600">
+                {isSearchMode && searchQuery ? (
+                  <span>
+                    Search Results:{" "}
+                    <span className="font-semibold">
+                      {totalCheckPointTypes}
+                    </span>{" "}
+                    checkpoint types found for "{searchQuery}"
+                  </span>
+                ) : (
+                  <span>
+                    Total Records:{" "}
+                    <span className="font-semibold">
+                      {totalCheckPointTypes}
+                    </span>{" "}
+                    checkpoint types
+                  </span>
+                )}
+              </div>
+            </div>
+
             <div className="relative w-full overflow-x-auto">
               <table className="w-full  border  min-w-max caption-bottom text-sm">
                 <thead className="[&amp;_tr]:border-b bg-blue-700 ">
@@ -342,95 +408,111 @@ function CheckPointType() {
                   </tr>
                 </thead>
                 <tbody className="[&amp;_tr:last-child]:border-0  ">
-                  {countrys?.map((checkListType, index) => (
-                    <tr
-                      key={checkListType?._id}
-                      className="border-b transition-colors  data-[state=selected]:bg-muted"
-                    >
-                      <th scope="col" className="p-4">
-                        <div className="flex items-center">
-                          <input
-                            id={`checkbox-${index}`}
-                            type="checkbox"
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                            checked={selectedRows?.includes(checkListType?._id)}
-                            onChange={() => handleRowSelect(checkListType?._id)}
-                          />
-                          <label
-                            htmlFor={`checkbox-${index}`}
-                            className="sr-only"
+                  {countrys && countrys.length > 0 ? (
+                    countrys.map((checkListType, index) => (
+                      <tr
+                        key={checkListType?._id}
+                        className="border-b transition-colors  data-[state=selected]:bg-muted"
+                      >
+                        <th scope="col" className="p-4">
+                          <div className="flex items-center">
+                            <input
+                              id={`checkbox-${index}`}
+                              type="checkbox"
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                              checked={selectedRows?.includes(
+                                checkListType?._id
+                              )}
+                              onChange={() =>
+                                handleRowSelect(checkListType?._id)
+                              }
+                            />
+                            <label
+                              htmlFor={`checkbox-${index}`}
+                              className="sr-only"
+                            >
+                              checkbox
+                            </label>
+                          </div>
+                        </th>
+                        <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
+                          {checkListType?.name}
+                        </td>
+                        <td className="capitalize p-4">
+                          <span
+                            className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                              checkListType?.status === "Active"
+                                ? "bg-green-100 text-green-800 border-green-400"
+                                : checkListType?.status === "Inactive"
+                                ? "bg-red-100 text-red-800  border-red-400"
+                                : "bg-orange-100 text-orange-800  border-orange-400"
+                            }`}
                           >
-                            checkbox
-                          </label>
-                        </div>
-                      </th>
-                      <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
-                        {checkListType?.name}
-                      </td>
-                      <td className="capitalize p-4">
-                        <span
-                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
-                            checkListType?.status === "Active"
-                              ? "bg-green-100 text-green-800 border-green-400"
-                              : checkListType?.status === "Inactive"
-                              ? "bg-red-100 text-red-800  border-red-400"
-                              : "bg-orange-100 text-orange-800  border-orange-400"
-                          }`}
-                        >
-                          {checkListType?.status}
-                        </span>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {moment(checkListType?.createdAt).format("MMM D, YYYY")}
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        {moment(checkListType?.modifiedAt).format(
-                          "MMM D, YYYY"
-                        )}
-                      </td>
+                            {checkListType?.status}
+                          </span>
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          {moment(checkListType?.createdAt).format(
+                            "MMM D, YYYY"
+                          )}
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          {moment(checkListType?.modifiedAt).format(
+                            "MMM D, YYYY"
+                          )}
+                        </td>
 
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        <div className="flex gap-4 ">
-                          <button
-                            onClick={() => {
-                              handleOpenCountryModal(checkListType);
-                            }}
-                            className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              fill="currentColor"
-                              className="bi bi-pencil-square"
-                              viewBox="0 0 16 16"
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          <div className="flex gap-4 ">
+                            <button
+                              onClick={() => {
+                                handleOpenCountryModal(checkListType);
+                              }}
+                              className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
                             >
-                              <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
-                              <path
-                                fill-rule="evenodd"
-                                d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(checkListType?._id)}
-                            className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="16"
-                              fill="currentColor"
-                              className="bi bi-trash3-fill"
-                              viewBox="0 0 16 16"
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                className="bi bi-pencil-square"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
+                                <path
+                                  fill-rule="evenodd"
+                                  d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                                />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(checkListType?._id)}
+                              className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                             >
-                              <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
-                            </svg>
-                          </button>
-                        </div>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
+                                className="bi bi-trash3-fill"
+                                viewBox="0 0 16 16"
+                              >
+                                <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="text-center p-4">
+                        {isSearchMode
+                          ? `No checkpoint types found for "${searchQuery}"`
+                          : "No checkpoint types found"}
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -452,22 +534,32 @@ function CheckPointType() {
                 Previous
               </button>
               <div style={{ display: "flex", gap: "8px" }}>
-                {Array.from(
-                  { length: totalPages },
-                  (_, index) => index + 1
-                ).map((p) => (
-                  <button
-                    className={`border px-3 rounded ${
-                      p === page ? "bg-blue-700 text-white" : ""
-                    }`}
-                    key={p}
-                    onClick={() => setPage(p)}
-                    disabled={p === page}
-                  >
-                    {p}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, index) => index + 1)
+                  .filter((p) => {
+                    // Show the first page, last page, and pages around the current page
+                    return (
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= page - 3 && p <= page + 3)
+                    );
+                  })
+                  .map((p, i, array) => (
+                    <React.Fragment key={p}>
+                      {/* Add ellipsis for skipped ranges */}
+                      {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
+                      <button
+                        className={`border px-3 rounded ${
+                          p === page ? "bg-blue-700 text-white" : ""
+                        }`}
+                        onClick={() => setPage(p)} // Change this line
+                        disabled={p === page}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  ))}
               </div>
+
               <button
                 className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
                 onClick={handleNextPage}

@@ -105,7 +105,7 @@ function Customer() {
     async function getRegions() {
       try {
         const res = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/collections/api/allregion`
+          `${process.env.REACT_APP_BASE_URL}/collections/api/region`
         );
         const regionsData = res.data.regions.map((reg) => ({
           label: reg.regionName,
@@ -559,7 +559,7 @@ function Customer() {
             </div>
           )} */}
           {/* Add this div before the table */}
-          <div className="flex justify-between items-center mb-4">
+         <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
