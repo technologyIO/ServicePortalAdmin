@@ -2,6 +2,7 @@
 
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 function SpareMasterBulk({ onClose }) {
   const [file, setFile] = useState(null);
@@ -34,6 +35,215 @@ function SpareMasterBulk({ onClose }) {
     warnings: [],
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields (matching backend FIELD_MAPPINGS) - Only 2 REQUIRED FIELDS based on backend
+          const requiredFields = {
+            subgrp: [
+              "subgrp",
+              "sub_grp",
+              "subgroup",
+              "sub_group",
+              "group",
+              "category",
+              "grp",
+            ],
+            partnumber: [
+              "partnumber",
+              "part_number",
+              "partno",
+              "part_no",
+              "itemcode",
+              "item_code",
+              "code",
+            ],
+          };
+
+          // Optional fields for better user experience
+          const optionalFields = {
+            description: [
+              "description",
+              "desc",
+              "product_description",
+              "item_description",
+              "name",
+            ],
+            type: [
+              "type",
+              "category_type",
+              "item_type",
+              "product_type",
+              "spare_type",
+            ],
+            rate: ["rate", "mrp", "rate_mrp", "price", "cost", "amount"],
+            dp: ["dp", "dealer_price", "dealerprice", "wholesale_price"],
+            charges: ["charges", "exchange_price", "exchangeprice", "exchange"],
+            spareiamegurl: [
+              "spareiamegurl",
+              "spare_image_url",
+              "image_url",
+              "imageurl",
+            ],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          // Check required fields
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // Check optional fields (for better user feedback)
+          for (const [field, variations] of Object.entries(optionalFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // Only 2 fields are required: Sub_grp and PartNumber
+          const isValid = foundFields.subgrp && foundFields.partnumber;
+
+          const missingFields = Object.entries(requiredFields)
+            .filter(([field]) => !foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                subgrp: "Sub Group",
+                partnumber: "Part Number",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          const optionalFound = Object.entries(optionalFields)
+            .filter(([field]) => foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                description: "Description",
+                type: "Type",
+                rate: "Rate (MRP)",
+                dp: "DP",
+                charges: "Charges (Exchange Price)",
+                spareiamegurl: "Image URL",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            optionalFound,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.values(requiredFields).reduce(
+              (count, _, index) =>
+                count +
+                (Object.keys(requiredFields)[index] in foundFields &&
+                foundFields[Object.keys(requiredFields)[index]]
+                  ? 1
+                  : 0),
+              0
+            ),
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            optionalFound: [],
+            totalRequired: 2,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          optionalFound: [],
+          totalRequired: 2,
+          foundRequired: 0,
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
@@ -68,24 +278,88 @@ function SpareMasterBulk({ onClose }) {
     validateAndSetFile(selectedFile);
   };
 
-  const validateAndSetFile = (selectedFile) => {
+  const validateAndSetFile = async (selectedFile) => {
     setError("");
+    setFileValidation(null);
+
     if (!selectedFile) {
       setFile(null);
       return;
     }
+
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
+
     if (selectedFile.size > 50 * 1024 * 1024) {
       setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
+
+    // Set file and show validation loading
     setFile(selectedFile);
+    setError("Validating file structure...");
+    addLiveUpdate(
+      `File selected: ${selectedFile.name} (${(
+        selectedFile.size /
+        1024 /
+        1024
+      ).toFixed(2)} MB)`,
+      "info"
+    );
+
+    // Validate file structure
+    const validation = await validateFileStructure(selectedFile);
+    setFileValidation(validation);
+
+    if (!validation.isValid) {
+      if (validation.error) {
+        setError(validation.error);
+        addLiveUpdate(`File validation failed: ${validation.error}`, "error");
+      } else {
+        const missingFieldsText = validation.missingFields.join(", ");
+        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
+          validation.foundRequired
+        }/${
+          validation.totalRequired
+        } required columns.\n\nAvailable columns:\n${validation.headers.join(
+          ", "
+        )}`;
+        setError(errorMessage);
+        addLiveUpdate(
+          `File validation failed: Missing required columns`,
+          "error"
+        );
+      }
+      setFile(null);
+      return;
+    }
+
+    setError(""); // Clear error if validation passes
+    addLiveUpdate(
+      `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
+      "success"
+    );
+
+    // Show mapped columns
+    if (validation.mappedColumns) {
+      const mappedList = Object.entries(validation.mappedColumns)
+        .map(([field, header]) => `${field}: "${header}"`)
+        .join(", ");
+      addLiveUpdate(`📋 Required columns mapped: ${mappedList}`, "info");
+    }
+
+    // Show optional columns found
+    if (validation.optionalFound && validation.optionalFound.length > 0) {
+      addLiveUpdate(
+        `📊 Optional columns found: ${validation.optionalFound.join(", ")}`,
+        "info"
+      );
+    }
   };
 
   const handleDragOver = (e) => {
@@ -484,7 +758,9 @@ function SpareMasterBulk({ onClose }) {
           <div>
             <h3 className="font-semibold text-indigo-900">Need a template?</h3>
             <p className="text-sm text-indigo-700">
-              Download our CSV template with Sub_GRp, Part Number, Description, Type, Rate (MRP), DP, Charges (Exchange Price), and Sl No. status columns
+              Download our CSV template with Sub_GRp, Part Number, Description,
+              Type, Rate (MRP), DP, Charges (Exchange Price), and Sl No. status
+              columns
             </p>
           </div>
           <button
@@ -563,7 +839,9 @@ function SpareMasterBulk({ onClose }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                          {error}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -664,7 +942,9 @@ function SpareMasterBulk({ onClose }) {
                             CSV or Excel files only (max 50MB)
                           </p>
                           <p className="text-xs text-center text-indigo-600 mt-2">
-                            Required columns: Sub_GRp, Part Number, Description, Type, Rate (MRP), DP, Charges (Exchange Price), Sl No. status
+                            Required columns: Sub_GRp, Part Number, Description,
+                            Type, Rate (MRP), DP, Charges (Exchange Price), Sl
+                            No. status
                           </p>
                         </>
                       )}
@@ -695,9 +975,11 @@ function SpareMasterBulk({ onClose }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-indigo-400 cursor-not-allowed"
                           : "bg-indigo-600 hover:bg-indigo-700"
                       } text-white transition-colors`}
@@ -717,7 +999,9 @@ function SpareMasterBulk({ onClose }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Process Spare Master Data
+                      {fileValidation && fileValidation.isValid
+                        ? "Upload & Process Spare Master Data ✓"
+                        : "Upload & Process Spare Master Data"}
                     </button>
                   </div>
                 </div>
@@ -1089,11 +1373,21 @@ function SpareMasterBulk({ onClose }) {
                                 </span>
                               </div>
                               <div className="text-sm text-gray-600 mb-1">
-                                <div><strong>Description:</strong> {item.description || "N/A"}</div>
-                                <div><strong>Rate (MRP):</strong> ₹{item.rate || 0}</div>
+                                <div>
+                                  <strong>Description:</strong>{" "}
+                                  {item.description || "N/A"}
+                                </div>
+                                <div>
+                                  <strong>Rate (MRP):</strong> ₹{item.rate || 0}
+                                </div>
                                 <div className="grid grid-cols-2 gap-2 mt-1">
-                                  <div><strong>DP:</strong> ₹{item.dp || 0}</div>
-                                  <div><strong>Charges:</strong> ₹{item.charges || 0}</div>
+                                  <div>
+                                    <strong>DP:</strong> ₹{item.dp || 0}
+                                  </div>
+                                  <div>
+                                    <strong>Charges:</strong> ₹
+                                    {item.charges || 0}
+                                  </div>
                                 </div>
                               </div>
                               {item.action && (
