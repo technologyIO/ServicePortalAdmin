@@ -107,15 +107,23 @@ function Customer() {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/api/region`
         );
-        const regionsData = res.data.regions.map((reg) => ({
-          label: reg.regionName,
-          id: reg._id,
-          country: reg.country,
-          status: reg.status,
-        }));
+
+        const regionsData = res.data.data.regionDropdown
+          .filter((reg) => reg.stateId !== null) // Remove regions with null stateId
+          .map((reg) => ({
+            label: reg.stateId || reg.regionName,
+            value: reg.regionName,
+            id: reg._id,
+            country: reg.country,
+            regionName: reg.regionName,
+            stateId: reg.stateId,
+          }))
+          .filter((reg) => reg.label && reg.value);
+
         setRegionOptions(regionsData);
+        console.log("Regions loaded:", regionsData);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching regions:", err);
       }
     }
     getRegions();
@@ -150,23 +158,30 @@ function Customer() {
     if (!selectedCountries.length) {
       setFilteredRegions(regionOptions);
     } else {
+      // Filter regions based on selected countries
       setFilteredRegions(
         regionOptions.filter((region) =>
-          selectedCountries.some((country) => region.country === country.label)
+          selectedCountries.some(
+            (country) =>
+              region.country &&
+              region.country.toLowerCase() === country.label.toLowerCase()
+          )
         )
       );
     }
-    setSelectedRegions([]);
-    setFilteredCities([]);
-    setSelectedCities([]);
+
+    // Only reset regions and cities if not in edit mode
+    if (!editModal) {
+      setSelectedRegions([]);
+      setFilteredCities([]);
+      setSelectedCities([]);
+    }
+
     setCurrentData((prev) => ({
       ...prev,
       country: selectedCountries.map((c) => c.label).join(", "),
-      region: "",
-      city: "",
     }));
-    // eslint-disable-next-line
-  }, [selectedCountries, regionOptions]);
+  }, [selectedCountries, regionOptions, editModal]);
 
   useEffect(() => {
     if (!selectedRegions.length) {
@@ -174,29 +189,62 @@ function Customer() {
     } else {
       setFilteredCities(
         cityOptions.filter((city) =>
-          selectedRegions.some((region) => city.region === region.label)
+          selectedRegions.some((region) => city.region === region.value)
         )
       );
     }
-    setSelectedCities([]);
+
+    // Only reset cities if not in edit mode
+    if (!editModal) {
+      setSelectedCities([]);
+    }
+
     setCurrentData((prev) => ({
       ...prev,
       region: selectedRegions.map((r) => r.label).join(", "),
-      city: "",
     }));
-    // eslint-disable-next-line
-  }, [selectedRegions, cityOptions]);
+  }, [selectedRegions, cityOptions, editModal]);
 
   useEffect(() => {
     setCurrentData((prev) => ({
       ...prev,
       city: selectedCities.map((c) => c.label).join(", "),
     }));
-    // eslint-disable-next-line
   }, [selectedCities]);
 
-  // Table and CRUD Logic (no removal)
+  // Helper function to find matching options from API data
+  const findMatchingRegions = (regionString, allRegions) => {
+    if (!regionString || !allRegions.length) return [];
 
+    const regionCodes = regionString
+      .split(",")
+      .map((r) => r.trim())
+      .filter((r) => r !== "");
+
+    return allRegions.filter((region) =>
+      regionCodes.some(
+        (code) =>
+          region.stateId === code ||
+          region.label === code ||
+          region.regionName === code
+      )
+    );
+  };
+
+  const findMatchingCities = (cityString, allCities) => {
+    if (!cityString || !allCities.length) return [];
+
+    const cityNames = cityString
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c !== "");
+
+    return allCities.filter((city) =>
+      cityNames.some((name) => city.label === name || city.name === name)
+    );
+  };
+
+  // Table and CRUD Logic
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -221,37 +269,71 @@ function Customer() {
     setSelectedCountries([]);
     setSelectedRegions([]);
     setSelectedCities([]);
+    setFilteredRegions(regionOptions);
+    setFilteredCities(cityOptions);
   };
 
-  const handleOpenModal = (country) => {
-    setCurrentData(country);
+  const handleOpenModal = async (customer) => {
+    setCurrentData(customer);
     setEditModal(true);
     setShowModal(true);
 
-    // autofill cascading fields for edit
-    // Country
+    // Wait for options to be loaded
+    if (!regionOptions.length || !cityOptions.length) {
+      setTimeout(() => handleOpenModal(customer), 100);
+      return;
+    }
+
+    // Country handling
+    const countryValue = customer?.country || "";
+    const customerCountries = countryValue
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c !== "");
+
     const foundCountries = countryOptions.filter((c) =>
-      (country?.country || "").split(", ").includes(c.label)
+      customerCountries.some(
+        (customerCountry) =>
+          customerCountry.toLowerCase() === c.label.toLowerCase()
+      )
     );
     setSelectedCountries(foundCountries);
-    // Region
-    const rOptions = regionOptions.filter((r) =>
-      foundCountries.map((c) => c.label).includes(r.country)
+
+    // Region handling - match with API data and filter by selected countries
+    const matchingRegions = findMatchingRegions(
+      customer?.region || "",
+      regionOptions
     );
-    setFilteredRegions(rOptions);
-    const foundRegions = rOptions.filter((r) =>
-      (country?.region || "").split(", ").includes(r.label)
+    setSelectedRegions(matchingRegions);
+
+    // Filter regions based on selected countries (only show regions for selected countries)
+    const filteredRegionsForCountries = regionOptions.filter((region) =>
+      foundCountries.some(
+        (country) =>
+          region.country &&
+          region.country.toLowerCase() === country.label.toLowerCase()
+      )
     );
-    setSelectedRegions(foundRegions);
-    // City
-    const cOptions = cityOptions.filter((c) =>
-      foundRegions.map((r) => r.label).includes(c.region)
+    setFilteredRegions(
+      filteredRegionsForCountries.length
+        ? filteredRegionsForCountries
+        : regionOptions
     );
-    setFilteredCities(cOptions);
-    const foundCities = cOptions.filter((c) =>
-      (country?.city || "").split(", ").includes(c.label)
+
+    // City handling - match with API data
+    const matchingCities = findMatchingCities(
+      customer?.city || "",
+      cityOptions
     );
-    setSelectedCities(foundCities);
+    setSelectedCities(matchingCities);
+
+    // Filter cities based on selected regions
+    const filteredCitiesForRegions = cityOptions.filter((city) =>
+      matchingRegions.some((region) => city.region === region.value)
+    );
+    setFilteredCities(
+      filteredCitiesForRegions.length ? filteredCitiesForRegions : cityOptions
+    );
   };
 
   const handleFormData = (name, value) => {
@@ -277,7 +359,7 @@ function Customer() {
             `${process.env.REACT_APP_BASE_URL}/collections/customer/${id}`
           )
           .then((res) => {
-            Swal.fire("Deleted!", "Countrys has been deleted.", "success");
+            Swal.fire("Deleted!", "Customer has been deleted.", "success");
           })
           .then((res) => {
             getData();
@@ -361,7 +443,7 @@ function Customer() {
     } else if (!isSearchMode) {
       getData(page);
     }
-  }, [page]); // Only trigger on page changes
+  }, [page]);
 
   useEffect(() => {
     if (!searchQuery) {
@@ -385,6 +467,7 @@ function Customer() {
       )
       .then((res) => {
         toast.success("Customer created successfully!");
+        handleCloseModal();
         getData();
       })
       .catch((error) => {
@@ -403,6 +486,7 @@ function Customer() {
       )
       .then((res) => {
         toast.success("Customer updated successfully!");
+        handleCloseModal();
         getData();
       })
       .catch((error) => {
@@ -412,6 +496,7 @@ function Customer() {
         toast.error(message);
       });
   };
+
   const handleShowCreateModal = () => {
     setEditModal(false);
     setCurrentData({});
@@ -419,17 +504,19 @@ function Customer() {
     setSelectedCountries([]);
     setSelectedRegions([]);
     setSelectedCities([]);
+    setFilteredRegions(regionOptions);
+    setFilteredCities(cityOptions);
   };
 
   const handlePreviousPage = () => {
     if (page > 1) {
-      setPage(page - 1); // Let useEffect handle the data loading
+      setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
-      setPage(page + 1); // Let useEffect handle the data loading
+      setPage(page + 1);
     }
   };
 
@@ -441,6 +528,7 @@ function Customer() {
       setSelectedCountries([...countryOptions]);
     }
   };
+
   const handleRegionSelectAll = () => {
     if (selectedRegions.length === filteredRegions.length) {
       setSelectedRegions([]);
@@ -448,6 +536,7 @@ function Customer() {
       setSelectedRegions([...filteredRegions]);
     }
   };
+
   const handleCitySelectAll = () => {
     if (selectedCities.length === filteredCities.length) {
       setSelectedCities([]);
@@ -455,6 +544,7 @@ function Customer() {
       setSelectedCities([...filteredCities]);
     }
   };
+
   return (
     <>
       {loader ? (
@@ -476,7 +566,6 @@ function Customer() {
                       if (searchQuery.trim()) {
                         handleSearch(1);
                       } else {
-                        // If Enter is pressed with empty search, reset to normal data
                         setIsSearchMode(false);
                         setSearchQuery("");
                         setPage(1);
@@ -487,8 +576,6 @@ function Customer() {
                   onChange={(e) => {
                     const value = e.target.value;
                     setSearchQuery(value);
-
-                    // If input is completely cleared, automatically refresh data
                     if (value === "" && isSearchMode) {
                       setIsSearchMode(false);
                       setPage(1);
@@ -528,9 +615,7 @@ function Customer() {
               </button>
               <button
                 className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
-                  isDownloadingCustomer
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
+                  isDownloadingCustomer ? "bg-gray-500 cursor-not-allowed" : ""
                 }`}
                 onClick={downloadCustomerExcel}
                 disabled={isDownloadingCustomer}
@@ -548,18 +633,8 @@ function Customer() {
               </button>
             </div>
           </div>
-          {/* {selectedRows?.length > 0 && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 :focus:ring-red-800 font-medium rounded-[4px] text-sm px-5 py-2.5 text-center me-2 mb-2"
-              >
-                Delete Selected
-              </button>
-            </div>
-          )} */}
-          {/* Add this div before the table */}
-         <div className="flex justify-between items-center ">
+
+          <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
@@ -579,7 +654,7 @@ function Customer() {
 
           <div className="relative w-full overflow-x-auto">
             <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700 ">
+              <thead className="[&_tr]:border-b bg-blue-700 ">
                 <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
@@ -616,9 +691,6 @@ function Customer() {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     District
                   </th>
-                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    State
-                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Region
                   </th>
@@ -654,7 +726,7 @@ function Customer() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
+              <tbody className="[&_tr:last-child]:border-0  ">
                 {data && data.length > 0 ? (
                   data.map((item, index) => (
                     <tr
@@ -699,9 +771,6 @@ function Customer() {
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.district}
                       </td>
-                      {/* <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
-                      {item?.state}
-                    </td> */}
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.region}
                       </td>
@@ -720,7 +789,6 @@ function Customer() {
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.email}
                       </td>
-
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         <span
                           className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
@@ -737,14 +805,12 @@ function Customer() {
                       <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                         {item?.customertype}
                       </td>
-
                       <td className="p-4 align-middle whitespace-nowrap">
                         {moment(item?.createdAt).format("MMM D, YYYY")}
                       </td>
                       <td className="p-4 align-middle whitespace-nowrap">
                         {moment(item?.modifiedAt).format("MMM D, YYYY")}
                       </td>
-
                       <td className="p-4 align-middle whitespace-nowrap">
                         <div className="flex gap-4 ">
                           <button
@@ -763,7 +829,7 @@ function Customer() {
                             >
                               <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
                               <path
-                                fill-rule="evenodd"
+                                fillRule="evenodd"
                                 d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
                               />
                             </svg>
@@ -790,7 +856,7 @@ function Customer() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="20" className="text-center p-4">
+                    <td colSpan="19" className="text-center p-4">
                       No customers found
                     </td>
                   </tr>
@@ -798,6 +864,7 @@ function Customer() {
               </tbody>
             </table>
           </div>
+
           <div
             className="Pagination-laptopUp"
             style={{
@@ -818,7 +885,6 @@ function Customer() {
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
                   return (
                     p === 1 ||
                     p === totalPages ||
@@ -827,13 +893,12 @@ function Customer() {
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)} // Change this line
+                      onClick={() => setPage(p)}
                       disabled={p === page}
                     >
                       {p}
@@ -881,7 +946,7 @@ function Customer() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleCloseModal();
+                  handleSubmit(currentData?._id);
                 }}
                 className="thin-scroll"
               >
@@ -898,7 +963,7 @@ function Customer() {
                           handleFormData("customercodeid", e.target.value)
                         }
                         id="customercodeid"
-                        value={currentData?.customercodeid}
+                        value={currentData?.customercodeid || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -912,7 +977,7 @@ function Customer() {
                           handleFormData("customername", e.target.value)
                         }
                         id="customername"
-                        value={currentData?.customername}
+                        value={currentData?.customername || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -926,7 +991,7 @@ function Customer() {
                           handleFormData("hospitalname", e.target.value)
                         }
                         id="hospitalname"
-                        value={currentData?.hospitalname}
+                        value={currentData?.hospitalname || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -984,23 +1049,22 @@ function Customer() {
                       </div>
                       <Autocomplete
                         multiple
-                        className=" w-full"
                         options={filteredRegions}
                         value={selectedRegions}
-                        getOptionLabel={(option) =>
-                          option ? option.label : ""
+                        onChange={(event, newValue) =>
+                          setSelectedRegions(newValue)
                         }
+                        getOptionLabel={(option) => option?.label || ""}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="region"
-                            label="Select region"
+                            label="Region"
+                            placeholder="Select regions"
                           />
                         )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) => setSelectedRegions(value)}
-                        disableCloseOnSelect
-                        disabled={!selectedCountries.length}
+                        isOptionEqualToValue={(option, value) =>
+                          option.id === value.id
+                        }
                       />
                     </div>
                     {/* CITY FIELD + BUTTON */}
@@ -1051,7 +1115,7 @@ function Customer() {
                           handleFormData("street", e.target.value)
                         }
                         id="street"
-                        value={currentData?.street}
+                        value={currentData?.street || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1065,7 +1129,7 @@ function Customer() {
                           handleFormData("postalcode", e.target.value)
                         }
                         id="postalcode"
-                        value={currentData?.postalcode}
+                        value={currentData?.postalcode || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1079,32 +1143,10 @@ function Customer() {
                           handleFormData("district", e.target.value)
                         }
                         id="district"
-                        value={currentData?.district}
+                        value={currentData?.district || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
-                    {/* <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        State{" "}
-                      </label>
-                      <Autocomplete
-                        className="h-10 w-full"
-                        options={state} // Data from API
-                        getOptionLabel={(option) => option.label} // Display the country name
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            name="state"
-                            label="state State"
-                          />
-                        )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) =>
-                          handleFormData("state", value ? value.label : "")
-                        }
-                      />
-                    </div> */}
-
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Telephone{" "}
@@ -1115,7 +1157,7 @@ function Customer() {
                           handleFormData("telephone", e.target.value)
                         }
                         id="telephone"
-                        value={currentData?.telephone}
+                        value={currentData?.telephone || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1129,7 +1171,7 @@ function Customer() {
                           handleFormData("taxnumber1", e.target.value)
                         }
                         id="taxnumber1"
-                        value={currentData?.taxnumber1}
+                        value={currentData?.taxnumber1 || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1143,7 +1185,7 @@ function Customer() {
                           handleFormData("taxnumber2", e.target.value)
                         }
                         id="taxnumber2"
-                        value={currentData?.taxnumber2}
+                        value={currentData?.taxnumber2 || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1157,7 +1199,7 @@ function Customer() {
                           handleFormData("email", e.target.value)
                         }
                         id="email"
-                        value={currentData?.email}
+                        value={currentData?.email || ""}
                         class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
                       />
                     </div>
@@ -1169,7 +1211,7 @@ function Customer() {
                       <Select
                         variant="soft"
                         className="rounded-[4px] py-2 border"
-                        defaultValue={currentData?.status || ""}
+                        value={currentData?.status || ""}
                         onChange={(e, value) => handleFormData("status", value)}
                       >
                         <Option value="">Select Status</Option>
@@ -1184,7 +1226,7 @@ function Customer() {
                       </label>
                       <select
                         id="customertype"
-                        value={currentData?.customertype}
+                        value={currentData?.customertype || ""}
                         onChange={(e) =>
                           handleFormData("customertype", e.target.value)
                         }
@@ -1207,7 +1249,6 @@ function Customer() {
                   </button>
 
                   <button
-                    onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
@@ -1219,7 +1260,6 @@ function Customer() {
           </Modal>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
               <div className=" ">
                 <CustomerBulk isOpen={isOpen} onClose={closeModal} />
               </div>
