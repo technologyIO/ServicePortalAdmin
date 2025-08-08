@@ -2,6 +2,7 @@
 
 import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
+import * as XLSX from "xlsx";
 
 function PendingInstallationBulk({ onClose, getData }) {
   const [file, setFile] = useState(null);
@@ -33,6 +34,340 @@ function PendingInstallationBulk({ onClose, getData }) {
     warnings: [],
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
+  const [fileValidation, setFileValidation] = useState(null);
+
+  const validateFileStructure = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
+          }
+
+          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields (matching backend FIELD_MAPPINGS) - 10 REQUIRED FIELDS
+          const requiredFields = {
+            invoiceno: [
+              "invoiceno",
+              "invoiceno",
+              "invoicenumber",
+              "invoicenumber",
+              "billno",
+              "billno",
+            ],
+            invoicedate: [
+              "invoicedate",
+              "invoicedate",
+              "billdate",
+              "billdate",
+              "date",
+            ],
+            distchnl: [
+              "distchnl",
+              "distchnl",
+              "distributionchannel",
+              "distributionchannel",
+              "channel",
+            ],
+            customerid: [
+              "customerid",
+              "customerid",
+              "custid",
+              "custid",
+              "customercode",
+              "customercode",
+            ],
+            material: [
+              "material",
+              "materialcode",
+              "materialcode",
+              "productcode",
+              "productcode",
+              "partno",
+              "partno",
+            ],
+            description: [
+              "description",
+              "materialdescription",
+              "materialdescription",
+              "productdescription",
+              "productdescription",
+              "desc",
+            ],
+            serialnumber: [
+              "serialnumber",
+              "serialnumber",
+              "serialno",
+              "serialno",
+              "sno",
+            ],
+            salesdist: [
+              "salesdist",
+              "salesdist",
+              "salesdistrict",
+              "salesdistrict",
+            ],
+            salesoff: ["salesoff", "salesoff", "salesoffice", "salesoffice"],
+            currentcustomerid: [
+              "currentcustomerid",
+              "currentcustomerid",
+              "currentcustid",
+              "currentcustid",
+            ],
+            mtl_grp4: [
+              "mtlgrp4",
+              "mtlgrp4",
+              "materialgroup4",
+              "materialgroup4",
+              "mtlgroup4",
+              "mtlgroup4",
+            ],
+          };
+
+          // Optional fields
+          const optionalFields = {
+            customername1: [
+              "customername1",
+              "customername1",
+              "customername",
+              "customername",
+              "name1",
+            ],
+            customername2: [
+              "customername2",
+              "customername2",
+              "name2",
+              "hospitalname",
+              "hospitalname",
+            ],
+            customercity: ["customercity", "customercity", "city"],
+            customerpostalcode: [
+              "customerpostalcode",
+              "customerpostalcode",
+              "postalcode",
+              "postalcode",
+              "pincode",
+              "zip",
+            ],
+            customercountry: ["customercountry", "customercountry", "country"],
+            customerregion: ["customerregion", "customerregion", "region"],
+            currentcustomername1: [
+              "currentcustomername1",
+              "currentcustomername1",
+              "currentcustomername",
+              "currentcustomername",
+            ],
+            currentcustomername2: [
+              "currentcustomername2",
+              "currentcustomername2",
+              "currenthospitalname",
+              "currenthospitalname",
+            ],
+            currentcustomercity: [
+              "currentcustomercity",
+              "currentcustomercity",
+              "currentcity",
+              "currentcity",
+            ],
+            currentcustomerregion: [
+              "currentcustomerregion",
+              "currentcustomerregion",
+              "currentregion",
+              "currentregion",
+            ],
+            currentcustomerpostalcode: [
+              "currentcustomerpostalcode",
+              "currentcustomerpostalcode",
+              "currentpostalcode",
+              "currentpostalcode",
+            ],
+            currentcustomercountry: [
+              "currentcustomercountry",
+              "currentcustomercountry",
+              "currentcountry",
+              "currentcountry",
+            ],
+            key: ["key", "keyfield", "keyfield", "id"],
+            palnumber: [
+              "palnumber",
+              "palnumber",
+              "pal",
+              "palletno",
+              "palletno",
+            ],
+            status: [
+              "status",
+              "record_status",
+              "recordstatus",
+              "state",
+              "condition",
+            ],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          // Check required fields
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // Check optional fields (for better user feedback)
+          for (const [field, variations] of Object.entries(optionalFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // All 10 fields are required
+          const isValid = Object.keys(requiredFields).every(
+            (field) => foundFields[field]
+          );
+
+          const missingFields = Object.entries(requiredFields)
+            .filter(([field]) => !foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                invoiceno: "Invoice No",
+                invoicedate: "Invoice Date",
+                distchnl: "DistChnl",
+                customerid: "Customer ID",
+                material: "Material",
+                description: "Description",
+                serialnumber: "Serial Number",
+                salesdist: "SalesDist",
+                salesoff: "SalesOff",
+                currentcustomerid: "Current Customer ID",
+                mtl_grp4: "Mtl.Grp4",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          const optionalFound = Object.entries(optionalFields)
+            .filter(([field]) => foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
+                customername1: "Customer Name1",
+                customername2: "Customer Name2",
+                customercity: "Customer City",
+                customerpostalcode: "Customer Postal Code",
+                customercountry: "Customer Country",
+                customerregion: "Customer Region",
+                currentcustomername1: "Current Customer Name1",
+                currentcustomername2: "Current Customer Name2",
+                currentcustomercity: "Current Customer City",
+                currentcustomerregion: "Current Customer Region",
+                currentcustomerpostalcode: "Current Customer Postal Code",
+                currentcustomercountry: "Current Customer Country",
+                key: "Key",
+                palnumber: "PAL Number",
+                status: "Status",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            optionalFound,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.keys(requiredFields).reduce(
+              (count, field) => count + (foundFields[field] ? 1 : 0),
+              0
+            ),
+          });
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            optionalFound: [],
+            totalRequired: 11,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
+        resolve({
+          isValid: false,
+          error: "Failed to read file",
+          headers: [],
+          foundFields: {},
+          mappedColumns: {},
+          missingFields: [],
+          optionalFound: [],
+          totalRequired: 11,
+          foundRequired: 0,
+        });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
@@ -67,24 +402,104 @@ function PendingInstallationBulk({ onClose, getData }) {
     validateAndSetFile(selectedFile);
   };
 
-  const validateAndSetFile = (selectedFile) => {
+  const validateAndSetFile = async (selectedFile) => {
     setError("");
+    setFileValidation(null);
+
     if (!selectedFile) {
       setFile(null);
       return;
     }
+
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
     if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
       setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
       setFile(null);
       return;
     }
+
     if (selectedFile.size > 50 * 1024 * 1024) {
       setError("File size exceeds 50MB limit");
       setFile(null);
       return;
     }
+
+    // Set file and show validation loading
     setFile(selectedFile);
+    setError("Validating file structure...");
+    addLiveUpdate(
+      `File selected: ${selectedFile.name} (${(
+        selectedFile.size / 1024
+      ).toFixed(2)} KB)`,
+      "info"
+    );
+
+    // Validate file structure
+    const validation = await validateFileStructure(selectedFile);
+    setFileValidation(validation);
+
+    if (!validation.isValid) {
+      if (validation.error) {
+        setError(validation.error);
+        addLiveUpdate(`File validation failed: ${validation.error}`, "error");
+      } else {
+        const missingFieldsText = validation.missingFields.join(", ");
+        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
+          validation.foundRequired
+        }/${
+          validation.totalRequired
+        } required columns.\n\nRequired columns: Invoice No, Invoice Date, DistChnl, Customer ID, Material, Description, Serial Number, SalesDist, SalesOff, Current Customer ID, Mtl.Grp4\n\nAvailable columns:\n${validation.headers.join(
+          ", "
+        )}`;
+        setError(errorMessage);
+        addLiveUpdate(
+          `File validation failed: Missing required columns`,
+          "error"
+        );
+      }
+      setFile(null);
+      return;
+    }
+
+    setError(""); // Clear error if validation passes
+    addLiveUpdate(
+      `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
+      "success"
+    );
+
+    // Show mapped columns
+    if (validation.mappedColumns) {
+      const mappedList = Object.entries(validation.mappedColumns)
+        .filter(([field]) =>
+          [
+            "invoiceno",
+            "distchnl",
+            "customerid",
+            "material",
+            "description",
+            "serialnumber",
+            "salesdist",
+            "salesoff",
+            "currentcustomerid",
+            "mtl_grp4",
+          ].includes(field)
+        )
+        .map(([field, header]) => `${field}: "${header}"`)
+        .join(", ");
+      addLiveUpdate(`📋 Required columns mapped: ${mappedList}`, "info");
+    }
+
+    // Show optional columns found
+    if (validation.optionalFound && validation.optionalFound.length > 0) {
+      const shortList = validation.optionalFound.slice(0, 5);
+      const displayText =
+        validation.optionalFound.length > 5
+          ? `${shortList.join(", ")} and ${
+              validation.optionalFound.length - 5
+            } more`
+          : validation.optionalFound.join(", ");
+      addLiveUpdate(`📊 Optional columns found: ${displayText}`, "info");
+    }
   };
 
   const handleDragOver = (e) => {
@@ -263,7 +678,7 @@ function PendingInstallationBulk({ onClose, getData }) {
                     );
                     setIsProcessing(false);
 
-                    setActiveTab("results");  
+                    setActiveTab("results");
                   } else if (data.status === "failed") {
                     addLiveUpdate(
                       "Pending Installation processing failed!",
@@ -562,7 +977,9 @@ function PendingInstallationBulk({ onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                          {error}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -694,9 +1111,11 @@ function PendingInstallationBulk({ onClose, getData }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={!file}
+                      disabled={
+                        !file || (fileValidation && !fileValidation.isValid)
+                      }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file
+                        !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-blue-400 cursor-not-allowed"
                           : "bg-blue-600 hover:bg-blue-700"
                       } text-white transition-colors`}
@@ -716,7 +1135,9 @@ function PendingInstallationBulk({ onClose, getData }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      Upload & Process Pending Installation Data
+                      {fileValidation && fileValidation.isValid
+                        ? "Upload & Process Pending Installation Data ✓"
+                        : "Upload & Process Pending Installation Data"}
                     </button>
                   </div>
                 </div>
