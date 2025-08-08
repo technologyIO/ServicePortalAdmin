@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import moment from "moment";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import toast from "react-hot-toast";
 
 function Dealer() {
   // Modal & UI states
@@ -53,7 +54,7 @@ function Dealer() {
       );
 
       if (response.status === 200) {
-        console.log(
+        toast.success(
           `Dealer ${
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
@@ -62,7 +63,7 @@ function Dealer() {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
