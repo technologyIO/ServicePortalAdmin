@@ -251,9 +251,15 @@ function CmcNcmcPrice() {
       .post(`${process.env.REACT_APP_BASE_URL}/admin/cmcncmcprice`, currentData)
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "CMC price created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create CMC price. Please try again."
+        );
       });
   };
 
@@ -265,9 +271,15 @@ function CmcNcmcPrice() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "CMC price updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update CMC price. Please try again."
+        );
       });
   };
 

@@ -26,6 +26,13 @@ const UserData = () => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  // Add state for permissions
+  const [permissions, setPermissions] = useState({
+    features: [],
+    mobileComponents: [],
+    demographicSelections: [],
+  });
+  const [allRolePermissions, setAllRolePermissions] = useState({});
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -43,6 +50,62 @@ const UserData = () => {
       setSelectedRows([...selectedRows, id]);
     }
   };
+  // Function to fetch all roles permissions
+  const fetchAllRolePermissions = async () => {
+    try {
+      // Get unique role IDs from users data
+      const uniqueRoleIds = [
+        ...new Set(data.map((user) => user?.role?.roleId).filter(Boolean)),
+      ];
+
+      const permissionsPromises = uniqueRoleIds.map(async (roleId) => {
+        try {
+          const response = await axios.get(
+            `${process.env.REACT_APP_BASE_URL}/roles/by-roleid/${roleId}`
+          );
+          return { roleId, data: response.data };
+        } catch (error) {
+          console.error(
+            `Error fetching permissions for role ${roleId}:`,
+            error
+          );
+          return { roleId, data: null };
+        }
+      });
+
+      const results = await Promise.all(permissionsPromises);
+
+      const permissionsMap = {};
+      results.forEach(({ roleId, data }) => {
+        if (data) {
+          permissionsMap[roleId] = data;
+        }
+      });
+
+      setAllRolePermissions(permissionsMap);
+    } catch (error) {
+      console.error("Error fetching all role permissions:", error);
+    }
+  };
+
+  // Function to check if remove device button should show
+  const shouldShowRemoveDeviceButtonForUser = (user) => {
+    if (!user?.role?.roleId) return false;
+
+    const rolePermissions = allRolePermissions[user.role.roleId];
+    if (!rolePermissions) return false;
+
+    return (
+      rolePermissions.mobileComponents &&
+      rolePermissions.mobileComponents.length > 0
+    );
+  };
+  // Add this useEffect after existing useEffects
+  useEffect(() => {
+    if (data.length > 0) {
+      fetchAllRolePermissions();
+    }
+  }, [data]);
 
   const handleDelete = (id) => {
     Swal.fire({
@@ -532,17 +595,23 @@ const UserData = () => {
                       <td className="p-4">{item?.dealerInfo?.dealerCode}</td> */}
 
                       <td className="p-4">
-                        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 shadow-sm rounded-md w-fit min-w-[250px]">
-                          <span className="text-sm text-blue-900 font-medium">
-                            {item?.deviceid || "No Device ID"}
+                        {shouldShowRemoveDeviceButtonForUser(item) ? (
+                          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-4 py-2 shadow-sm rounded-md w-fit min-w-[250px]">
+                            <span className="text-sm text-blue-900 font-medium">
+                              {item?.deviceid || "No Device ID"}
+                            </span>
+                            <button
+                              onClick={() => handleRemoveDevice(item._id)}
+                              className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded h-8 px-4 bg-red-700 hover:bg-red-500 text-white text-sm font-medium leading-normal w-fit"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-900">
+                            No Mobile App Access
                           </span>
-                          <button
-                            onClick={() => handleRemoveDevice(item._id)}
-                            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded h-8 px-4 bg-red-700 hover:bg-red-500 text-white text-sm font-medium leading-normal w-fit"
-                          >
-                            Remove
-                          </button>
-                        </div>
+                        )}
                       </td>
 
                       {/* <td className="p-4">

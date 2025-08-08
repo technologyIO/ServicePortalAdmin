@@ -254,9 +254,15 @@ function PmDocMaster() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "PM document created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create PM document. Please try again."
+        );
       });
   };
 
@@ -268,9 +274,15 @@ function PmDocMaster() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "PM document updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update PM document. Please try again."
+        );
       });
   };
 

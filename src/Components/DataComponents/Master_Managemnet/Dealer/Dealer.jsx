@@ -3,6 +3,7 @@ import axios from "axios";
 import moment from "moment";
 import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 
 function Dealer() {
   // Modal & UI states
@@ -613,19 +614,32 @@ function Dealer() {
 
   // Delete single dealer
   const handleDelete = (id) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this dealer? You won't be able to revert this!"
-      )
-    ) {
-      axios
-        .delete(`${process.env.REACT_APP_BASE_URL}/collections/dealer/${id}`)
-        .then(() => {
-          alert("Dealer has been deleted.");
-          getData();
-        })
-        .catch(console.error);
-    }
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axios
+          .delete(`${process.env.REACT_APP_BASE_URL}/collections/dealer/${id}`)
+          .then(() => {
+            getData();
+            Swal.fire("Deleted!", "Dealer has been deleted.", "success");
+          })
+          .catch((error) => {
+            console.error(error);
+            Swal.fire(
+              "Error!",
+              "Failed to delete dealer. Please try again.",
+              "error"
+            );
+          });
+      }
+    });
   };
 
   // Submit form (create or update)
@@ -643,9 +657,14 @@ function Dealer() {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/dealer`, currentData)
       .then(() => {
         getData();
+        getData();
         handleCloseModal();
+        toast.success("Dealer created successfully!"); // Success toast
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        toast.error("Failed to create dealer. Please try again."); // Error toast
+      });
   };
 
   // Edit dealer
@@ -658,8 +677,12 @@ function Dealer() {
       .then(() => {
         getData();
         handleCloseModal();
+        toast.success("Dealer updated successfully!"); // Success toast
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        toast.error("Failed to update dealer. Please try again."); // Error toast
+      });
   };
 
   // Pagination controls

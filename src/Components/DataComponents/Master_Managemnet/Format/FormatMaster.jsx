@@ -237,22 +237,34 @@ function FormatMaster() {
   const handleCreateRecord = () => {
     axios
       .post(`${process.env.REACT_APP_BASE_URL}/master/format`, currentData)
-      .then(() => {
+      .then((res) => {
         getData();
+        toast.success(res.data?.message || "Format created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create format. Please try again."
+        );
       });
   };
 
   const handleEditRecord = (id) => {
     axios
       .put(`${process.env.REACT_APP_BASE_URL}/master/format/${id}`, currentData)
-      .then(() => {
+      .then((res) => {
         getData();
+        toast.success(res.data?.message || "Format updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update format. Please try again."
+        );
       });
   };
 

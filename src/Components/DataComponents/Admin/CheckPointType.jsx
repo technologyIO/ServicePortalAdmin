@@ -243,9 +243,17 @@ function CheckPointType() {
       )
       .then((res) => {
         getAllCountries();
+        toast.success(
+          res.data?.message || "Check point type created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create check point type. Please try again."
+        );
       });
   };
 
@@ -257,9 +265,17 @@ function CheckPointType() {
       )
       .then((res) => {
         getAllCountries();
+        toast.success(
+          res.data?.message || "Check point type updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update check point type. Please try again."
+        );
       });
   };
 

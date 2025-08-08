@@ -268,9 +268,17 @@ function PendingInstallation() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Pending installation created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create pending installation. Please try again."
+        );
       });
   };
 
@@ -282,9 +290,17 @@ function PendingInstallation() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Pending installation updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update pending installation. Please try again."
+        );
       });
   };
 

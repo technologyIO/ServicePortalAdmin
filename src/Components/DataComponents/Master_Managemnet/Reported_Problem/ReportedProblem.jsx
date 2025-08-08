@@ -259,9 +259,17 @@ function ReportedProblem() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Reported problem created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create reported problem. Please try again."
+        );
       });
   };
 
@@ -273,9 +281,17 @@ function ReportedProblem() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Reported problem updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update reported problem. Please try again."
+        );
       });
   };
 

@@ -284,9 +284,15 @@ const AdminDepartment = () => {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/depart`, currentData)
       .then((res) => {
         getAllData();
+        toast.success(res.data?.message || "Department created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create department. Please try again."
+        );
       });
   };
 
@@ -298,11 +304,18 @@ const AdminDepartment = () => {
       )
       .then((res) => {
         getAllData();
+        toast.success(res.data?.message || "Department updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update department. Please try again."
+        );
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) {
       setPage(page - 1); // Let useEffect handle the data loading

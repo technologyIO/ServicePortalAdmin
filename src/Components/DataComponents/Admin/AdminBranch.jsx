@@ -254,12 +254,15 @@ const AdminBranch = () => {
     } else {
       handleAddData();
     }
+    // Don't call handleCloseModal() here - it's now handled in success callbacks
   };
+
   const handleAddData = () => {
     axios
       .post(`${process.env.REACT_APP_BASE_URL}/collections/branch`, currentData)
       .then((res) => {
         getAllData();
+        handleCloseModal();
         toast.success("Branch added successfully");
       })
       .catch((error) => {
@@ -280,6 +283,7 @@ const AdminBranch = () => {
       )
       .then((res) => {
         getAllData();
+        handleCloseModal(); // Add this line
         toast.success("Branch updated successfully");
       })
       .catch((error) => {
@@ -291,6 +295,7 @@ const AdminBranch = () => {
         );
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) {
       const newPage = page - 1;
@@ -661,7 +666,7 @@ const AdminBranch = () => {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  handleCloseModal();
+                  handleSubmit(currentData?._id);
                 }}
                 className=""
               >
@@ -712,6 +717,10 @@ const AdminBranch = () => {
                           required
                           options={state} // Data from API
                           getOptionLabel={(option) => option.name} // Display the country name
+                          value={
+                            state.find((s) => s.name === currentData?.state) ||
+                            null
+                          } // Add this line
                           renderInput={(params) => (
                             <TextField {...params} name="state" label="State" />
                           )}
@@ -744,7 +753,10 @@ const AdminBranch = () => {
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">
                   <button
-                    onClick={() => handleCloseModal()}
+                    onClick={(e) => {
+                      e.preventDefault(); // Add this to prevent form submission
+                      handleCloseModal();
+                    }}
                     type="button"
                     class="focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
                   >
@@ -752,7 +764,6 @@ const AdminBranch = () => {
                   </button>
 
                   <button
-                    onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
                     className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >

@@ -246,9 +246,15 @@ function CmcNcmcWYears() {
       .post(`${process.env.REACT_APP_BASE_URL}/admin/cmcncmcyear`, currentData)
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "CMC year created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create CMC year. Please try again."
+        );
       });
   };
 
@@ -260,9 +266,15 @@ function CmcNcmcWYears() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "CMC year updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update CMC year. Please try again."
+        );
       });
   };
 

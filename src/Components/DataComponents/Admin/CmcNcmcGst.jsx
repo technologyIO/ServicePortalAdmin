@@ -249,9 +249,15 @@ function CmcNcmcGst() {
       .post(`${process.env.REACT_APP_BASE_URL}/admin/gst`, currentData)
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "GST created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create GST. Please try again."
+        );
       });
   };
 
@@ -260,9 +266,15 @@ function CmcNcmcGst() {
       .put(`${process.env.REACT_APP_BASE_URL}/admin/gst/${id}`, currentData)
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "GST updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update GST. Please try again."
+        );
       });
   };
 

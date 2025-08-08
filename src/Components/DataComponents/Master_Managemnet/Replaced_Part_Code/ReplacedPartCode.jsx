@@ -262,9 +262,17 @@ function ReplacedPartCode() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Replaced part code created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create replaced part code. Please try again."
+        );
       });
   };
 
@@ -276,9 +284,17 @@ function ReplacedPartCode() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Replaced part code updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update replaced part code. Please try again."
+        );
       });
   };
 

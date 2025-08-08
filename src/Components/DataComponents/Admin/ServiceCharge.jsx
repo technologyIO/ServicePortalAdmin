@@ -149,7 +149,7 @@ function ServiceCharge() {
   // Create
   const handleCreate = async () => {
     try {
-      await axios.post(
+      const res = await axios.post(
         `${process.env.REACT_APP_BASE_URL}/admin/service-charge`,
         {
           ...currentData,
@@ -161,13 +161,21 @@ function ServiceCharge() {
           },
         }
       );
-      Swal.fire("Created!", "", "success");
+      toast.success(
+        res.data?.message || "Service charge created successfully!"
+      );
       getData();
-    } catch {
-      Swal.fire("Failed to create!", "", "error");
+    } catch (error) {
+      console.log(error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to create service charge. Please try again."
+      );
     }
     handleCloseModal();
   };
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
@@ -176,7 +184,7 @@ function ServiceCharge() {
   // Update
   const handleEdit = async (id) => {
     try {
-      await axios.put(
+      const res = await axios.put(
         `${process.env.REACT_APP_BASE_URL}/admin/service-charge/${id}`,
         {
           ...currentData,
@@ -188,10 +196,17 @@ function ServiceCharge() {
           },
         }
       );
-      Swal.fire("Updated!", "", "success");
+      toast.success(
+        res.data?.message || "Service charge updated successfully!"
+      );
       getData();
-    } catch {
-      Swal.fire("Failed to update!", "", "error");
+    } catch (error) {
+      console.log(error);
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to update service charge. Please try again."
+      );
     }
     handleCloseModal();
   };
@@ -497,7 +512,7 @@ function ServiceCharge() {
                   <td className="p-3">
                     {moment(item.updatedAt).format("MMM D, YYYY")}
                   </td>
-                  <td className="flex gap-4 ">
+                  <td className="flex gap-4 mt-2">
                     <button
                       onClick={() => handleOpenModal(item)}
                       className="border p-1 bg-blue-700 text-white rounded mr-2"

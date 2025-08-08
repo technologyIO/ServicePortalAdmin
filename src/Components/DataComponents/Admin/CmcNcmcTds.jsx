@@ -255,9 +255,17 @@ function CmcNcmcTds() {
       .post(`${process.env.REACT_APP_BASE_URL}/admin/cmc-ncmc-tds`, currentData)
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "CMC-NCMC TDS created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create CMC-NCMC TDS. Please try again."
+        );
       });
   };
 
@@ -269,9 +277,17 @@ function CmcNcmcTds() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "CMC-NCMC TDS updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update CMC-NCMC TDS. Please try again."
+        );
       });
   };
 

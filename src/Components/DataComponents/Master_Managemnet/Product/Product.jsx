@@ -14,6 +14,7 @@ import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import ProductBulk from "./ProductBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import toast from "react-hot-toast";
 function Product() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -87,7 +88,7 @@ function Product() {
   useEffect(() => {
     getCities();
   }, []);
-  
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -98,7 +99,7 @@ function Product() {
       );
 
       if (response.status === 200) {
-        console.log(
+        toast.success(
           `Product ${
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
@@ -107,7 +108,7 @@ function Product() {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
@@ -262,9 +263,11 @@ function Product() {
       )
       .then((res) => {
         getData();
+        toast.success("Product created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error("Failed to create product. Please try again.");
       });
   };
 
@@ -276,9 +279,11 @@ function Product() {
       )
       .then((res) => {
         getData();
+        toast.success("Product updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error("Failed to update product. Please try again.");
       });
   };
 

@@ -12,6 +12,7 @@ import axios from "axios";
 import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import toast from "react-hot-toast";
 
 function PreventiveMaintenance() {
   const [showModal, setShowModal] = useState(false);
@@ -222,7 +223,7 @@ function PreventiveMaintenance() {
       return;
     }
 
-    setPage(1);  
+    setPage(1);
     setLoader(true);
     setIsSearchMode(true);
 
@@ -340,9 +341,15 @@ function PreventiveMaintenance() {
         } else {
           getData();
         }
+        toast.success(res.data?.message || "PMS created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create PMS. Please try again."
+        );
       });
   };
 
@@ -356,9 +363,15 @@ function PreventiveMaintenance() {
         } else {
           getData();
         }
+        toast.success(res.data?.message || "PMS updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update PMS. Please try again."
+        );
       });
   };
 

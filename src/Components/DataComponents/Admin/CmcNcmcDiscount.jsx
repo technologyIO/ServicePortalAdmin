@@ -252,9 +252,15 @@ function CmcNcmcDiscount() {
       .post(`${process.env.REACT_APP_BASE_URL}/admin/discount`, currentData)
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Discount created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create discount. Please try again."
+        );
       });
   };
 
@@ -266,9 +272,15 @@ function CmcNcmcDiscount() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Discount updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update discount. Please try again."
+        );
       });
   };
 

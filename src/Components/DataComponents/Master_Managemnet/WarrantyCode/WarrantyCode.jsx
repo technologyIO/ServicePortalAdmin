@@ -258,9 +258,17 @@ function WarrantyCode() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Warranty code created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create warranty code. Please try again."
+        );
       });
   };
 
@@ -272,9 +280,17 @@ function WarrantyCode() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Warranty code updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update warranty code. Please try again."
+        );
       });
   };
 

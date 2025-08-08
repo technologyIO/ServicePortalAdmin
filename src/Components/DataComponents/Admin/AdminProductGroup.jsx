@@ -291,9 +291,17 @@ const AdminProductGroup = () => {
       )
       .then((res) => {
         getAllData();
+        toast.success(
+          res.data?.message || "Product group created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create product group. Please try again."
+        );
       });
   };
 
@@ -305,11 +313,20 @@ const AdminProductGroup = () => {
       )
       .then((res) => {
         getAllData();
+        toast.success(
+          res.data?.message || "Product group updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update product group. Please try again."
+        );
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) {
       setPage(page - 1); // Let useEffect handle the data loading

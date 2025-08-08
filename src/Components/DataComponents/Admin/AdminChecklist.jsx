@@ -28,6 +28,7 @@ import moment from "moment";
 import BulkModal from "../BulkUpload.jsx/BulkModal";
 import CheckListBulk from "./Bulk/CheckListBulk";
 import LoadingSpinner from "../../../LoadingSpinner";
+import toast from "react-hot-toast";
 
 const AdminChecklist = () => {
   const [showModal, setShowModal] = useState(false);
@@ -282,7 +283,7 @@ const AdminChecklist = () => {
       );
 
       if (response.status === 200) {
-        console.log(
+        toast.success(
           `Checklist ${
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
@@ -291,7 +292,7 @@ const AdminChecklist = () => {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
@@ -328,9 +329,16 @@ const AdminChecklist = () => {
       )
       .then((res) => {
         getAllData();
+        console.log("Response data:", res.data); // Log response data
+        toast.dismiss();
+        toast.success(res.data?.message || "Checklist created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            "Failed to create checklist. Please try again."
+        );
       });
   };
 
@@ -342,9 +350,12 @@ const AdminChecklist = () => {
       )
       .then((res) => {
         getAllData();
+        toast.dismiss();
+        toast.success("Checklist updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error("Failed to update checklist. Please try again.");
       });
   };
   const handlePreviousPage = () => {

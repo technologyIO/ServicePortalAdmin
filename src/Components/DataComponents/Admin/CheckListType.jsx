@@ -243,9 +243,17 @@ function CheckListType() {
       )
       .then((res) => {
         getAllCountries();
+        toast.success(
+          res.data?.message || "Check list type created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create check list type. Please try again."
+        );
       });
   };
 
@@ -257,9 +265,17 @@ function CheckListType() {
       )
       .then((res) => {
         getAllCountries();
+        toast.success(
+          res.data?.message || "Check list type updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update check list type. Please try again."
+        );
       });
   };
 

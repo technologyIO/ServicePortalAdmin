@@ -13,6 +13,7 @@ import moment from "moment";
 import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import EquipmentBulk from "./EquipmentBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import toast from "react-hot-toast";
 const UserData = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -102,7 +103,7 @@ const UserData = () => {
       );
 
       if (response.status === 200) {
-        console.log(
+        toast.success(
           `Equipment ${
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
@@ -111,7 +112,7 @@ const UserData = () => {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
@@ -254,9 +255,15 @@ const UserData = () => {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Equipment created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create equipment. Please try again."
+        );
       });
   };
 
@@ -268,9 +275,15 @@ const UserData = () => {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Equipment updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update equipment. Please try again."
+        );
       });
   };
 

@@ -260,9 +260,15 @@ function HubStock() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Hub stock created successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create hub stock. Please try again."
+        );
       });
   };
 
@@ -274,9 +280,15 @@ function HubStock() {
       )
       .then((res) => {
         getData();
+        toast.success(res.data?.message || "Hub stock updated successfully!");
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update hub stock. Please try again."
+        );
       });
   };
 

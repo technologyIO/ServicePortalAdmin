@@ -257,9 +257,17 @@ function PendingComplaint() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Pending complaint created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create pending complaint. Please try again."
+        );
       });
   };
 
@@ -271,9 +279,17 @@ function PendingComplaint() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "Pending complaint updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update pending complaint. Please try again."
+        );
       });
   };
 

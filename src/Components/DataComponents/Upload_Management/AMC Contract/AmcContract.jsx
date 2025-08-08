@@ -265,9 +265,17 @@ function AmcContract() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "AMC contract created successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to create AMC contract. Please try again."
+        );
       });
   };
 
@@ -279,9 +287,17 @@ function AmcContract() {
       )
       .then((res) => {
         getData();
+        toast.success(
+          res.data?.message || "AMC contract updated successfully!"
+        );
       })
       .catch((error) => {
         console.log(error);
+        toast.error(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Failed to update AMC contract. Please try again."
+        );
       });
   };
 
