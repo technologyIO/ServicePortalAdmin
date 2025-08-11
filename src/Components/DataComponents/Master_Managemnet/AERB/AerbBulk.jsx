@@ -466,14 +466,25 @@ function AerbBulk({ onClose, getData }) {
 ,,`;
 
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "aerb_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      ["Material Code", "Material Description","Status"], // Headers
+      ["", ""], // Empty row 1
+      ["", ""], // Empty row 2
+      ["", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Aerb Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "aerb_template.xlsx");
   };
 
   const resetForm = () => {
@@ -695,7 +706,9 @@ function AerbBulk({ onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                          {error}
+                        </p>
                       </div>
                     </div>
                   )}

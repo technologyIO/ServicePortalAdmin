@@ -100,18 +100,35 @@ function DealerBulk() {
     }
   };
 
-  // AMC Contract sample CSV content (with fields as per schema)
-  const csvContent = `salesdoc,startdate,enddate,satypeZDRC_ZDRN,serialnumber,materialcode,status`;
-
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "amccontract_sample.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "salesdoc",
+        "startdate",
+        "enddate",
+        "satypeZDRC_ZDRN",
+        "serialnumber",
+        "materialcode",
+        "status",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "AMC Contract Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "amccontract_sample.xlsx");
   };
 
   const resetForm = () => {

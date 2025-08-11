@@ -708,20 +708,41 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
   };
 
   // CSV template content & download function unchanged
-  const csvContent = `CustomerCode,Name1,Name2,Street,City,PostalCode,District,Region,Country,Telephone,Tax Number1,Tax Number2,Email
-,,,,,,,,,,,,,
-,,,,,,,,,,,,,
-,,,,,,,,,,,,,`;
-
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "customer_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "CustomerCode",
+        "Name1",
+        "Name2",
+        "Street",
+        "City",
+        "PostalCode",
+        "District",
+        "Region",
+        "Country",
+        "Telephone",
+        "Tax Number1",
+        "Tax Number2",
+        "Email",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "customer_template.xlsx");
   };
 
   const resetForm = () => {

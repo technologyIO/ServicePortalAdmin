@@ -108,7 +108,12 @@ export default function EquipmentBulk({ onClose }) {
               "product_description",
             ],
             serialnumber: ["serialnumber", "serial_number", "serial", "sn"],
-            equipmentid: ['equipment', 'equipmentid', 'equipment_id', 'equipmentid'],
+            equipmentid: [
+              "equipment",
+              "equipmentid",
+              "equipment_id",
+              "equipmentid",
+            ],
             currentcustomer: [
               "currentcustomer",
               "current_customer",
@@ -180,7 +185,7 @@ export default function EquipmentBulk({ onClose }) {
                 materialcode: "Material Code",
                 materialdescription: "Material Description",
                 serialnumber: "Serial Number",
-                equipmentid: 'Equipment (ID)',
+                equipmentid: "Equipment (ID)",
                 currentcustomer: "Current Customer",
                 endcustomer: "End Customer",
                 custWarrantystartdate: "Customer Warranty Start",
@@ -508,15 +513,40 @@ export default function EquipmentBulk({ onClose }) {
 ,,,,,,,,,,`;
 
   const handleDownloadTemplate = () => {
-    const blob = new Blob([csvTemplate], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "equipment_bulk_upload_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "Material Code",
+        "Material Description",
+        "Serial Number",
+        "Equipment",
+        "Current Customer",
+        "End Customer",
+        "CustWarrantyStart",
+        "CustWarrantyEnd",
+        "DealerWarrantyStart",
+        "DealerWarrantyEnd",
+        "Dealer",
+        "PAL number",
+        "IR Number",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Equipment Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "equipment_bulk_upload_template.xlsx");
 
     addLiveUpdate("📁 Template downloaded successfully", "success");
   };
@@ -780,7 +810,9 @@ export default function EquipmentBulk({ onClose }) {
                     <h3 className="text-sm font-medium text-red-800">
                       Upload Error
                     </h3>
-                    <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
+                    <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                      {error}
+                    </p>
                   </div>
                 </div>
               )}

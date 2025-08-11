@@ -57,128 +57,163 @@ function ProductBulk({ isOpen, onClose, getData }) {
   const [fileValidation, setFileValidation] = useState(null);
 
   const validateFileStructure = async (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        let headers = [];
-        const fileName = file.name.toLowerCase();
-        
-        if (fileName.endsWith('.csv')) {
-          // Parse CSV headers
-          const text = e.target.result;
-          const firstLine = text.split('\n')[0];
-          headers = firstLine.split(',').map(h => h.trim().replace(/"/g, ''));
-        } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
-          // Parse Excel headers
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-          headers = jsonData[0] || [];
-        }
-        
-        // Normalize headers for comparison (matching backend logic)
-        const normalizedHeaders = headers.map(h => 
-          h.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
-        );
-        
-        // Check for required fields (matching backend MAP) - NOW WITH 5 REQUIRED FIELDS
-        const requiredFields = {
-          partnoid: ['partno', 'partnoid', 'partnumber', 'part_number', 'partno', 'partnoid'],
-          product: ['productdescription', 'productdesc', 'product', 'productdescription1'],
-          productgroup: ['productgroup', 'group', 'productgroup'],
-          subgrp: ['subgrp', 'subgroup', 'sub_grp', 'subgroup'],
-          frequency: ['frequency', 'freq'],
-          installationcheckliststatusboolean: ['installationcheckliststatus', 'installationcheckliststatusboolean', 'installationcheckliststatus'],
-          pmcheckliststatusboolean: ['pmcheckliststatus', 'pmcheckliststatusboolean', 'pmcheckliststatus']
-        };
-        
-        const foundFields = {};
-        const mappedColumns = {};
-        
-        for (const [field, variations] of Object.entries(requiredFields)) {
-          const foundVariation = variations.find(variation => 
-            normalizedHeaders.includes(variation)
-          );
-          foundFields[field] = !!foundVariation;
-          
-          if (foundVariation) {
-            // Find the original header name for this variation
-            const originalHeader = headers.find(h => 
-              h.toLowerCase().replace(/[^a-z0-9]/g, '').trim() === foundVariation
-            );
-            mappedColumns[field] = originalHeader;
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let headers = [];
+          const fileName = file.name.toLowerCase();
+
+          if (fileName.endsWith(".csv")) {
+            // Parse CSV headers
+            const text = e.target.result;
+            const firstLine = text.split("\n")[0];
+            headers = firstLine
+              .split(",")
+              .map((h) => h.trim().replace(/"/g, ""));
+          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+            // Parse Excel headers
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+              header: 1,
+            });
+            headers = jsonData[0] || [];
           }
-        }
-        
-        // All 7 fields are now required
-        const isValid = foundFields.partnoid && foundFields.product && 
-                        foundFields.productgroup && foundFields.subgrp && 
-                        foundFields.frequency && foundFields.installationcheckliststatusboolean && 
-                        foundFields.pmcheckliststatusboolean;
-        
-        const missingFields = Object.entries(foundFields)
-          .filter(([field, found]) => !found)
-          .map(([field]) => {
-            const fieldLabels = {
-              'partnoid': 'Part No',
-              'product': 'Product Description', 
-              'productgroup': 'Product Group',
-              'subgrp': 'Sub_GRp',
-              'frequency': 'Frequency',
-              'installationcheckliststatusboolean': 'Installation checklist Status',
-              'pmcheckliststatusboolean': 'PM checklist Status'
-            };
-            return fieldLabels[field] || field;
+
+          // Normalize headers for comparison (matching backend logic)
+          const normalizedHeaders = headers.map((h) =>
+            h
+              .toLowerCase()
+              .replace(/[^a-z0-9]/g, "")
+              .trim()
+          );
+
+          // Check for required fields (matching backend MAP) - NOW WITH 5 REQUIRED FIELDS
+          const requiredFields = {
+            partnoid: [
+              "partno",
+              "partnoid",
+              "partnumber",
+              "part_number",
+              "partno",
+              "partnoid",
+            ],
+            product: [
+              "productdescription",
+              "productdesc",
+              "product",
+              "productdescription1",
+            ],
+            productgroup: ["productgroup", "group", "productgroup"],
+            subgrp: ["subgrp", "subgroup", "sub_grp", "subgroup"],
+            frequency: ["frequency", "freq"],
+            installationcheckliststatusboolean: [
+              "installationcheckliststatus",
+              "installationcheckliststatusboolean",
+              "installationcheckliststatus",
+            ],
+            pmcheckliststatusboolean: [
+              "pmcheckliststatus",
+              "pmcheckliststatusboolean",
+              "pmcheckliststatus",
+            ],
+          };
+
+          const foundFields = {};
+          const mappedColumns = {};
+
+          for (const [field, variations] of Object.entries(requiredFields)) {
+            const foundVariation = variations.find((variation) =>
+              normalizedHeaders.includes(variation)
+            );
+            foundFields[field] = !!foundVariation;
+
+            if (foundVariation) {
+              // Find the original header name for this variation
+              const originalHeader = headers.find(
+                (h) =>
+                  h
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]/g, "")
+                    .trim() === foundVariation
+              );
+              mappedColumns[field] = originalHeader;
+            }
+          }
+
+          // All 7 fields are now required
+          const isValid =
+            foundFields.partnoid &&
+            foundFields.product &&
+            foundFields.productgroup &&
+            foundFields.subgrp &&
+            foundFields.frequency &&
+            foundFields.installationcheckliststatusboolean &&
+            foundFields.pmcheckliststatusboolean;
+
+          const missingFields = Object.entries(foundFields)
+            .filter(([field, found]) => !found)
+            .map(([field]) => {
+              const fieldLabels = {
+                partnoid: "Part No",
+                product: "Product Description",
+                productgroup: "Product Group",
+                subgrp: "Sub_GRp",
+                frequency: "Frequency",
+                installationcheckliststatusboolean:
+                  "Installation checklist Status",
+                pmcheckliststatusboolean: "PM checklist Status",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          resolve({
+            isValid,
+            headers: headers,
+            foundFields,
+            mappedColumns,
+            missingFields,
+            totalRequired: Object.keys(requiredFields).length,
+            foundRequired: Object.values(foundFields).filter(Boolean).length,
           });
-        
-        resolve({
-          isValid,
-          headers: headers,
-          foundFields,
-          mappedColumns,
-          missingFields,
-          totalRequired: Object.keys(requiredFields).length,
-          foundRequired: Object.values(foundFields).filter(Boolean).length
-        });
-        
-      } catch (error) {
+        } catch (error) {
+          resolve({
+            isValid: false,
+            error: `File parsing error: ${error.message}`,
+            headers: [],
+            foundFields: {},
+            mappedColumns: {},
+            missingFields: [],
+            totalRequired: 5,
+            foundRequired: 0,
+          });
+        }
+      };
+
+      reader.onerror = () => {
         resolve({
           isValid: false,
-          error: `File parsing error: ${error.message}`,
+          error: "Failed to read file",
           headers: [],
           foundFields: {},
           mappedColumns: {},
           missingFields: [],
           totalRequired: 5,
-          foundRequired: 0
+          foundRequired: 0,
         });
+      };
+
+      // Read file based on type
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
       }
-    };
-    
-    reader.onerror = () => {
-      resolve({
-        isValid: false,
-        error: 'Failed to read file',
-        headers: [],
-        foundFields: {},
-        mappedColumns: {},
-        missingFields: [],
-        totalRequired: 5,
-        foundRequired: 0
-      });
-    };
-    
-    // Read file based on type
-    if (file.name.toLowerCase().endsWith('.csv')) {
-      reader.readAsText(file);
-    } else {
-      reader.readAsArrayBuffer(file);
-    }
-  });
-};
+    });
+  };
 
   // Enhanced live update function with better categorization
   const addLiveUpdate = useCallback((message, type = "info", data = null) => {
@@ -601,15 +636,38 @@ function ProductBulk({ isOpen, onClose, getData }) {
   const csvContent = `Part No,Product Description,Product Group,Sub_GRp,Frequency,Date of Launch,End Of Sale,End of Support,Ex-support avlb,Installation checklist Status,PM checklist Status`;
 
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "product_bulk_upload_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "Part No",
+        "Product Description",
+        "Product Group",
+        "Sub_GRp",
+        "Frequency",
+        "Date of Launch",
+        "End Of Sale",
+        "End of Support",
+        "Ex-support avlb",
+        "Installation checklist Status",
+        "PM checklist Status",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Product Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "product_bulk_upload_template.xlsx");
 
     addLiveUpdate("📥 Product template downloaded successfully", "success");
   };
@@ -889,7 +947,9 @@ function ProductBulk({ isOpen, onClose, getData }) {
                         <h3 className="text-sm font-medium text-red-800">
                           Error
                         </h3>
-                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">{error}</p>
+                        <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
+                          {error}
+                        </p>
                       </div>
                     </div>
                   )}

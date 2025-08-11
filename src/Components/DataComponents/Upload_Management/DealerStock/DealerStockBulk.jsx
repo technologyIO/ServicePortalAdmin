@@ -631,20 +631,35 @@ function DealerStockBulk({ onClose, getData }) {
   };
 
   // Updated CSV template with all required fields
-  const csvContent = `Dealer Code,Dealer Name,Dealer City,Material Code,Material Description,Plant,Unrestricted Quantity
-,,,,,,
-,,,,,,
-,,,,,,`;
-
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "dealerstock_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "Dealer Code",
+        "Dealer Name",
+        "Dealer City",
+        "Material Code",
+        "Material Description",
+        "Plant",
+        "Unrestricted Quantity",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dealer Stock Template");
+
+    // Write and download file
+    XLSX.writeFile(workbook, "dealerstock_template.xlsx");
   };
 
   const resetForm = () => {

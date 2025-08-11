@@ -605,20 +605,46 @@ function PendingComplaintsBulk({ onClose, getData }) {
     }
   };
 
-  const csvContent = `Notification Type,Notification/Complaint ID,Notification Date,User Status,Material Description,Serial Number,Device Data,Sales Office,Material Code,Reported Problem,Dealer Code,Customer Code,PartnerResp.,BreakDown
-,,,,,,,,,,,,
-,,,,,,,,,,,,
-,,,,,,,,,,,,`;
-
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "pending_complaints_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "Notification Type",
+        "Notification/Complaint ID",
+        "Notification Date",
+        "User Status",
+        "Material Description",
+        "Serial Number",
+        "Device Data",
+        "Sales Office",
+        "Material Code",
+        "Reported Problem",
+        "Dealer Code",
+        "Customer Code",
+        "PartnerResp.",
+        "BreakDown",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Pending Complaints Template"
+    );
+
+    // Write and download file
+    XLSX.writeFile(workbook, "pending_complaints_template.xlsx");
   };
 
   const resetForm = () => {

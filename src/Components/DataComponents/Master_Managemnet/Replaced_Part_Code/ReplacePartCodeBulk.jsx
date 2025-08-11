@@ -716,22 +716,38 @@ function ReplacePartCodeBulk({ isOpen, onClose, getData }) {
     }
   };
 
-  // Updated CSV template with ReplacedPartCode fields
-  const csvContent = `Catalog,Code Group,Name,Code,Short Text For Code,Sl No`;
-
   const handleDownload = () => {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute(
-      "download",
-      "replaced_part_code_bulk_upload_template.csv"
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+
+    // Create data with headers and empty rows
+    const data = [
+      [
+        "Catalog",
+        "Code Group",
+        "Name",
+        "Code",
+        "Short Text For Code",
+        "Sl No",
+        "Status",
+      ], // Headers with Status field added
+      ["", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", ""], // Empty row 3
+    ];
+
+    // Convert to worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Replaced Part Code Template"
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    // Write and download file
+    XLSX.writeFile(workbook, "replaced_part_code_bulk_upload_template.xlsx");
 
     addLiveUpdate(
       "📥 Replaced Part Code template downloaded successfully",
