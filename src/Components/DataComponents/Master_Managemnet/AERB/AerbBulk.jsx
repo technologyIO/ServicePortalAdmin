@@ -459,11 +459,7 @@ function AerbBulk({ onClose, getData }) {
       }));
     }
   };
-
-  const csvContent = `Material Code,Material Description
-,,
-,,
-,,`;
+ 
 
   const handleDownload = () => {
     // Create workbook and worksheet

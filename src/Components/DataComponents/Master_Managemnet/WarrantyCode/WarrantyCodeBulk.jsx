@@ -590,12 +590,6 @@ function WarrantyCodeBulk({ onClose }) {
     }
   };
 
-  // Updated CSV template with WarrantyCode fields (empty data)
-  const csvContent = `Warranty Code,Description,Months
-,,
-,,
-,,`;
-
   const handleDownload = () => {
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();

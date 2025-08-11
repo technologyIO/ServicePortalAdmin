@@ -804,6 +804,13 @@ ${usersList}
                         options={branch}
                         placeholder="Enter Branch"
                         getOptionLabel={(option) => option.name}
+                        value={
+                          currentData?.branch
+                            ? branch.find(
+                                (b) => b.name === currentData.branch
+                              ) || null
+                            : null
+                        }
                         renderInput={(params) => (
                           <TextField
                             {...params}

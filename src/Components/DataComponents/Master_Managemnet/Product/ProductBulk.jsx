@@ -633,8 +633,7 @@ function ProductBulk({ isOpen, onClose, getData }) {
     }
   };
 
-  const csvContent = `Part No,Product Description,Product Group,Sub_GRp,Frequency,Date of Launch,End Of Sale,End of Support,Ex-support avlb,Installation checklist Status,PM checklist Status`;
-
+ 
   const handleDownload = () => {
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
