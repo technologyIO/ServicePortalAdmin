@@ -19,6 +19,49 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import moment from "moment";
 
+const shouldShowSkillsPage = (selectedRole, permissions) => {
+  if (!selectedRole) return true;
+
+  // Check by role name
+  const adminRoles = ["Admin", "Super Admin", "System Admin", "CIC"];
+  if (
+    adminRoles.some((adminRole) =>
+      selectedRole.name?.toLowerCase().includes(adminRole.toLowerCase())
+    )
+  ) {
+    return false;
+  }
+
+  // Check if role has mobile components
+  // if (
+  //   !permissions?.mobileComponents ||
+  //   permissions.mobileComponents.length === 0
+  // ) {
+  //   return false;
+  // }
+
+  return true;
+};
+
+const getStepsForRole = (selectedRole, permissions) => {
+  const shouldShowSkills = shouldShowSkillsPage(selectedRole, permissions);
+
+  if (shouldShowSkills) {
+    return [
+      { id: 1, name: "Role Information" },
+      { id: 2, name: "User Details" },
+      { id: 3, name: "Skills" },
+      { id: 4, name: "Location Details" },
+    ];
+  } else {
+    return [
+      { id: 1, name: "Role Information" },
+      { id: 2, name: "User Details" },
+      { id: 3, name: "Location Details" },
+    ];
+  }
+};
+
 export default function UserManagement() {
   const { userId } = useParams();
   const isEditMode = !!userId;
@@ -389,7 +432,7 @@ export default function UserManagement() {
       }
       if (!formData.manageremail)
         newErrors.manageremail = "Manager email is required";
-    } else if (currentStep === 4) {
+    } else if (currentStep === (shouldShowSkills ? 4 : 3)) {
       permissions.demographicSelections.forEach((selection) => {
         if (selection.name.toLowerCase() === "city") return;
         if (selection.isEnabled) {
@@ -454,24 +497,26 @@ export default function UserManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (currentStep === 4) {
+    const finalStep = shouldShowSkills ? 4 : 3;
+    if (currentStep === finalStep) {
       if (validateCurrentStep()) {
         setIsSubmitting(true);
         try {
           // Prepare skills array
           const skillsArray = [];
-          Skill.forEach((skillGroup) => {
-            skillGroup.products.forEach((product) => {
-              if (selectedSkill[product._id]) {
-                skillsArray.push({
-                  productName: product.product,
-                  partNumbers: product.partnoid,
-                  productGroup: skillGroup.productgroup,
-                });
-              }
+          if (shouldShowSkills) {
+            Skill.forEach((skillGroup) => {
+              skillGroup.products.forEach((product) => {
+                if (selectedSkill[product._id]) {
+                  skillsArray.push({
+                    productName: product.product,
+                    partNumbers: product.partnoid,
+                    productGroup: skillGroup.productgroup,
+                  });
+                }
+              });
             });
-          });
-
+          }
           // Prepare demographics array
           const demographicsArray = [];
           if (selectedGeo.length > 0 || selectedSingleGeo) {
@@ -707,12 +752,9 @@ export default function UserManagement() {
     }
   };
 
-  const steps = [
-    { id: 1, name: "Role Information" },
-    { id: 2, name: "User Details" },
-    { id: 3, name: "Skills" },
-    { id: 4, name: "Location Details" },
-  ];
+  const steps = getStepsForRole(selectedRole, permissions);
+  const totalSteps = steps.length;
+  const shouldShowSkills = shouldShowSkillsPage(selectedRole, permissions);
 
   // Filter countries based on selected geo
   const filteredCountries = useMemo(() => {
@@ -1400,7 +1442,7 @@ export default function UserManagement() {
                   />
                 )}
 
-                {currentStep === 3 && (
+                {currentStep === 3 && shouldShowSkills && (
                   <Step3Skills
                     Skill={Skill}
                     selectedSkill={selectedSkill}
@@ -1408,7 +1450,7 @@ export default function UserManagement() {
                   />
                 )}
 
-                {currentStep === 4 && (
+                {currentStep === (shouldShowSkills ? 4 : 3) && (
                   <div className="bg-white/80 bg-white   p-8 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center   gap-4">
                       <div>
@@ -1450,7 +1492,7 @@ export default function UserManagement() {
               <div></div>
             )}
 
-            {currentStep < 4 ? (
+            {currentStep < totalSteps ? (
               <button
                 type="button"
                 onClick={handleNext}
