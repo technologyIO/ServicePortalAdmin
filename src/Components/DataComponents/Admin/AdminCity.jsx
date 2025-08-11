@@ -105,7 +105,63 @@ const AdminCity = () => {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      toast.error("Failed to update status");
+
+      // Handle different error scenarios
+      if (error.response && error.response.status === 400) {
+        const errorData = error.response.data;
+
+        // Check if it's a user link error (for deactivation)
+        if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
+          // Show detailed error with linked users
+          const usersList = errorData.linkedUsers
+            .map((user) => `• ${user.name} (${user.employeeid})`)
+            .join("\n");
+
+          Swal.fire({
+            title: "Cannot Deactivate City",
+            html: `
+            <div style="text-align: left;">
+              <p style="margin-bottom: 10px;">${errorData.message}</p>
+              <p style="margin-bottom: 10px;"><strong>Linked Users (${errorData.linkedUsersCount}):</strong></p>
+              <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-line;">
+${usersList}
+              </div>
+              <p style="margin-top: 10px; color: #6c757d; font-size: 14px;">
+                <strong>Note:</strong> Please remove this city from all linked users before deactivating it.
+              </p>
+            </div>
+          `,
+            icon: "error",
+            confirmButtonText: "OK",
+            customClass: {
+              popup: "swal-wide",
+            },
+          });
+        } else {
+          // Other 400 errors (validation, etc.)
+          Swal.fire({
+            title: "Cannot Update Status",
+            text: errorData.message || "Failed to update city status",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
+        }
+      } else if (error.response && error.response.status === 404) {
+        // City not found
+        Swal.fire({
+          title: "City Not Found",
+          text: "The city you're trying to update doesn't exist.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
+        // Generic error - use toast for other errors
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to update status"
+        );
+      }
     }
   };
 
@@ -128,7 +184,66 @@ const AdminCity = () => {
           })
           .catch((error) => {
             console.log(error);
-            Swal.fire("Error!", "Failed to delete city.", "error");
+
+            // Handle different error scenarios
+            if (error.response && error.response.status === 400) {
+              // City is linked with users
+              const errorData = error.response.data;
+
+              if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
+                // Show detailed error with linked users
+                const usersList = errorData.linkedUsers
+                  .map((user) => `• ${user.name} (${user.employeeid})`)
+                  .join("\n");
+
+                Swal.fire({
+                  title: "Cannot Delete City",
+                  html: `
+                  <div style="text-align: left;">
+                    <p style="margin-bottom: 10px;">${errorData.message}</p>
+                    <p style="margin-bottom: 10px;"><strong>Linked Users (${errorData.linkedUsersCount}):</strong></p>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-line;">
+${usersList}
+                    </div>
+                  </div>
+                `,
+                  icon: "error",
+                  confirmButtonText: "OK",
+                  customClass: {
+                    popup: "swal-wide",
+                  },
+                });
+              } else {
+                // Fallback error message
+                Swal.fire({
+                  title: "Cannot Delete City",
+                  text:
+                    errorData.message ||
+                    "City is linked with users and cannot be deleted",
+                  icon: "error",
+                  confirmButtonText: "OK",
+                });
+              }
+            } else if (error.response && error.response.status === 404) {
+              // City not found
+              Swal.fire({
+                title: "City Not Found",
+                text: "The city you're trying to delete doesn't exist.",
+                icon: "error",
+                confirmButtonText: "OK",
+              });
+            } else {
+              // Generic error
+              Swal.fire({
+                title: "Error",
+                text:
+                  error.response?.data?.message ||
+                  error.message ||
+                  "Failed to delete city",
+                icon: "error",
+                confirmButtonText: "OK",
+              });
+            }
           });
       }
     });

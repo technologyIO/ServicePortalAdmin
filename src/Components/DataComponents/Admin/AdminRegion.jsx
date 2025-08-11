@@ -127,7 +127,106 @@ function AdminRegion() {
           })
           .catch((error) => {
             console.log(error);
-            Swal.fire("Error!", "Failed to delete region.", "error");
+
+            // Handle different error scenarios
+            if (error.response && error.response.status === 400) {
+              // Region is linked with users and/or states
+              const errorData = error.response.data;
+
+              if (
+                (errorData.linkedUsers && errorData.linkedUsers.length > 0) ||
+                (errorData.linkedStates && errorData.linkedStates.length > 0)
+              ) {
+                let htmlContent = `
+                <div style="text-align: left;">
+                  <p style="margin-bottom: 15px;">${errorData.message}</p>
+              `;
+
+                // Show linked users if any
+                if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
+                  const usersList = errorData.linkedUsers
+                    .map((user) => `• ${user.name} (${user.employeeid})`)
+                    .join("\n");
+
+                  htmlContent += `
+                  <div style="margin-bottom: 15px;">
+                    <p style="margin-bottom: 5px;"><strong>Linked Users (${errorData.linkedUsersCount}):</strong></p>
+                    <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-line; border-left: 4px solid #2196f3;">
+${usersList}
+                    </div>
+                  </div>
+                `;
+                }
+
+                // Show linked states if any
+                if (
+                  errorData.linkedStates &&
+                  errorData.linkedStates.length > 0
+                ) {
+                  const statesList = errorData.linkedStates
+                    .map(
+                      (state) =>
+                        `• ${state.name} (${state.stateId}) - ${state.status}`
+                    )
+                    .join("\n");
+
+                  htmlContent += `
+                  <div style="margin-bottom: 15px;">
+                    <p style="margin-bottom: 5px;"><strong>Linked States (${errorData.linkedStatesCount}):</strong></p>
+                    <div style="background: #fff3e0; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-line; border-left: 4px solid #ff9800;">
+${statesList}
+                    </div>
+                  </div>
+                `;
+                }
+
+                htmlContent += `
+                  <p style="margin-top: 15px; color: #6c757d; font-size: 14px;">
+                    <strong>Note:</strong> Please remove this region from all linked users and states before deleting it.
+                  </p>
+                </div>
+              `;
+
+                Swal.fire({
+                  title: "Cannot Delete Region",
+                  html: htmlContent,
+                  icon: "error",
+                  confirmButtonText: "OK",
+                  customClass: {
+                    popup: "swal-wide",
+                  },
+                });
+              } else {
+                // Fallback error message
+                Swal.fire({
+                  title: "Cannot Delete Region",
+                  text:
+                    errorData.message ||
+                    "Region is linked and cannot be deleted",
+                  icon: "error",
+                  confirmButtonText: "OK",
+                });
+              }
+            } else if (error.response && error.response.status === 404) {
+              // Region not found
+              Swal.fire({
+                title: "Region Not Found",
+                text: "The region you're trying to delete doesn't exist.",
+                icon: "error",
+                confirmButtonText: "OK",
+              });
+            } else {
+              // Generic error
+              Swal.fire({
+                title: "Error",
+                text:
+                  error.response?.data?.message ||
+                  error.message ||
+                  "Failed to delete region",
+                icon: "error",
+                confirmButtonText: "OK",
+              });
+            }
           });
       }
     });
@@ -161,7 +260,63 @@ function AdminRegion() {
       }
     } catch (error) {
       console.error("Error updating status:", error);
-      toast.error("Failed to update status");
+
+      // Handle different error scenarios
+      if (error.response && error.response.status === 400) {
+        const errorData = error.response.data;
+
+        // Check if it's a user link error (for deactivation)
+        if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
+          // Show detailed error with linked users
+          const usersList = errorData.linkedUsers
+            .map((user) => `• ${user.name} (${user.employeeid})`)
+            .join("\n");
+
+          Swal.fire({
+            title: "Cannot Deactivate Region",
+            html: `
+            <div style="text-align: left;">
+              <p style="margin-bottom: 10px;">${errorData.message}</p>
+              <p style="margin-bottom: 10px;"><strong>Linked Users (${errorData.linkedUsersCount}):</strong></p>
+              <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; font-family: monospace; white-space: pre-line; border-left: 4px solid #2196f3;">
+${usersList}
+              </div>
+              <p style="margin-top: 10px; color: #6c757d; font-size: 14px;">
+                <strong>Note:</strong> Please remove this region from all linked users before deactivating it.
+              </p>
+            </div>
+          `,
+            icon: "error",
+            confirmButtonText: "OK",
+            customClass: {
+              popup: "swal-wide",
+            },
+          });
+        } else {
+          // Other 400 errors (validation, etc.)
+          Swal.fire({
+            title: "Cannot Update Status",
+            text: errorData.message || "Failed to update region status",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
+        }
+      } else if (error.response && error.response.status === 404) {
+        // Region not found
+        Swal.fire({
+          title: "Region Not Found",
+          text: "The region you're trying to update doesn't exist.",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      } else {
+        // Generic error - use toast for other errors
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to update status"
+        );
+      }
     }
   };
 
