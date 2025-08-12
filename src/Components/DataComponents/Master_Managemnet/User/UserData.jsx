@@ -53,6 +53,49 @@ const UserData = () => {
       setSelectedRows([...selectedRows, id]);
     }
   };
+  // Add this function inside your UserData component
+  const handleBulkDelete = () => {
+    if (selectedRows.length === 0) {
+      toast.error("Please select users to delete");
+      return;
+    }
+
+    Swal.fire({
+      title: "Delete Selected Users?",
+      text: `You are about to delete ${selectedRows.length} users permanently!`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete them!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axios
+          .delete(`${process.env.REACT_APP_BASE_URL}/collections/user/bulk`, {
+            data: { ids: selectedRows },
+          })
+          .then((response) => {
+            Swal.fire({
+              title: "Deleted!",
+              text: response.data.message,
+              icon: "success",
+            });
+            setSelectedRows([]);
+            setSelectAll(false);
+            getData();
+          })
+          .catch((error) => {
+            console.error("Bulk delete error:", error);
+            Swal.fire({
+              title: "Error!",
+              text: error.response?.data?.message || "Failed to delete users",
+              icon: "error",
+            });
+          });
+      }
+    });
+  };
+
   // Function to fetch all roles permissions
   const fetchAllRolePermissions = async () => {
     try {
@@ -369,7 +412,6 @@ const UserData = () => {
               >
                 Search
               </button>
-
               <button
                 type="button"
                 onClick={() => {
@@ -384,6 +426,20 @@ const UserData = () => {
                 />
                 Refresh
               </button>
+
+              <div className="flex justify-end ">
+                {selectedRows?.length > 0 && (
+                  <div className="flex justify-center ">
+                    <button
+                      onClick={handleBulkDelete}
+                      type="button"
+                      className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-red-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                    >
+                      Delete Selected ({selectedRows.length})
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex gap-3">
               <button

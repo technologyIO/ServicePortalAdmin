@@ -4,6 +4,7 @@ import moment from "moment";
 import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
+import { FormControl, Input } from "@mui/joy";
 
 function Dealer() {
   // Modal & UI states
@@ -543,6 +544,48 @@ function Dealer() {
       setSelectedRows([]);
     }
   };
+  // Add this function inside your Dealer component
+  const handleBulkDelete = () => {
+    if (selectedRows.length === 0) {
+      toast.error("Please select dealers to delete");
+      return;
+    }
+
+    Swal.fire({
+      title: "Delete Selected Dealers?",
+      text: `You are about to delete ${selectedRows.length} dealers permanently!`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete them!",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        axios
+          .delete(`${process.env.REACT_APP_BASE_URL}/collections/dealer/bulk`, {
+            data: { ids: selectedRows },
+          })
+          .then((response) => {
+            Swal.fire({
+              title: "Deleted!",
+              text: response.data.message,
+              icon: "success",
+            });
+            setSelectedRows([]);
+            setSelectAll(false);
+            getData();
+          })
+          .catch((error) => {
+            console.error("Bulk delete error:", error);
+            Swal.fire({
+              title: "Error!",
+              text: error.response?.data?.message || "Failed to delete dealers",
+              icon: "error",
+            });
+          });
+      }
+    });
+  };
 
   // Select/Deselect single row
   const handleRowSelect = (id) => {
@@ -762,38 +805,60 @@ function Dealer() {
         <>
           {/* Search & Action Buttons */}
           <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center flex-1">
-              <div className="relative flex-1">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg
-                    className="w-5 h-5 text-gray-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <input
-                  type="text"
+            <div className="flex gap-3 justify-center">
+              <FormControl sx={{ flex: 1 }} size="sm">
+                <Input
+                  size="sm"
                   placeholder="Search"
+                  startDecorator={
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  }
                   value={searchQuery}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch(1)}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (!e.target.value) {
+                      getData(); // Refresh when cleared
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch(1);
+                    }
+                  }}
                 />
-              </div>
+              </FormControl>
+
               <button
                 onClick={() => handleSearch(1)}
                 type="button"
-                className="text-white px-5 bg-blue-700 hover:bg-blue-800 focus:outline-none font-medium rounded-md text-sm py-2 text-center"
+                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
               >
                 Search
               </button>
+
+              {selectedRows?.length > 0 && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleBulkDelete}
+                    type="button"
+                    className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-red-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                  >
+                    Delete Selected ({selectedRows.length})
+                  </button>
+                </div>
+              )}
             </div>
+
             <div className="flex gap-3">
               <button
                 onClick={openBulkModal}
