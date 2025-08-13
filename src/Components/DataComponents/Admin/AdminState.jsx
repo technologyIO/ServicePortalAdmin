@@ -910,6 +910,10 @@ ${branchesList}
                         className="h-10 w-full"
                         options={region}
                         getOptionLabel={(option) => option.label || ""}
+                        value={
+                          region.find((r) => r.label === currentData?.region) ||
+                          null
+                        } // Add this line
                         renderInput={(params) => (
                           <TextField
                             {...params}

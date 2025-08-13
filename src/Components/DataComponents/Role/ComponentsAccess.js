@@ -25,70 +25,97 @@ const ComponentsAccess = ({ availableComponents, isLoading, register, watch, set
   }
 
   return (
-    <div className="md:col-span-2">
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Components Access <span className="text-red-500">*</span>
-        </label>
-        <div className="flex space-x-2">
+    <div className="space-y-6  ">
+      <div className="flex justify-between items-center  ">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+            <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+            Web Components Access
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">Select components to grant access</p>
+        </div>
+        <div className="flex space-x-3">
           <button
             type="button"
             onClick={selectAllComponents}
-            className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm font-medium shadow-sm"
           >
-            Select All
+            Grant All Access
           </button>
           <button
             type="button"
             onClick={deselectAllComponents}
-            className="text-xs px-2 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+            className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 text-sm font-medium shadow-sm"
           >
-            Deselect All
+            Revoke All Access
           </button>
         </div>
       </div>
-      {isLoading ? (
-        <p>Loading components...</p>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4 border border-gray-200 rounded p-2">
-          {availableComponents
-            .filter((c) => c.isActive !== false)
-            .map((component) => {
-              const features = getValues("features") || []
-              const isChecked = features.some((f) => f.featuresId === component._id)
+      <div className="h-screen overflow-y-auto">
 
-              return (
-                <div key={component._id} className="flex items-center mb-2">
-                  <input
-                    type="checkbox"
-                    id={`component-${component._id}`}
-                    checked={isChecked}
-                    onChange={(e) => {
-                      let newFeatures = [...features]
-                      if (e.target.checked) {
-                        newFeatures.push({
-                          featuresId: component._id,
-                          component: component.name,
-                          read: false,
-                          write: false,
-                          edit: false,
-                          delete: false,
-                        })
-                      } else {
-                        newFeatures = newFeatures.filter((f) => f.featuresId !== component._id)
-                      }
-                      setValue("features", newFeatures)
-                    }}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor={`component-${component._id}`} className="ml-2 text-sm text-gray-700">
-                    {component.name}
-                  </label>
-                </div>
-              )
-            })}
-        </div>
-      )}
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+            <p className="ml-3 text-gray-600">Loading components...</p>
+          </div>
+        ) : (
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-green-200 mr-2 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {availableComponents
+                .filter((c) => c.isActive !== false)
+                .map((component) => {
+                  const features = getValues("features") || []
+                  const isChecked = features.some((f) => f.featuresId === component._id)
+
+                  return (
+                    <div
+                      key={component._id}
+                      className={`p-4 rounded-lg border-2 transition-all duration-200 cursor-pointer ${isChecked
+                          ? 'border-green-300 bg-green-50 shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-green-200 hover:bg-green-25'
+                        }`}
+                      onClick={() => {
+                        const features = getValues("features") || []
+                        let newFeatures = [...features]
+                        if (isChecked) {
+                          newFeatures = newFeatures.filter((f) => f.featuresId !== component._id)
+                        } else {
+                          newFeatures.push({
+                            featuresId: component._id,
+                            component: component.name,
+                            read: false,
+                            write: false,
+                            edit: false,
+                            delete: false,
+                          })
+                        }
+                        setValue("features", newFeatures)
+                      }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isChecked
+                            ? 'border-green-500 bg-green-500'
+                            : 'border-gray-300 bg-white'
+                          }`}>
+                          {isChecked && (
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={`font-medium transition-colors duration-200 ${isChecked ? 'text-green-800' : 'text-gray-700'
+                          }`}>
+                          {component.name}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
