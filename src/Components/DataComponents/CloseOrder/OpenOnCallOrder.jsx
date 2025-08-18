@@ -79,7 +79,7 @@ function OpenOnCallOrder() {
       setLoading(false);
     }
   };
- useEffect(() => {
+  useEffect(() => {
     if (!searchQuery) {
       fetchOnCalls();
     }
@@ -179,6 +179,7 @@ function OpenOnCallOrder() {
               <th className="p-3 text-left">
                 <input type="checkbox" className="w-4 h-4" />
               </th>
+              <th className="p-3 text-left font-medium">C Note ID</th>
               <th className="p-3 text-left font-medium">OnCall No.</th>
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">Device</th>
@@ -202,6 +203,9 @@ function OpenOnCallOrder() {
                   />
                 </td>
 
+                <td className="p-3 font-bold text-blue-600">
+                  {oc.cnoteNumber}
+                </td>
                 <td className="p-3 font-bold text-blue-600">
                   {oc.onCallNumber}
                 </td>

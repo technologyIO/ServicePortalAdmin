@@ -187,6 +187,7 @@ function CloseOnCallOrder() {
               <th className="p-3 text-left">
                 <input type="checkbox" className="w-4 h-4" />
               </th>
+              <th className="p-3 text-left font-medium">C Note ID</th>
               <th className="p-3 text-left font-medium">OnCall No.</th>
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">Device</th>
@@ -208,7 +209,9 @@ function CloseOnCallOrder() {
                     className="w-4 h-4 text-blue-600 rounded"
                   />
                 </td>
-
+                <td className="p-3 font-bold text-blue-600">
+                  {onCall.cnoteNumber}
+                </td>
                 <td className="p-3 font-bold text-blue-600">
                   {onCall.onCallNumber}
                 </td>

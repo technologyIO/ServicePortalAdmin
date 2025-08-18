@@ -34,7 +34,22 @@ const RoleForm = ({
   const [mobileComponentsList, setMobileComponentsList] = useState([]);
   const [reportsList, setReportsList] = useState([]);
   const [currentRoleData, setCurrentRoleData] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isRoleTypeOpen, setIsRoleTypeOpen] = useState(false);
 
+  // Role type options
+  const roleTypeOptions = [
+    { value: 'skanray', label: 'Skanray' },
+    { value: 'dealer', label: 'Dealer' }
+  ];
+
+  const handleSelect = (roleId, roleName) => {
+    setSelectedParentRole(roleId);
+    setValue("parentRole", roleId); // Ye line add karni thi
+    setIsOpen(false);
+  };
+
+  const selectedRole = parentRoles.find(role => role._id === selectedParentRole);
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -109,40 +124,40 @@ const RoleForm = ({
       // Format mobile components
       const formattedMobileComponents = data.mobilePermissions
         ? Object.entries(data.mobilePermissions)
-            .filter(([_, permissions]) => Object.values(permissions).some(Boolean))
-            .map(([componentId, permissions]) => {
-              const component = mobileComponentsList.find(c => c._id === componentId);
-              return {
-                componentId,
-                name: component?.name || componentId,
-                ...permissions
-              };
-            })
+          .filter(([_, permissions]) => Object.values(permissions).some(Boolean))
+          .map(([componentId, permissions]) => {
+            const component = mobileComponentsList.find(c => c._id === componentId);
+            return {
+              componentId,
+              name: component?.name || componentId,
+              ...permissions
+            };
+          })
         : [];
 
       // Format reports
       const formattedReports = data.reportPermissions
         ? Object.entries(data.reportPermissions)
-            .filter(([_, permissions]) => Object.values(permissions).some(Boolean))
-            .map(([reportId, permissions]) => {
-              const report = reportsList.find(r => r._id === reportId);
-              return {
-                reportId,
-                name: report?.name || reportId,
-                ...permissions
-              };
-            })
+          .filter(([_, permissions]) => Object.values(permissions).some(Boolean))
+          .map(([reportId, permissions]) => {
+            const report = reportsList.find(r => r._id === reportId);
+            return {
+              reportId,
+              name: report?.name || reportId,
+              ...permissions
+            };
+          })
         : [];
 
       // Format demographic selections
       const formattedDemographic = data.demographic
         ? Object.entries(data.demographic)
-            .filter(([_, settings]) => settings.enabled)
-            .map(([name, settings]) => ({
-              name,
-              isEnabled: true,
-              selectionType: settings.type
-            }))
+          .filter(([_, settings]) => settings.enabled)
+          .map(([name, settings]) => ({
+            name,
+            isEnabled: true,
+            selectionType: settings.type
+          }))
         : [];
 
       const formattedData = {
@@ -199,7 +214,7 @@ const RoleForm = ({
                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
                 Basic Information
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -216,38 +231,194 @@ const RoleForm = ({
                   )}
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Parent Role
                   </label>
-                  <select
-                    {...register("parentRole")}
-                    value={selectedParentRole}
-                    onChange={(e) => setSelectedParentRole(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
-                  >
-                    <option value="">Select parent role</option>
-                    {parentRoles.map((role) => (
-                      <option key={role._id} value={role._id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
+
+                  <div className="relative">
+                    {/* Hidden select for form registration */}
+                    <select
+                      {...register("parentRole")}
+                      value={selectedParentRole}
+                      onChange={(e) => {
+                        setSelectedParentRole(e.target.value);
+                        setValue("parentRole", e.target.value);
+                      }}
+                      className="hidden"
+                    >
+                      <option value="">Select parent role</option>
+                      {parentRoles.map((role) => (
+                        <option key={role._id} value={role._id}>
+                          {role.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Custom dropdown button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsOpen(!isOpen)}
+                      className="w-full px-4 py-3 text-left bg-white border border-gray-300 rounded-xl shadow-sm 
+                 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                 transition-all duration-200 flex items-center justify-between group"
+                    >
+                      <span className={`${selectedRole ? 'text-gray-900' : 'text-gray-500'} font-medium`}>
+                        {selectedRole ? selectedRole.name : 'Select parent role'}
+                      </span>
+                      <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {isOpen && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg 
+                     max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95">
+                        <div className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedParentRole('');
+                              setValue("parentRole", '');
+                              setIsOpen(false);
+                            }}
+                            className="w-full px-4 py-3 text-left text-gray-500 hover:bg-blue-50 hover:text-blue-600 
+                     transition-colors duration-150 font-medium"
+                          >
+                            Select parent role
+                          </button>
+                          {parentRoles.map((role) => (
+                            <button
+                              key={role._id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedParentRole(role._id);
+                                setValue("parentRole", role._id);
+                                setIsOpen(false);
+                              }}
+                              className={`w-full px-4 py-3 text-left hover:bg-blue-50 hover:text-blue-600 
+                       transition-colors duration-150 font-medium
+                       ${selectedParentRole === role._id ? 'bg-blue-100 text-blue-700' : 'text-gray-700'}`}
+                            >
+                              {role.name}
+                              {selectedParentRole === role._id && (
+                                <svg className="inline-block w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Click outside to close */}
+                  {isOpen && (
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsOpen(false)}
+                    />
+                  )}
                 </div>
 
-                <div>
+
+
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Role Type
                   </label>
-                  <select
-                    value={selectedRoleType}
-                    onChange={(e) => setSelectedRoleType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/70 backdrop-blur-sm"
-                  >
-                    <option value="">Select role type</option>
-                    <option value="skanray">Skanray</option>
-                    <option value="dealer">Dealer</option>
-                  </select>
+
+                  <div className="relative">
+                    {/* Hidden select for form registration */}
+                    <select
+                      value={selectedRoleType}
+                      onChange={(e) => setSelectedRoleType(e.target.value)}
+                      className="hidden"
+                    >
+                      <option value="">Select role type</option>
+                      {roleTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Custom dropdown button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsRoleTypeOpen(!isRoleTypeOpen)}
+                      className="w-full px-4 py-3 text-left bg-white border border-gray-300 rounded-xl shadow-sm 
+                 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                 transition-all duration-200 flex items-center justify-between group"
+                    >
+                      <span className={`${selectedRoleType ? 'text-gray-900' : 'text-gray-500'} font-medium`}>
+                        {selectedRoleType ? roleTypeOptions.find(opt => opt.value === selectedRoleType)?.label : 'Select role type'}
+                      </span>
+                      <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isRoleTypeOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {isRoleTypeOpen && (
+                      <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg 
+                     max-h-60 overflow-auto animate-in fade-in-0 zoom-in-95">
+                        <div className="py-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedRoleType('');
+                              setIsRoleTypeOpen(false);
+                            }}
+                            className="w-full px-4 py-3 text-left text-gray-500 hover:bg-blue-50 hover:text-blue-600 
+                     transition-colors duration-150 font-medium"
+                          >
+                            Select role type
+                          </button>
+                          {roleTypeOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setSelectedRoleType(option.value);
+                                setIsRoleTypeOpen(false);
+                              }}
+                              className={`w-full px-4 py-3 text-left hover:bg-blue-50 hover:text-blue-600 
+                       transition-colors duration-150 font-medium
+                       ${selectedRoleType === option.value ? 'bg-blue-100 text-blue-700' : 'text-gray-700'}`}
+                            >
+                              {option.label}
+                              {selectedRoleType === option.value && (
+                                <svg className="inline-block w-4 h-4 ml-2" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Click outside to close */}
+                  {isRoleTypeOpen && (
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsRoleTypeOpen(false)}
+                    />
+                  )}
                 </div>
               </div>
             </div>

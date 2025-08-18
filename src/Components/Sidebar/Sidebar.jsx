@@ -1,24 +1,99 @@
-import React, { useEffect, useState } from "react";
-import GlobalStyles from "@mui/joy/GlobalStyles";
-import Avatar from "@mui/joy/Avatar";
-import Box from "@mui/joy/Box";
-import Divider from "@mui/joy/Divider";
-import IconButton from "@mui/joy/IconButton";
-import List from "@mui/joy/List";
-import ListItem from "@mui/joy/ListItem";
-import ListItemButton, { listItemButtonClasses } from "@mui/joy/ListItemButton";
-import ListItemContent from "@mui/joy/ListItemContent";
-import Typography from "@mui/joy/Typography";
-import Sheet from "@mui/joy/Sheet";
-import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
-import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import SummarizeIcon from "@mui/icons-material/Summarize";
-import { closeSidebar } from "./utils";
+"use client";
+
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Button, CircularProgress, Modal } from "@mui/joy";
-import { usePermissions } from "../../PermissionContext";
+import { usePermissions } from "../../PermissionContext"; // <- Import your permissions hook
+import { Delete, LucideDelete, Trash, Trash2 } from "lucide-react";
+
+// SVG ICONS (unchanged)
+const DashboardIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+  </svg>
+);
+const UploadIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const SettingsIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372-.836 2.942.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const BusinessIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
+      clipRule="evenodd"
+    />
+    <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
+  </svg>
+);
+const ReceiptIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-8.207-.293a1 1 0 011.414-1.414l.707.707a1 1 0 01-1.414 1.414l-.707-.707z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const DeleteIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
+      clipRule="evenodd"
+    />
+    <path
+      fillRule="evenodd"
+      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const ChevronDownIcon = () => (
+  <svg
+    className="w-4 h-4 transition-transform duration-200"
+    fill="currentColor"
+    viewBox="0 0 20 20"
+  >
+    <path
+      fillRule="evenodd"
+      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const LogoutIcon = () => (
+  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+    <path
+      fillRule="evenodd"
+      d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const MenuIcon = () => (
+  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+  </svg>
+);
+const CloseIcon = () => (
+  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+  </svg>
+);
 
 function Toggler({
   defaultExpanded = false,
@@ -36,46 +111,98 @@ function Toggler({
   }, [open, storageKey]);
 
   return (
-    <React.Fragment>
+    <div>
       {renderToggle({ open, setOpen })}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
-          transition: "0.2s ease",
-          "& > *": {
-            overflow: "hidden",
-          },
-        }}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+        }`}
       >
-        {children}
-      </Box>
-    </React.Fragment>
+        <div className="pt-2">{children}</div>
+      </div>
+    </div>
   );
 }
 
-export default function Sidebar({ onSidebarItemClick }) {
+const LogoutModal = ({ open, onClose, onConfirm }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      ></div>
+      <div className="relative bg-white rounded-lg shadow-xl p-6 w-80 mx-4 transform transition-all duration-300 scale-100 border border-gray-200 z-[10000]">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <LogoutIcon />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Confirm Logout
+          </h3>
+          <p className="text-gray-600 mb-6 text-sm">
+            Are you sure you want to log out of your account?
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md font-medium transition-colors duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-800 rounded-md font-medium transition-colors duration-200"
+            >
+              Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function EnhancedSidebar({ onSidebarItemClick }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedItem, setSelectedItem] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const user = JSON.parse(localStorage.getItem("user")) || {};
-  const { hasPermission } = usePermissions();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
+  // Permission system (use your actual permission context)
+  const { hasPermission, loading, ready } = usePermissions();
+
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+
+  // --- Permission Logic FIX ---
   const canAccess = (componentName, action = "read") => {
+    if (!ready || loading) return false;
     return hasPermission(componentName, action);
   };
-
-  // Helper function to check if any item in a section has permission
   const hasAnyPermissionInSection = (sectionItems) => {
+    if (!ready || loading) return false;
     return sectionItems.some((item) => canAccess(item.component));
   };
+  const hasAnyPermissionInSubsections = (subsections) => {
+    if (!ready || loading) return false;
+    return subsections.some((subsection) => {
+      if (subsection.items) {
+        return hasAnyPermissionInSection(subsection.items);
+      }
+      if (subsection.subsections) {
+        return hasAnyPermissionInSubsections(subsection.subsections);
+      }
+      return false;
+    });
+  };
+  // --------------------------------------
 
-  // Define sidebar sections and their items
+  // All sidebar config unchanged
   const sidebarSections = [
     {
       title: "Master",
-      icon: <DashboardRoundedIcon />,
+      icon: <DashboardIcon />,
       storageKey: "masterManagementTogglerState",
       items: [
         { component: "User", path: "/user" },
@@ -100,19 +227,7 @@ export default function Sidebar({ onSidebarItemClick }) {
     },
     {
       title: "Upload",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          style={{ color: "#636b74" }}
-          height="16"
-          fill="currentColor"
-          className="bi bi-cloud-arrow-up-fill"
-          viewBox="0 0 16 16"
-        >
-          <path d="M8 2a5.53 5.53 0 0 0-3.594 1.342c-.766.66-1.321 1.52-1.464 2.383C1.266 6.095 0 7.555 0 9.318 0 11.366 1.708 13 3.781 13h8.906C14.502 13 16 11.57 16 9.773c0-1.636-1.242-2.969-2.834-3.194C12.923 3.999 10.69 2 8 2m2.354 5.146a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2a.5.5 0 0 1 .708 0z" />
-        </svg>
-      ),
+      icon: <UploadIcon />,
       storageKey: "uploadManagementTogglerState",
       items: [
         { component: "Customer", path: "/customer" },
@@ -125,41 +240,98 @@ export default function Sidebar({ onSidebarItemClick }) {
     },
     {
       title: "Admin",
-      icon: <SettingsRoundedIcon />,
+      icon: <SettingsIcon />,
       storageKey: "adminTogglerState",
       items: [
         { component: "Geo", path: "/admin-geo" },
-        { component: "Country", path: "/admin-country" },
-        { component: "Region", path: "/admin-region" },
-        { component: "State", path: "/admin-state" },
         { component: "City", path: "/admin-city" },
-        { component: "CheckListType", path: "/checklist-type" },
-        { component: "CheckPointType", path: "/checkpoint-type" },
-        { component: "Role Manage", path: "/role-manage" },
+        { component: "State", path: "/admin-state" },
+        { component: "Region", path: "/admin-region" },
+        { component: "Country", path: "/admin-country" },
         { component: "Department", path: "/admin-department" },
+        { component: "Role Manage", path: "/role-manage" },
+        { component: "CheckListType", path: "/checklist-type" },
         { component: "Product Group", path: "/admin-product-group" },
-        // { component: "PM Master", path: "/admin-pm-master" },
-        { component: "CMC/NCMC Years", path: "/cmc-ncmc-years" },
-        { component: "CMC/NCMC Price", path: "/cmc-ncmc-price" },
-        { component: "CMC/NCMC TDS", path: "/cmc-ncmc-tds" },
+        { component: "CheckPointType", path: "/checkpoint-type" },
         { component: "CMC/NCMC Gst", path: "/cmc-ncmc-gst" },
+        { component: "CMC/NCMC TDS", path: "/cmc-ncmc-tds" },
+        { component: "CMC/NCMC Price", path: "/cmc-ncmc-price" },
+        { component: "CMC/NCMC Years", path: "/cmc-ncmc-years" },
         { component: "CMC/NCMC Discount", path: "/cmc-ncmc-discount" },
-        { component: "Quote Approval", path: "/quote-approval" },
-        { component: "On Call Approval", path: "/on-call-approval" },
-        { component: "CNote Delete", path: "/cnote-delete" },
-        { component: "OnCall Cnote Delete", path: "/oncall-cnote-delete" },
-        { component: "Service Charge", path: "/service-charge" },
+        { component: "OnCall Service Charge", path: "/service-charge" },
       ],
     },
     {
-      title: "Close Order",
-      icon: <SummarizeIcon />,
-      storageKey: "closeOrderTogglerState",
+      title: "Opportunity",
+      icon: <BusinessIcon />,
+      storageKey: "opportunityTogglerState",
+      isNested: true,
+      subsections: [
+        {
+          title: "OnCall",
+          storageKey: "onCallTogglerState",
+          items: [
+            { component: "OnCall", path: "/on-call-approval", label: "Open" },
+            { component: "OnCall", path: "/oncall-close", label: "Close" },
+          ],
+        },
+        {
+          title: "CMC/NCMC",
+          storageKey: "cmcNcmcTogglerState",
+          items: [
+            { component: "CMC/NCMC", path: "/quote-approval", label: "Open" },
+            { component: "CMC/NCMC", path: "/cmc-ncmc-close", label: "Close" },
+          ],
+        },
+      ],
+    },
+    {
+      title: "SO Number Entry",
+      icon: <ReceiptIcon />,
+      storageKey: "soNumberEntryTogglerState",
+      isNested: true,
+      subsections: [
+        {
+          title: "OnCall SO Entry",
+          storageKey: "onCallSOEntryTogglerState",
+          items: [
+            {
+              component: "OnCall SO Entry",
+              path: "/open-oncall-order",
+              label: "Open",
+            },
+            {
+              component: "OnCall SO Entry",
+              path: "/close-oncall-order",
+              label: "Close",
+            },
+          ],
+        },
+        {
+          title: "CMC/NCMC SO Entry",
+          storageKey: "cmcNcmcSOEntryTogglerState",
+          items: [
+            {
+              component: "CMC/NCMC SO Entry",
+              path: "/open-proposal",
+              label: "Open",
+            },
+            {
+              component: "CMC/NCMC SO Entry",
+              path: "/close-proposal",
+              label: "Close",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: "Cnote Delete",
+      icon: <Trash2 size={20} />,
+      storageKey: "cnoteDeleteTogglerState",
       items: [
-        { component: "Close Order Open", path: "/open-proposal" },
-        { component: "Close Order Close", path: "/close-proposal" },
-        { component: "Open OnCall Order", path: "/open-oncall-order" },
-        { component: "Close OnCall Order", path: "/close-oncall-order" },
+        { component: "OnCall Cnote Delete", path: "/oncall-cnote-delete" },
+        { component: "CMC/NCMC Cnote Delete", path: "/cnote-delete" },
       ],
     },
   ];
@@ -167,11 +339,10 @@ export default function Sidebar({ onSidebarItemClick }) {
   const avatarImage =
     user?.details?.profileimage ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
-
-  const userName = user?.details?.firstname || "Default Name";
-  const userId = user?.details?.employeeid || "Default ID";
-  const userRole = user?.details?.role?.roleName || "User";
-  const department = user?.details?.department || "None";
+  const userName = user?.details?.firstname || "John Doe";
+  const userId = user?.details?.employeeid || "EMP001";
+  const userRole = user?.details?.role?.roleName || "Administrator";
+  const department = user?.details?.department || "IT Department";
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -185,232 +356,257 @@ export default function Sidebar({ onSidebarItemClick }) {
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
+    setIsMobileOpen(false);
   };
 
-  return (
-    <Sheet
-      className="Sidebar"
-      sx={{
-        position: { xs: "fixed", md: "sticky" },
-        transform: {
-          xs: "translateX(calc(100% * (var(--SideNavigation-slideIn, 0) - 1)))",
-          md: "none",
-        },
-        transition: "transform 0.4s, width 0.4s",
-        zIndex: 1,
-        height: "100dvh",
-        width: "var(--Sidebar-width)",
-        top: 0,
-        p: 0,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-        borderRight: "1px solid",
-        borderColor: "divider",
-      }}
-    >
-      <GlobalStyles
-        styles={(theme) => ({
-          ":root": {
-            "--Sidebar-width": "220px",
-            [theme.breakpoints.up("lg")]: {
-              "--Sidebar-width": "240px",
-            },
-          },
-        })}
-      />
-      <Box
-        className="Sidebar-overlay"
-        sx={{
-          position: "fixed",
-          zIndex: 9998,
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          opacity: "var(--SideNavigation-slideIn)",
-          backgroundColor: "var(--joy-palette-background-backdrop)",
-          transition: "opacity 0.4s",
-          transform: {
-            xs: "translateX(calc(100% * (var(--SideNavigation-slideIn, 0) - 1) + var(--SideNavigation-slideIn, 0) * var(--Sidebar-width, 0px)))",
-            lg: "translateX(-100%)",
-          },
-        }}
-        onClick={() => closeSidebar()}
-      />
-      <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-        <img
-          style={{ width: "40px", height: "40px", borderRadius: "5px" }}
-          src="https://img.freepik.com/free-vector/blond-man-with-eyeglasses-icon-isolated_24911-100831.jpg?t=st=1713514458~exp=1713518058~hmac=9d7688b59aa4ecb9a54415ce7ef5de909bbbf715fb73346df0d52abf0b08c603&w=740"
-          alt=""
-        />
-        <Typography level="title-lg">Service Portal</Typography>
-      </Box>
-      <Box
-        sx={{
-          minHeight: 0,
-          overflow: "hidden auto",
-          flexGrow: 1,
-          flexDirection: "column",
-          [`& .${listItemButtonClasses.root}`]: {
-            gap: 1.5,
-          },
-        }}
-      >
-        <List
-          size="sm"
-          className="mb-5 mt-6 mx-1"
-          sx={{
-            gap: 3,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": "3px",
-          }}
-        >
-          {/* Render only sections where user has at least one permission */}
-          {sidebarSections.map((section) => {
-            if (!hasAnyPermissionInSection(section.items)) {
-              return null;
-            }
+  // Child renderers with permission checks
+  const renderNestedItems = (items, level = 0) => {
+    return items.map((item) => {
+      if (!canAccess(item.component)) return null;
+      return (
+        <div key={item.path}>
+          <button
+            onClick={() => {
+              navigate(item.path);
+              handleItemClick(item.path);
+            }}
+            className={`w-full text-left px-3 py-2 rounded-md transition-all duration-200 text-sm ${
+              selectedItem === item.path
+                ? "bg-blue-100 text-blue-800 font-medium"
+                : "text-gray-700 hover:text-blue-800 hover:bg-blue-50"
+            }`}
+            style={{ marginLeft: `${level * 16}px` }}
+          >
+            <span>{item.label || item.component}</span>
+          </button>
+        </div>
+      );
+    });
+  };
 
-            return (
-              <ListItem nested key={section.title}>
-                <Toggler
-                  storageKey={section.storageKey}
-                  renderToggle={({ open, setOpen }) => (
-                    <ListItemButton onClick={() => setOpen(!open)}>
-                      {section.icon}
-                      <ListItemContent>
-                        <Typography level="title-sm">
-                          {section.title}
-                        </Typography>
-                      </ListItemContent>
-                      <KeyboardArrowDownIcon
-                        sx={{ transform: open ? "rotate(180deg)" : "none" }}
-                      />
-                    </ListItemButton>
-                  )}
+  const renderSection = (section) => {
+    if (!section.isNested) {
+      if (!hasAnyPermissionInSection(section.items)) return null;
+      return (
+        <div key={section.title} className="mb-1">
+          <Toggler
+            storageKey={section.storageKey}
+            renderToggle={({ open, setOpen }) => (
+              <button
+                onClick={() => setOpen(!open)}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white hover:bg-gray-50 transition-all duration-200 group border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="text-gray-500 group-hover:text-gray-700 transition-colors duration-200">
+                    {section.icon}
+                  </div>
+                  <span className="font-medium text-gray-700 group-hover:text-gray-900 text-sm">
+                    {section.title}
+                  </span>
+                </div>
+                <div
+                  className={`transform transition-transform duration-200 text-gray-400 ${
+                    open ? "rotate-180" : ""
+                  }`}
                 >
-                  <List sx={{ gap: 0.5 }}>
-                    {section.items.map((item) => {
-                      if (!canAccess(item.component)) {
-                        return null;
-                      }
-
-                      return (
-                        <ListItem
-                          nested
-                          key={item.path}
-                          onClick={() => {
-                            navigate(item.path);
-                            handleItemClick(item.path);
-                          }}
-                        >
-                          <ListItemButton selected={selectedItem === item.path}>
-                            {item.component}
-                          </ListItemButton>
-                        </ListItem>
-                      );
-                    })}
-                  </List>
-                </Toggler>
-              </ListItem>
-            );
-          })}
-        </List>
-      </Box>
-
-      <Box sx={{ width: "100%" }}>
-        <div className="flex mx-1 bg-gradient-to-r from-slate-50 to-gray-50 gap-3 items-center rounded-xl pl-3 py-3 border border-gray-200/60 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300/60">
-          <Avatar
-            variant="outlined"
-            size="sm"
-            src={`${process.env.REACT_APP_BASE_URL || ""}${avatarImage}`}
-            className="ring-2 ring-white shadow-sm"
-          />
-
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <div className="flex items-center justify-between pr-2">
-              <Typography
-                level="title-sm"
-                className="text-sm font-semibold text-gray-800 mb-1"
-              >
-                {userName}
-              </Typography>
-              <Typography
-                level="body-xs"
-                className="text-xs text-gray-600 font-medium"
-              >
-                Role ID: {userId}
-              </Typography>
+                  <ChevronDownIcon />
+                </div>
+              </button>
+            )}
+          >
+            <div className="space-y-1 mt-1 ml-1">
+              {renderNestedItems(section.items)}
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              <div className="flex gap-1.5">
-                <Typography
-                  level="body-xs"
-                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full text-black font-semibold shadow-sm"
-                >
-                  {userRole}
-                </Typography>
-                <Typography
-                  level="body-xs"
-                  className="text-xs px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full text-white font-medium shadow-sm"
-                >
-                  {department}
-                </Typography>
+          </Toggler>
+        </div>
+      );
+    }
+
+    if (!hasAnyPermissionInSubsections(section.subsections)) return null;
+
+    return (
+      <div key={section.title} className="mb-1">
+        <Toggler
+          storageKey={section.storageKey}
+          renderToggle={({ open, setOpen }) => (
+            <button
+              onClick={() => setOpen(!open)}
+              className="w-full flex items-center justify-between p-3 rounded-lg bg-white hover:bg-gray-50 transition-all duration-200 group border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-gray-500 group-hover:text-gray-700 transition-colors duration-200">
+                  {section.icon}
+                </div>
+                <span className="font-medium text-gray-700 group-hover:text-gray-900 text-sm">
+                  {section.title}
+                </span>
+              </div>
+              <div
+                className={`transform transition-transform duration-200 text-gray-400 ${
+                  open ? "rotate-180" : ""
+                }`}
+              >
+                <ChevronDownIcon />
+              </div>
+            </button>
+          )}
+        >
+          <div className="space-y-1 mt-1 ml-3">
+            {section.subsections.map((subsection) => {
+              if (
+                subsection.items &&
+                !hasAnyPermissionInSection(subsection.items)
+              )
+                return null;
+              return (
+                <div key={subsection.title}>
+                  <Toggler
+                    storageKey={subsection.storageKey}
+                    renderToggle={({ open, setOpen }) => (
+                      <button
+                        onClick={() => setOpen(!open)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-md bg-gray-50 hover:bg-gray-100 transition-all duration-200 group border border-gray-100 hover:border-gray-200"
+                      >
+                        <span className="text-sm font-medium text-gray-600 group-hover:text-gray-800">
+                          {subsection.title}
+                        </span>
+                        <div
+                          className={`transform transition-transform duration-200 text-gray-400 ${
+                            open ? "rotate-180" : ""
+                          }`}
+                        >
+                          <ChevronDownIcon />
+                        </div>
+                      </button>
+                    )}
+                  >
+                    <div className="space-y-1 mt-1 ml-1">
+                      {renderNestedItems(subsection.items, 1)}
+                    </div>
+                  </Toggler>
+                </div>
+              );
+            })}
+          </div>
+        </Toggler>
+      </div>
+    );
+  };
+
+  if (loading || !ready) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <span className="text-gray-400">Loading...</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileOpen(true)}
+        className={`fixed top-1 left-2 z-[9999] lg:hidden p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-200 border-2 border-white ${
+          isMobileOpen ? "hidden" : "block"
+        }`}
+        aria-label="Open menu"
+      >
+        <MenuIcon />
+      </button>
+
+      <button
+        onClick={() => setIsMobileOpen(false)}
+        className="fixed top-1 right-2 z-[9999] lg:hidden p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all duration-200 border-2 border-white"
+        aria-label="Close menu"
+        style={{ display: isMobileOpen ? "block" : "none" }}
+      >
+        <CloseIcon />
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm  lg:hidden"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div
+        className={`fixed top-0 left-0 h-full w-80 z-[9998] bg-white border-r border-gray-300 shadow-2xl z- flex flex-col transition-transform duration-300 ease-in-out lg:sticky lg:transform-none lg:h-screen lg:z-auto ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <img
+                src="https://img.freepik.com/free-vector/blond-man-with-eyeglasses-icon-isolated_24911-100831.jpg"
+                alt="Logo"
+                className="w-6 h-6 rounded-md"
+              />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">
+                Service Portal
+              </h1>
+              <p className="text-gray-600 text-xs">Management System</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Content */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white">
+          {sidebarSections.map(renderSection)}
+        </div>
+
+        {/* Fixed bottom section */}
+        <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-3 border border-gray-200 mb-3">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative">
+                <img
+                  src={avatarImage || "/placeholder.svg"}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-blue-200"
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white"></div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-gray-900 truncate text-sm">
+                  {userName}
+                </h3>
+                <p className="text-xs text-gray-500">ID: {userId}</p>
               </div>
             </div>
-          </Box>
-        </div>
-        <div className="mx-1">
-          <IconButton
-            size="sm"
-            className="flex gap-5 mb-3 h-10 text-lg items-center mt-2 justify-between px-3 bg-gray-200 w-full"
-            variant="plain"
-            color="neutral"
+            <div className="flex flex-wrap gap-1 mb-3">
+              <span className="px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded">
+                {userRole}
+              </span>
+              <span className="px-2 py-1 bg-gray-200 text-gray-700 text-xs font-medium rounded">
+                {department}
+              </span>
+            </div>
+          </div>
+          <button
             onClick={() => setIsModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 p-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 text-sm shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
           >
-            LogOut <LogoutRoundedIcon />
-          </IconButton>
-
-          <LogoutModal
-            open={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onConfirm={handleLogout}
-          />
-        </div>
-      </Box>
-    </Sheet>
-  );
-}
-
-const LogoutModal = ({ open, onClose, onConfirm }) => {
-  return (
-    <Modal open={open} onClose={onClose}>
-      <div
-        className="p-5 bg-white rounded-md shadow-lg w-80"
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.2)",
-        }}
-      >
-        <h2 className="text-xl font-semibold mb-4">Confirm Logout</h2>
-        <p className="mb-6">Are you sure you want to log out?</p>
-        <div className="flex justify-end gap-4">
-          <Button variant="plain" color="neutral" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="solid" color="danger" onClick={onConfirm}>
-            Log Out
-          </Button>
+            <LogoutIcon />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
-    </Modal>
+
+      <LogoutModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleLogout}
+      />
+    </>
   );
-};
+}
 
 {
   /* <List

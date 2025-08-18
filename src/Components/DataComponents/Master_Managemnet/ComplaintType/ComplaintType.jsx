@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import FormControl from "@mui/joy/FormControl";
 
 import Input from "@mui/joy/Input";
+import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
 
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -354,103 +355,133 @@ function ComplaintType() {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center">
-              <FormControl sx={{ flex: 1 }} size="sm">
-                <Input
-                  size="sm"
-                  placeholder="Search"
-                  startDecorator={<SearchIcon />}
-                  value={searchQuery}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      if (searchQuery.trim()) {
-                        handleSearch(1);
-                      } else {
-                        // If Enter is pressed with empty search, reset to normal data
-                        setIsSearchMode(false);
-                        setSearchQuery("");
-                        setPage(1);
-                        getData(1);
-                      }
-                    }
-                  }}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchQuery(value);
-
-                    // If input is completely cleared, automatically refresh data
-                    if (value === "" && isSearchMode) {
-                      setIsSearchMode(false);
-                      setPage(1);
-                      getData(1);
-                    }
-                  }}
-                />
-              </FormControl>
-              <button
-                onClick={() => handleSearch(1)}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
-              >
-                Search
-              </button>
-              {/* Replace the commented section with this */}
-              {selectedRows?.length > 0 && (
-                <div className="flex justify-center ">
-                  <button
-                    onClick={handleBulkDelete}
-                    type="button"
-                    className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-red-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
-                  >
-                    Delete Selected ({selectedRows.length})
-                  </button>
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
+              {/* Search and primary actions row */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <FormControl sx={{ flex: 1 }} size="sm">
+                    <Input
+                      size="sm"
+                      placeholder="Search records, users, or data..."
+                      startDecorator={<SearchIcon />}
+                      value={searchQuery}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          if (searchQuery.trim()) {
+                            handleSearch(1);
+                          } else {
+                            setIsSearchMode(false);
+                            setSearchQuery("");
+                            setPage(1);
+                            getData(1);
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchQuery(value);
+                        if (value === "" && isSearchMode) {
+                          setIsSearchMode(false);
+                          setPage(1);
+                          getData(1);
+                        }
+                      }}
+                      className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                    />
+                  </FormControl>
                 </div>
-              )}
+
+                <button
+                  onClick={() => handleSearch(1)}
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Search
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                <button
+                  onClick={handleCloseModal}
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New
+                </button>
+
+                {selectedRows?.length > 0 && (
+                  <div className="animate-in slide-in-from-right-2 duration-300">
+                    <button
+                      onClick={handleBulkDelete}
+                      type="button"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
+                    >
+                      <span className="hidden sm:inline">Delete Selected</span>
+                      <span className="sm:hidden">Delete</span>
+                      <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
+                        ({selectedRows.length})
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex gap-3">
+
+            {/* Secondary/actions row */}
+            <div className="flex flex-wrap justify-end gap-3">
               <button
                 onClick={openModal}
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Upload className="w-4 h-4" />
                 Upload
               </button>
-              <button
-                onClick={handleCloseModal}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
-              >
-                Create
-              </button>
+
               <button
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Filter className="w-4 h-4" />
                 Filter
               </button>
+
               <button
-                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
-                  isDownloadingComplaintType
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
-                }`}
                 onClick={downloadComplaintTypeExcel}
                 disabled={isDownloadingComplaintType}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isDownloadingComplaintType
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                }`}
               >
                 {isDownloadingComplaintType ? (
-                  <>
-                    <div className="flex items-center">
-                      <LoadingSpinner />
-                      Downloading...
-                    </div>
-                  </>
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">...</span>
+                  </div>
                 ) : (
-                  <>Download Excel</>
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download Excel</span>
+                    <span className="sm:inline hidden">Download</span>
+                  </>
                 )}
               </button>
             </div>
           </div>
+
           {/* {selectedRows?.length > 0 && (
             <div className="flex justify-center">
               <button
@@ -527,7 +558,11 @@ function ComplaintType() {
                   data.map((item, index) => (
                     <tr
                       key={item?._id}
-                      className="border-b transition-colors data-[state=selected]:bg-muted"
+                      className={`border-b transition-colors ${
+                        selectedRows?.includes(item?._id)
+                          ? "bg-gray-300"
+                          : "hover:bg-gray-50"
+                      }`}
                     >
                       <th scope="col" className="p-4">
                         <div className="flex items-center">

@@ -1,14 +1,20 @@
+// OnCallApprovalList.jsx
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import moment from "moment";
+import { useNavigate } from "react-router-dom";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import Swal from "sweetalert2";
-import axios from "axios";
-import moment from "moment";
-import OnCallViewModal from "./OnCallViewModal";
-import OnCallApprovalModal from "./OnCallApprovalModal";
-// import ApprovalModal from "./ApprovalModal";
-// import ViewModal from "./ViewModal";
+
+// Show a loader while fetching
+function Loader() {
+  return (
+    <div className="flex items-center justify-center h-[60vh]">
+      <span className="CustomLoader"></span>
+    </div>
+  );
+}
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_BASE_URL,
@@ -18,204 +24,110 @@ const api = axios.create({
   },
 });
 
-function OnCallApproval() {
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [oncallList, setOncallList] = useState([]);
-  const [filteredOncallList, setFilteredOncallList] = useState([]);
-  const [displayedRows, setDisplayedRows] = useState([]);
-  const [selectedOncall, setSelectedOncall] = useState(null);
-  const [selectedRevision, setSelectedRevision] = useState(null);
-  const [page, setPage] = useState(1);
-  const limit = 10;
-  const [totalPages, setTotalPages] = useState(1);
+export default function OnCallApproval() {
+  const [customers, setCustomers] = useState([]);
+  const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userId, setUserId] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
+    async function fetchCustomersWithOnCalls() {
+      setLoading(true);
       try {
-        const parsedData = JSON.parse(userData);
-        if (parsedData?.details?.id) {
-          setUserId(parsedData.details.id);
-        }
+        // Get all onCalls (>5% discount) and group by customer
+        const res = await api.get("/phone/oncall/pagecall?limit=1000");
+        const rawData = Array.isArray(res.data?.data) ? res.data.data : [];
+
+        // Filter for discount > 5%
+        const filtered = rawData.filter(
+          (item) =>
+            typeof item.discountPercentage === "number" &&
+            item.discountPercentage > 5
+        );
+
+        // Group by customer.customercodeid
+        const grouped = {};
+        filtered.forEach((oncall) => {
+          const custId = oncall.customer?.customercodeid || "unknown";
+          if (!grouped[custId]) {
+            grouped[custId] = {
+              customer: oncall.customer,
+              oncalls: [],
+            };
+          }
+          grouped[custId].oncalls.push(oncall);
+        });
+
+        const customerList = Object.values(grouped);
+        setCustomers(customerList);
+        setFilteredCustomers(customerList);
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("Error fetching customers:", error);
+        setCustomers([]);
+        setFilteredCustomers([]);
       }
+      setLoading(false);
     }
+    fetchCustomersWithOnCalls();
   }, []);
 
-  const fetchOnCalls = async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(
-        `/phone/oncall/pagecall?page=${page}&limit=${limit}`
-      );
-      // setOncallList to full array (will filter later)
-      const data = Array.isArray(res.data?.data) ? res.data.data : [];
-      setOncallList(data);
-      setFilteredOncallList(data); // We filter for table later
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      Swal.fire(
-        "Error!",
-        error.response?.data?.message || "Failed to fetch oncalls",
-        "error"
-      );
-    }
-  };
-  const filteredDiscountOnCalls = oncallList.filter(
-    (item) =>
-      typeof item.discountPercentage === "number" &&
-      !Number.isNaN(item.discountPercentage) &&
-      item.discountPercentage > 5
-  );
-
-  // Processing for showing flattened list with revisions
-  const processOnCalls = (oncalls) => {
-    const rows = [];
-    oncalls.forEach((oncall) => {
-      if (
-        oncall.revisions &&
-        Array.isArray(oncall.revisions) &&
-        oncall.revisions.length > 0
-      ) {
-        oncall.revisions.forEach((rev) => {
-          rows.push({
-            ...oncall,
-            revisionData: rev,
-            isCurrentRevision: rev.revisionNumber === oncall.currentRevision,
-            ...rev.changes,
-            status: rev.status,
-          });
-        });
-      } else {
-        rows.push({
-          ...oncall,
-          revisionData: {
-            revisionNumber: 0,
-            status: oncall.status,
-            revisionDate: oncall.createdAt,
-          },
-          isCurrentRevision: true,
-        });
-      }
-    });
-    return rows;
-  };
-  // After fetching all data:
-  useEffect(() => {
-    // get only >5% discount OnCalls, recalculate page
-    const filtered = oncallList.filter(
-      (item) =>
-        typeof item.discountPercentage === "number" &&
-        !Number.isNaN(item.discountPercentage) &&
-        item.discountPercentage > 5
-    );
-    setFilteredOncallList(filtered);
-    setTotalPages(Math.ceil(filtered.length / limit));
-    // Set what rows to show on this page
-    setDisplayedRows(
-      processOnCalls(filtered.slice((page - 1) * limit, page * limit))
-    );
-  }, [oncallList, page]);
-
-  useEffect(() => {
-    fetchOnCalls();
-    // eslint-disable-next-line
-  }, [page]);
-
+  // Handle search functionality
   const handleSearch = () => {
     if (!searchQuery.trim()) {
-      // default: filter for discount > 5
-      const filtered = oncallList.filter(
-        (item) =>
-          typeof item.discountPercentage === "number" &&
-          !Number.isNaN(item.discountPercentage) &&
-          item.discountPercentage > 5
-      );
-      setFilteredOncallList(filtered);
-      setTotalPages(Math.ceil(filtered.length / limit));
-      setDisplayedRows(
-        processOnCalls(filtered.slice((page - 1) * limit, page * limit))
-      );
+      setFilteredCustomers(customers);
       return;
     }
+
     const query = searchQuery.toLowerCase().trim();
-    // Filter by search and by discount > 5
-    const searchFiltered = oncallList.filter(
-      (item) =>
-        (item.onCallNumber?.toString().toLowerCase().includes(query) ||
-          item.customer?.customername
-            ?.toString()
-            .toLowerCase()
-            .includes(query) ||
-          item.status?.toLowerCase().includes(query)) &&
-        typeof item.discountPercentage === "number" &&
-        !Number.isNaN(item.discountPercentage) &&
-        item.discountPercentage > 5
+    const searchFiltered = customers.filter(
+      ({ customer, oncalls }) =>
+        customer?.customername?.toLowerCase().includes(query) ||
+        customer?.city?.toLowerCase().includes(query) ||
+        oncalls.some((oncall) =>
+          oncall.onCallNumber?.toLowerCase().includes(query)
+        )
     );
-    setFilteredOncallList(searchFiltered);
-    setTotalPages(Math.ceil(searchFiltered.length / limit));
-    setDisplayedRows(
-      processOnCalls(searchFiltered.slice((page - 1) * limit, page * limit))
-    );
+    setFilteredCustomers(searchFiltered);
   };
+
   useEffect(() => {
     if (!searchQuery) {
-      fetchOnCalls();
+      setFilteredCustomers(customers);
     }
-  }, [searchQuery]);
+  }, [searchQuery, customers]);
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       handleSearch();
     }
   };
 
-  const handleOpenApprovalModal = (oncall) => {
-    setSelectedOncall(oncall);
-    setShowApprovalModal(true);
-  };
+  if (loading) return <Loader />;
 
-  const handleOpenViewModal = (oncall) => {
-    // Flatten latest revision data for use in modal
-    const revisionData = {
-      ...oncall,
-      ...oncall.revisionData?.changes,
-      status: oncall.revisionData?.status || oncall.status,
-      // You may pass more if required
-    };
-    setSelectedOncall(revisionData);
-    setSelectedRevision(oncall.revisionData);
-    setShowViewModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowApprovalModal(false);
-    setShowViewModal(false);
-    setSelectedOncall(null);
-    setSelectedRevision(null);
-  };
-
-  if (loading) {
+  if (!filteredCustomers.length)
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <span className="CustomLoader"></span>
+      <div className="text-center py-16 text-lg font-semibold text-gray-400">
+        {searchQuery
+          ? "No customers found matching your search."
+          : "No on-calls with discount > 5% found."}
       </div>
     );
-  }
 
   return (
-    <>
-      <div className="flex items-center justify-between gap-3">
+    <div className="p-6">
+      <div className="text-2xl font-bold mb-6 text-blue-700">
+        Customer OnCall Approval
+      </div>
+
+      {/* Search Section */}
+      <div className="flex items-center justify-between gap-3 mb-6">
         <div className="flex gap-3 justify-center">
           <FormControl sx={{ flex: 1 }} size="sm">
             <Input
               size="sm"
-              placeholder="Search"
+              placeholder="Search customers, cities, or OnCall numbers..."
               startDecorator={<SearchIcon />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -233,200 +145,64 @@ function OnCallApproval() {
             Search
           </button>
         </div>
-        <div className="flex gap-3 ">
-          <button
-            type="button"
-            className="text-white w-full px-5 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center"
-          >
-            Filter
-          </button>
-        </div>
       </div>
 
-      <div className="relative w-full overflow-x-auto">
-        <table className="w-full border min-w-max caption-bottom text-sm">
-          <thead className="[&>tr]:border-b bg-blue-700 ">
-            <tr className="border-b transition-colors text-white">
-              <th scope="col" className="p-4"></th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                OnCall #
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Revision
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Customer
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Discount
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Final Amount
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Status
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Created Date
-              </th>
-              <th className="h-12 px-4 text-left align-middle font-medium">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayedRows
-              .sort((a, b) => {
-                const dateA = new Date(
-                  a.revisionData?.revisionDate || a.createdAt
-                );
-                const dateB = new Date(
-                  b.revisionData?.revisionDate || b.createdAt
-                );
-                return dateB - dateA;
-              })
-              .map((oncall) => (
-                <tr
-                  key={`${oncall._id}-${
-                    oncall.revisionData?.revisionNumber || 0
-                  }`}
-                  className="border-b"
-                >
-                  <td className="p-4">
-                    <input
-                      id={`checkbox-${oncall._id}`}
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
-                    />
-                  </td>
-                  <td className="p-4 font-bold text-md capitalize">
-                    {oncall.onCallNumber}
-                  </td>
-                  <td className="p-4 text-md">
-                    {oncall.revisionData?.revisionNumber > 0 ? (
-                      <>
-                        Rev. {oncall.revisionData.revisionNumber}
-                        {oncall.isCurrentRevision && (
-                          <span className="ml-2 px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
-                            Current
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      "Original"
-                    )}
-                  </td>
-                  <td className="p-4 text-md capitalize">
-                    {oncall.customer?.customername}
-                  </td>
-                  <td className="p-4 text-md">{oncall.discountPercentage}%</td>
-                  <td className="p-4 text-md">
-                    ₹{oncall.finalAmount?.toFixed(2)}
-                  </td>
-                  <td className="p-4 text-md capitalize">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        oncall.status === "approved"
-                          ? "bg-green-100 text-green-800"
-                          : oncall.status === "rejected"
-                          ? "bg-red-100 text-red-800"
-                          : oncall.status === "pending"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {oncall.status}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    {moment(
-                      oncall.revisionData?.revisionDate || oncall.createdAt
-                    ).format("MMM D, YYYY")}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleOpenViewModal(oncall)}
-                        className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                      >
-                        View
-                      </button>
-                      {oncall.isCurrentRevision && (
-                        <button
-                          onClick={() => handleOpenApprovalModal(oncall)}
-                          className="border p-[7px] bg-blue-700 text-white rounded cursor-pointer hover:bg-blue-500"
-                        >
-                          Edit
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+      <table className="w-full border caption-bottom text-md bg-white rounded shadow">
+        <thead>
+          <tr className="bg-blue-700 text-white">
+            <th className="p-3 font-bold">OnCall</th>
+            <th className="p-3 font-bold">Product</th>
+            <th className="p-3 font-bold">Customer Name</th>
+            <th className="p-3 font-bold">City</th>
+            <th className="p-3 font-bold">Status</th>
+            <th className="p-3 font-bold">Discount %</th>
+            <th className="p-3 font-bold">OnCall Date</th>
+            <th className="p-3 font-bold">Action</th>
+          </tr>
+        </thead>
 
-      {/* Pagination */}
-      <div className="flex justify-between py-3">
-        <button
-          className={`border rounded p-1 ${
-            page === 1 ? "cursor-not-allowed" : "cursor-pointer"
-          } w-[100px] hover:bg-gray-300 px-2 bg-gray-100 font-semibold`}
-          onClick={() => page > 1 && setPage(page - 1)}
-          disabled={page === 1}
-        >
-          Previous
-        </button>
-        <div style={{ display: "flex", gap: "8px" }}>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(
-              (p) =>
-                p === 1 || p === totalPages || (p >= page - 3 && p <= page + 3)
-            )
-            .map((p, i, arr) => (
-              <React.Fragment key={p}>
-                {i > 0 && p !== arr[i - 1] + 1 && <span>...</span>}
-                <button
-                  className={`border px-3 rounded ${
-                    p === page ? "bg-blue-700 text-white" : ""
-                  }`}
-                  onClick={() => setPage(p)}
-                  disabled={p === page}
-                >
-                  {p}
-                </button>
-              </React.Fragment>
-            ))}
-        </div>
-        <button
-          className="border rounded p-1 cursor-pointer hover:bg-blue-500 px-2 bg-blue-700 w-[100px] text-white font-semibold"
-          onClick={() => page < totalPages && setPage(page + 1)}
-          disabled={page === totalPages}
-        >
-          Next
-        </button>
-      </div>
-
-      {/* Place your ApprovalModal and ViewModal as required */}
-
-      <OnCallApprovalModal
-        open={showApprovalModal}
-        onClose={handleCloseModal}
-        proposal={selectedOncall}
-        setProposal={setSelectedOncall}
-        userId={userId}
-        fetchProposals={fetchOnCalls}
-      />
-
-      <OnCallViewModal
-        open={showViewModal}
-        onClose={handleCloseModal}
-        proposal={selectedOncall}
-        revision={selectedRevision}
-      />
-    </>
+        <tbody>
+          {filteredCustomers.map(({ customer, oncalls }) =>
+            // हर OnCall के लिए अलग row बनाएं
+            oncalls.map((oncall, oncallIndex) => (
+              <tr
+                key={`${customer.customercodeid}-${oncall._id}-${oncallIndex}`}
+                className="border-b hover:bg-gray-50"
+              >
+                <td className="p-3 font-semibold capitalize">
+                  {oncall?.onCallNumber || "--"}
+                </td>
+                <td className="p-3 font-semibold capitalize">
+                  {oncall?.productGroups?.[0]?.productPartNo ||
+                    oncall?.complaint?.materialdescription ||
+                    "--"}
+                </td>
+                <td className="p-3 font-semibold capitalize">
+                  {customer?.customername || "--"}
+                </td>
+                <td className="p-3">{customer?.city || "--"}</td>
+                <td className="p-3 text-center">1</td>
+                <td className="p-3 text-center">
+                  {oncall?.discountPercentage || 0}%
+                </td>
+                <td className="p-3">
+                  {moment(oncall?.createdAt).format("D MMM YYYY")}
+                </td>
+                <td className="p-3">
+                  <button
+                    className="bg-blue-700 text-white px-4 py-1 rounded font-bold hover:bg-blue-800 transition-colors"
+                    onClick={() =>
+                      navigate(`/on-call/customer/${customer.customercodeid}`)
+                    }
+                  >
+                    Open
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }
-
-export default OnCallApproval;

@@ -14,6 +14,7 @@ import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import toast from "react-hot-toast";
 import AerbBulk from "./AerbBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
 function Aerb() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -355,88 +356,126 @@ function Aerb() {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center">
-              <FormControl sx={{ flex: 1 }} size="sm">
-                <Input
-                  size="sm"
-                  placeholder="Search"
-                  startDecorator={<SearchIcon />}
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (!e.target.value) {
-                      getData(); // Refresh data when search is cleared
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch(1);
-                    }
-                  }}
-                />
-              </FormControl>
-              <button
-                onClick={() => handleSearch(1)} // Change this line
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
-              >
-                Search
-              </button>
-              <div className="flec justify-end ">
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <SearchIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <FormControl sx={{ flex: 1 }} size="sm">
+                    <Input
+                      size="sm"
+                      placeholder="Search records, users, or data..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        if (!e.target.value) {
+                          getData();
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSearch(1);
+                        }
+                      }}
+                      className="block h-10 w-full pl-12 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                    />
+                  </FormControl>
+                </div>
+
+                <button
+                  onClick={() => handleSearch(1)}
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Search
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  // onClick={() => {
+                  //   setIsSpinning(true);
+                  //   getData();
+                  //   setTimeout(() => setIsSpinning(false), 1000);
+                  // }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <RefreshCw
+                    size={20}
+                    // className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+                  />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                <button
+                  onClick={handleCloseModal}
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  <Plus size={18} />
+                  Create New
+                </button>
+
                 {selectedRows?.length > 0 && (
-                  <div className="flex justify-center ">
+                  <div className="animate-in slide-in-from-right-2 duration-300">
                     <button
                       onClick={handleBulkDelete}
                       type="button"
-                      className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-red-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
                     >
-                      Delete Selected ({selectedRows.length})
+                      <span className="hidden sm:inline">Delete Selected</span>
+                      <span className="sm:hidden">Delete</span>
+                      <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
+                        ({selectedRows.length})
+                      </span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex gap-3">
+
+            <div className="flex flex-wrap justify-end gap-3">
               <button
                 onClick={openModal}
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Upload size={18} />
                 Upload
               </button>
-              <button
-                onClick={handleCloseModal}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
-              >
-                Create
-              </button>
+
               <button
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Filter size={18} />
                 Filter
               </button>
+
               <button
-                className={`text-white text-nowrap w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2
-          ${
-            isDownloadingAerb
-              ? "bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed"
-              : "text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
-          }`}
                 onClick={downloadAerbExcel}
                 disabled={isDownloadingAerb}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isDownloadingAerb
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                }`}
               >
                 {isDownloadingAerb ? (
-                  <>
-                    <div className="flex items-center">
-                      <LoadingSpinner />
-                      Downloading...
-                    </div>
-                  </>
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">...</span>
+                  </div>
                 ) : (
-                  <>Download Excel</>
+                  <>
+                    <Download size={18} />
+                    <span className="hidden sm:inline">Download Excel</span>
+                    <span className="sm:inline hidden">Download</span>
+                  </>
                 )}
               </button>
             </div>
@@ -510,7 +549,9 @@ function Aerb() {
                   data.map((item, index) => (
                     <tr
                       key={item?._id}
-                      className="border-b transition-colors data-[state=selected]:bg-muted"
+                      className={`border-b transition-colors data-[state=selected]:bg-muted ${
+                        selectedRows?.includes(item?._id) ? "bg-gray-300" : ""
+                      }`}
                     >
                       <th scope="col" className="p-4">
                         <div className="flex items-center">

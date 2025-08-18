@@ -300,8 +300,11 @@ const AdminRoles = () => {
                 {data?.map((i, index) => (
                   <tr
                     key={i._id}
-                    className="border-b transition-colors  data-[state=selected]:bg-muted"
-                  >
+                    className={`border-b transition-colors ${
+  selectedRows?.includes(item?._id) 
+    ? 'bg-gray-300' 
+    : 'hover:bg-gray-50'
+}`}                  >
                     <th scope="col" className="p-4">
                       <div className="flex items-center">
                         <input

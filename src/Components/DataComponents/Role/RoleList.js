@@ -25,17 +25,18 @@ const RoleList = ({ roles, onEdit, onDelete }) => {
     if (result.isConfirmed) {
       try {
         await axios.delete(`${process.env.REACT_APP_BASE_URL}/roles/${roleId}`)
-
         Swal.fire({
           title: "Deleted!",
           text: "Role has been deleted successfully.",
           icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
+          showConfirmButton: true, 
+          confirmButtonColor: "#3b82f6", 
+          confirmButtonText: "OK",
           customClass: {
             popup: "rounded-xl",
           },
-        })
+        });
+
 
         onDelete()
       } catch (error) {

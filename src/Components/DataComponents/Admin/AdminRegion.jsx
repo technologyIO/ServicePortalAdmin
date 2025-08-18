@@ -15,6 +15,7 @@ import axios from "axios";
 import moment from "moment";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../../../LoadingSpinner";
+import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
 
 function AdminRegion() {
   const [showModal, setShowModal] = useState(false);
@@ -36,6 +37,27 @@ function AdminRegion() {
   const [isDownloadingRegion, setIsDownloadingRegion] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
+  // Add these states at the top with other states
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+
+  // Add these functions
+  const handleSelectAll = () => {
+    setSelectAll(!selectAll);
+    if (!selectAll) {
+      setSelectedRows(data?.map((region) => region._id));
+    } else {
+      setSelectedRows([]);
+    }
+  };
+
+  const handleRowSelect = (regionId) => {
+    if (selectedRows.includes(regionId)) {
+      setSelectedRows(selectedRows.filter((id) => id !== regionId));
+    } else {
+      setSelectedRows([...selectedRows, regionId]);
+    }
+  };
 
   const downloadRegionExcel = async () => {
     setIsDownloadingRegion(true);
@@ -464,85 +486,105 @@ ${usersList}
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center">
-              <FormControl sx={{ flex: 1 }} size="sm">
-                <Input
-                  size="sm"
-                  placeholder="Search"
-                  startDecorator={<SearchIcon />}
-                  value={searchQuery}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      if (searchQuery.trim()) {
-                        handleSearch(1);
-                      } else {
-                        // If Enter is pressed with empty search, reset to normal data
-                        setIsSearchMode(false);
-                        setSearchQuery("");
-                        setPage(1);
-                        getAllData(1);
-                      }
-                    }
-                  }}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearchQuery(value);
-
-                    // If input is completely cleared, automatically refresh data
-                    if (value === "" && isSearchMode) {
-                      setIsSearchMode(false);
-                      setPage(1);
-                      getAllData(1);
-                    }
-                  }}
-                />
-              </FormControl>
-              <button
-                onClick={() => handleSearch(1)}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
-              >
-                Search
-              </button>
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
+            {/* Top Row: Search and Main Actions */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <FormControl sx={{ flex: 1 }} size="sm">
+                    <Input
+                      size="sm"
+                      placeholder="Search records, users, or data..."
+                      startDecorator={<SearchIcon />}
+                      value={searchQuery}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          if (searchQuery.trim()) {
+                            handleSearch(1);
+                          } else {
+                            setIsSearchMode(false);
+                            setSearchQuery("");
+                            setPage(1);
+                            getAllData(1);
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchQuery(value);
+                        if (value === "" && isSearchMode) {
+                          setIsSearchMode(false);
+                          setPage(1);
+                          getAllData(1);
+                        }
+                      }}
+                      className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                    />
+                  </FormControl>
+                </div>
+                <button
+                  onClick={() => handleSearch(1)}
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Search
+                </button>
+              </div>
+              <div className="flex gap-3">
+                {/* Refresh Button Always Visible */}
+                <button
+                  type="button"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+                <button
+                  onClick={handleCloseModal}
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New
+                </button>
+              </div>
             </div>
 
-            <div className="flex gap-3 ">
-              <button
-                onClick={handleCloseModal}
-                type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
-              >
-                Create
-              </button>
+            {/* Bottom Row: Filter, Download Excel */}
+            <div className="flex flex-wrap justify-end gap-3">
               <button
                 type="button"
-                className="text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br  focus:outline-none  font-medium rounded-[3px] text-sm  py-1.5 text-center  mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Filter className="w-4 h-4" />
                 Filter
               </button>
               <button
-                className={`text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2 ${
-                  isDownloadingRegion
-                    ? "bg-gray-500 cursor-not-allowed"
-                    : "text-white w-full col-span-2 px-5 md:col-span-1 bg-blue-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center mb-2"
-                }`}
                 onClick={downloadRegionExcel}
                 disabled={isDownloadingRegion}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isDownloadingRegion
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                }`}
               >
                 {isDownloadingRegion ? (
-                  <>
-                    <div className="flex items-center">
-                      <LoadingSpinner />
-                      Downloading...
-                    </div>
-                  </>
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">...</span>
+                  </div>
                 ) : (
-                  <>Download Excel</>
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download Excel</span>
+                    <span className="sm:inline hidden">Download</span>
+                  </>
                 )}
               </button>
             </div>
           </div>
+
           {/* Add this div before the table */}
           <div className="flex justify-between items-center ">
             <div className="text-sm text-gray-600">
@@ -571,6 +613,8 @@ ${usersList}
                         id="checkbox-all-search"
                         type="checkbox"
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                        checked={selectAll}
+                        onChange={handleSelectAll}
                       />
                       <label htmlFor="checkbox-all-search" className="sr-only">
                         checkbox
@@ -618,7 +662,11 @@ ${usersList}
                       return countries.map((country, stateIndex) => (
                         <tr
                           key={`${regionId}-${stateIndex}`}
-                          className="border-b transition-colors data-[state=selected]:bg-muted"
+                          className={`border-b transition-colors ${
+                            selectedRows?.includes(regionId)
+                              ? "bg-gray-300"
+                              : "hover:bg-gray-50"
+                          }`}
                         >
                           {/* 🟢 Only show these fields once using rowSpan */}
                           {stateIndex === 0 && (
@@ -633,7 +681,10 @@ ${usersList}
                                     id={`checkbox-${regionIndex}`}
                                     type="checkbox"
                                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                                    checked={selectedRows?.includes(regionId)}
+                                    onChange={() => handleRowSelect(regionId)}
                                   />
+
                                   <label
                                     htmlFor={`checkbox-${regionIndex}`}
                                     className="sr-only"

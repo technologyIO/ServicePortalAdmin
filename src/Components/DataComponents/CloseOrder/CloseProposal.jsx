@@ -97,7 +97,7 @@ function CloseProposal() {
 
     setFilteredData(filtered);
   };
- useEffect(() => {
+  useEffect(() => {
     if (!searchQuery) {
       fetchProposals();
     }
@@ -175,7 +175,8 @@ function CloseProposal() {
               <th className="p-3 text-left">
                 <input type="checkbox" className="w-4 h-4" />
               </th>
-              <th className="p-3 text-left font-medium">Proposal No.</th>
+              <th className="p-3 text-left font-medium">Proposal Number</th>
+              <th className="p-3 text-left font-medium">Cnote Number</th>
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">CO Number</th>
               <th className="p-3 text-left font-medium">Discount %</th>
@@ -196,9 +197,11 @@ function CloseProposal() {
                 </td>
 
                 <td className="p-3 font-bold text-blue-600">
-                  {proposal.proposalNumber}
+                  {proposal?.proposalNumber}
                 </td>
-
+                <td className="p-3 font-bold text-gray-600">
+                  {proposal?.cnoteNumber}
+                </td>
                 <td className="p-3">
                   <div>
                     <div className="font-medium capitalize">

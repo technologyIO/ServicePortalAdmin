@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import RoleForm from "./RoleForm";
 import RoleList from "./RoleList";
 import { fetchRoles, fetchParentRoles, fetchComponents } from "./utils";
@@ -15,8 +15,33 @@ const RoleManagement = () => {
   const [selectedParentRole, setSelectedParentRole] = useState("");
   const [selectedRoleType, setSelectedRoleType] = useState("");
   const [availableComponents, setAvailableComponents] = useState([]);
+  const formRef = useRef(null);
 
-  // Fetch all required data
+  // All useEffect hooks should be at the top level
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [rolesData, parentRolesData, componentsData] = await Promise.all([
+          fetchRoles(),
+          fetchParentRoles(),
+          fetchComponents(),
+        ]);
+        setRoles(rolesData);
+        setParentRoles(parentRolesData);
+        setAvailableComponents(componentsData);
+      } catch (error) {
+        toast.error("Failed to load initial data");
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch all required data function
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -36,14 +61,21 @@ const RoleManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleEdit = (role) => {
     setIsEditing(true);
     setCurrentRoleId(role._id);
     setSelectedParentRole(role.parentRole?._id || "");
+
+    // Smooth scroll to form section
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest",
+        });
+      }
+    }, 100);
   };
 
   const handleRoleUpdate = () => {
@@ -58,6 +90,7 @@ const RoleManagement = () => {
     setSelectedRoleType("");
   };
 
+  // Loading check after all hooks
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -88,7 +121,10 @@ const RoleManagement = () => {
           </div>
 
           {/* Form Section */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/50 overflow-hidden">
+          <div
+            ref={formRef}
+            className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200/50 overflow-hidden"
+          >
             <div className="">
               <RoleForm
                 isEditing={isEditing}

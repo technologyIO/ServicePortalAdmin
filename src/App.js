@@ -79,6 +79,8 @@ import CloseOncallOrder from './Components/DataComponents/CloseOrder/CloseOncall
 import QuoteTemplate from './Components/Template/OnCallQuoteTemplate';
 import ProposalQuoteTemplate from './Components/Template/ProposalQuoteTemplate';
 import ComplaintType from './Components/DataComponents/Master_Managemnet/ComplaintType/ComplaintType';
+import { ServiceMangePage } from './Components/ServiceMangePage';
+import OnCallDetailPage from './Components/DataComponents/OnCall/OnCallDetailPage';
 
 
 const PrivateRoute = ({ children }) => {
@@ -408,12 +410,12 @@ const AppContent = () => {
             />} />
             <Route path="/service-charge" element={<ProtectedRoute
               component={ServiceCharge}
-              componentName="Service Charge"
+              componentName="OnCall Service Charge"
               requiredPermission="read"
             />} />
             <Route path="/cnote-delete" element={<ProtectedRoute
               component={CNoteDelete}
-              componentName="CNote Delete"
+              componentName="CMC/NCMC Cnote Delete"
               requiredPermission="read"
             />} />
             <Route path="/oncall-cnote-delete" element={<ProtectedRoute
@@ -452,6 +454,8 @@ const AppContent = () => {
                 requiredPermission="read"
               />} /> */}
             <Route path="/open-proposal" element={<OpenProposal />} />
+            <Route path="/on-call/customer/:customerId" element={<OnCallDetailPage />} />
+            <Route path="/service-manage" element={<ServiceMangePage />} />
             <Route path="/complaint-create" element={<ComplaintCreate />} />
             <Route path="/user-create" element={<UserManagment />} />
             <Route path="/proposal/:id" element={<ProposalApprovalPage />} />

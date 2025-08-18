@@ -9,7 +9,7 @@ import axios from "axios";
 import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { RefreshCw, X } from "lucide-react";
+import { Download, Filter, Plus, RefreshCw, Upload, X } from "lucide-react";
 import LoadingSpinner from "../../../../LoadingSpinner";
 
 const UserData = () => {
@@ -388,103 +388,127 @@ const UserData = () => {
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex gap-3 justify-center">
-              <FormControl sx={{ flex: 1 }} size="sm">
-                <Input
-                  size="sm"
-                  placeholder="Search"
-                  startDecorator={<SearchIcon />}
-                  value={searchQuery}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch();
-                    }
-                  }}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-              </FormControl>
-              <button
-                onClick={() => handleSearch(1)}
-                type="button"
-                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
-              >
-                Search
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSpinning(true);
-                  getData();
-                  setTimeout(() => setIsSpinning(false), 1000);
-                }}
-                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2 flex items-center justify-center gap-2"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </button>
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-2 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <SearchIcon className="h-5 w-5 text-gray-400" />
+                  </div>
 
-              <div className="flex justify-end ">
+                  <input
+                    type="text"
+                    placeholder="Search records, users, or data..."
+                    value={searchQuery}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch();
+                      }
+                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="block w-full pl-12 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                  />
+                </div>
+
+                <button
+                  onClick={() => handleSearch(1)}
+                  type="button"
+                  className="px-6  bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Search
+                </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSpinning(true);
+                    getData();
+                    setTimeout(() => setIsSpinning(false), 1000);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-2xl hover:bg-blue-100 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+                  />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/user-create")}
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  <Plus />
+                  Create New
+                </button>
+
                 {selectedRows?.length > 0 && (
-                  <div className="flex justify-center ">
+                  <div className="animate-in slide-in-from-right-2 duration-300">
                     <button
                       onClick={handleBulkDelete}
                       type="button"
-                      className="text-white w-full text-nowrap col-span-2 px-5 md:col-span-1 bg-red-700 hover:bg-gradient-to-br focus:outline-none font-medium rounded-[3px] text-sm py-1.5 text-center me-2 mb-2"
+                      className="px-4 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
                     >
-                      Delete Selected ({selectedRows.length})
+                      <span className="hidden sm:inline">Delete Selected</span>
+                      <span className="sm:hidden">Delete</span>
+                      <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
+                        ({selectedRows.length})
+                      </span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex gap-3">
+
+            <div className="flex flex-wrap justify-end gap-3">
               <button
                 type="button"
-                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-2xl hover:bg-blue-100 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
+                <Upload size={20} />
                 Upload
               </button>
 
               <button
-                onClick={() => navigate("/user-create")}
                 type="button"
-                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-2xl hover:bg-blue-100 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
-                Create
-              </button>
-              <button
-                type="button"
-                className="text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
-              >
+                <span className="text-sm">
+                  <Filter size={20} />
+                </span>
                 Filter
               </button>
+
               <button
-                className={`text-white text-nowrap w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2
-          ${
-            isDownloading
-              ? "bg-gradient-to-r from-gray-500 to-gray-600 cursor-not-allowed"
-              : "text-white w-full col-span-2 px-5 bg-blue-700 hover:bg-gradient-to-br font-medium rounded-[3px] text-sm py-1.5 mb-2"
-          }`}
                 onClick={downloadExcel}
                 disabled={isDownloading}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isDownloading
+                    ? "bg-white text-gray-500 cursor-not-allowed"
+                    : "bg-white shadow-2xl hover:bg-blue-100 text-gray-700 focus:ring-gray-500/20"
+                }`}
               >
                 {isDownloading ? (
-                  <>
-                    <div className="flex items-center">
-                      <LoadingSpinner />
-                      Downloading...
-                    </div>
-                  </>
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">...</span>
+                  </div>
                 ) : (
-                  <>Download Excel</>
+                  <>
+                    <span className="text-sm">
+                      <Download size={20} />
+                    </span>
+                    <span className="hidden sm:inline">Export Excel</span>
+                    <span className="sm:inline hidden">Export</span>
+                  </>
                 )}
               </button>
             </div>
           </div>
+
           <div className="flex justify-end ">
             {/* {selectedRows?.length > 0 && (
               <button
@@ -571,7 +595,14 @@ const UserData = () => {
                 {data?.map((item, index) => {
                   console.log("item", item);
                   return (
-                    <tr key={item?._id} className="border-b">
+                    <tr
+                      key={item?._id}
+                      className={`border-b transition-colors ${
+                        selectedRows?.includes(item?._id)
+                          ? "bg-gray-300"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
                       <th scope="row" className="p-4">
                         <div className="flex items-center">
                           <input
