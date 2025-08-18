@@ -301,10 +301,11 @@ const AdminRoles = () => {
                   <tr
                     key={i._id}
                     className={`border-b transition-colors ${
-  selectedRows?.includes(item?._id) 
-    ? 'bg-gray-300' 
-    : 'hover:bg-gray-50'
-}`}                  >
+                      selectedRows?.includes(i?._id)
+                        ? "bg-gray-300"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
                     <th scope="col" className="p-4">
                       <div className="flex items-center">
                         <input
@@ -383,7 +384,7 @@ const AdminRoles = () => {
                             />
                           </svg>
                         </button>
-                        
+
                         <button
                           onClick={() => handleDelete(i?._id)}
                           className="p-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"

@@ -388,10 +388,11 @@ const AdminPM_Master = () => {
                   <tr
                     key={i._id}
                     className={`border-b transition-colors ${
-  selectedRows?.includes(item?._id) 
-    ? 'bg-gray-300' 
-    : 'hover:bg-gray-50'
-}`}                  >
+                      selectedRows?.includes(i?._id)
+                        ? "bg-gray-300"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
                     <th scope="col" className="p-4">
                       <div className="flex items-center">
                         <input
