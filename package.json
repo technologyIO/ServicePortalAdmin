@@ -33,7 +33,6 @@
     "react-sweetalert2": "^0.6.0",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.12.2",
-    "tailwind-scrollbar": "^4.0.2",
     "typescript": "latest",
     "web-vitals": "^2.1.4",
     "xlsx": "^0.18.5"

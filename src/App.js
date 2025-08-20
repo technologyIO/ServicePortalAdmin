@@ -72,7 +72,7 @@ import OTPVerification from './Components/Auth/OTPVerification';
 import ResetPasswordOtp from './Components/Auth/ResetPasswordOtp';
 import PmDocMaster from './Components/DataComponents/Master_Managemnet/PmDocMaster/PmDocMaster';
 import ServiceCharge from './Components/DataComponents/Admin/ServiceCharge';
-import OnCallApproval from './Components/DataComponents/OnCall/OnCallApproval';
+import OnCall from './Components/DataComponents/OnCall/OnCall';
 import OnCallCnoteDelete from './Components/DataComponents/Admin/CNote/OnCallCnoteDelete';
 import OpenOnCallOrder from './Components/DataComponents/CloseOrder/OpenOnCallOrder';
 import CloseOncallOrder from './Components/DataComponents/CloseOrder/CloseOncallOrder';
@@ -81,6 +81,9 @@ import ProposalQuoteTemplate from './Components/Template/ProposalQuoteTemplate';
 import ComplaintType from './Components/DataComponents/Master_Managemnet/ComplaintType/ComplaintType';
 import { ServiceMangePage } from './Components/ServiceMangePage';
 import OnCallDetailPage from './Components/DataComponents/OnCall/OnCallDetailPage';
+import OnCallApproval from './Components/DataComponents/OnCall/OnCallApproval';
+import CMCNCMCList from './Components/DataComponents/Admin/QuoteApproval/CMCNCMCList';
+import CMCNCMCDetailTabs from './Components/DataComponents/Admin/QuoteApproval/CMCNCMCDetailTabs';
 
 
 const PrivateRoute = ({ children }) => {
@@ -403,9 +406,14 @@ const AppContent = () => {
               componentName="CMC/NCMC Discount"
               requiredPermission="read"
             />} />
-            <Route path="/quote-approval" element={<ProtectedRoute
+            <Route path="/cmc-ncm-approval" element={<ProtectedRoute
               component={QuoteApproval}
               componentName="Quote Approval"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-open" element={<ProtectedRoute
+              component={CMCNCMCList}
+              componentName="CMC/NCMC"
               requiredPermission="read"
             />} />
             <Route path="/service-charge" element={<ProtectedRoute
@@ -421,6 +429,11 @@ const AppContent = () => {
             <Route path="/oncall-cnote-delete" element={<ProtectedRoute
               component={OnCallCnoteDelete}
               componentName="OnCall Cnote Delete"
+              requiredPermission="read"
+            />} />
+            <Route path="/on-call-open" element={<ProtectedRoute
+              component={OnCall}
+              componentName="OnCall"
               requiredPermission="read"
             />} />
             <Route path="/on-call-approval" element={<ProtectedRoute
@@ -455,6 +468,7 @@ const AppContent = () => {
               />} /> */}
             <Route path="/open-proposal" element={<OpenProposal />} />
             <Route path="/on-call/customer/:customerId" element={<OnCallDetailPage />} />
+            <Route path="/cmcncmc/customer/:customerId" element={<CMCNCMCDetailTabs />} />
             <Route path="/service-manage" element={<ServiceMangePage />} />
             <Route path="/complaint-create" element={<ComplaintCreate />} />
             <Route path="/user-create" element={<UserManagment />} />

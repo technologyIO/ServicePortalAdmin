@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePermissions } from "../../PermissionContext"; // <- Import your permissions hook
 import { Delete, LucideDelete, Trash, Trash2 } from "lucide-react";
+import { Approval } from "@mui/icons-material";
 
 // SVG ICONS (unchanged)
 const DashboardIcon = () => (
@@ -271,17 +272,34 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
           title: "OnCall",
           storageKey: "onCallTogglerState",
           items: [
-            { component: "OnCall", path: "/on-call-approval", label: "Open" },
-            { component: "OnCall", path: "/oncall-close", label: "Close" },
+            { component: "OnCall", path: "/on-call-open", label: "Open" },
+            { component: "OnCall", path: "/on-call-close", label: "Close" },
           ],
         },
         {
           title: "CMC/NCMC",
           storageKey: "cmcNcmcTogglerState",
           items: [
-            { component: "CMC/NCMC", path: "/quote-approval", label: "Open" },
+            { component: "CMC/NCMC", path: "/cmc-ncmc-open", label: "Open" },
             { component: "CMC/NCMC", path: "/cmc-ncmc-close", label: "Close" },
           ],
+        },
+      ],
+    },
+    {
+      title: "Opportunity Approval",
+      icon: <Approval className="size-5" />,
+      storageKey: "opportunityapprovalTogglerState",
+      items: [
+        {
+          component: "On Call Approval",
+          path: "/on-call-approval",
+          label: "OnCall Approval",
+        },
+        {
+          component: "CMC/NCMC Approval",
+          path: "/cmc-ncm-approval",
+          label: "CMC/NCMC Approval",
         },
       ],
     },
@@ -335,10 +353,14 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       ],
     },
   ];
+  const baseUrl =
+    process.env.REACT_APP_API_URL ||
+    "https://servicepbackend.insideoutprojects.in";
+  const avatarPath = user?.details?.profileimage;
+  const avatarImage = avatarPath
+    ? `${baseUrl}${avatarPath}`
+    : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
 
-  const avatarImage =
-    user?.details?.profileimage ||
-    "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286";
   const userName = user?.details?.firstname || "John Doe";
   const userId = user?.details?.employeeid || "EMP001";
   const userRole = user?.details?.role?.roleName || "Administrator";

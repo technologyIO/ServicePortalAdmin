@@ -8,44 +8,49 @@ import moment from "moment";
 import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
 
 function OnCallCNoteDelete() {
-  /* ───────────────────────── STATES ───────────────────────── */
+  // ───────────────────────── STATES ─────────────────────────
   const [data, setData] = useState([]);
-  const [filteredData, setFiltered] = useState([]);
   const [loader, setLoader] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-
   const limit = 10;
 
-  /* ───────────────────────── API CALLS ───────────────────────── */
-  const getAllData = useCallback(() => {
+  // ──────────────────────── API CALLS ────────────────────────
+  const getAllData = useCallback(async (pg = page, query = searchQuery) => {
     setLoader(true);
-    axios
-      .get(
-        `${process.env.REACT_APP_BASE_URL}/phone/oncall-cnote?page=${page}&limit=${limit}`
-      )
-      .then((res) => {
-        setLoader(false);
-        const rows = res.data.data || res.data;
-        const pagesCount =
-          res.data.totalPages || Math.ceil((res.data.length || 0) / limit);
-
-        setData(rows);
-        setFiltered(rows);
-        setTotalPages(pagesCount);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoader(false);
-      });
-  }, [page]);
+    try {
+      const params = { page: pg, limit };
+      if (query && query.trim()) params.q = query.trim();
+      // Choose API according to search
+      const apiUrl =
+        query && query.trim()
+          ? "/phone/oncall-cnote/search"
+          : "/phone/oncall-cnote/paginated";
+      const res = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}${apiUrl}`,
+        { params }
+      );
+      setLoader(false);
+      const rows = res.data.data || [];
+      setData(rows);
+      setTotalPages(res.data.pagination?.totalPages || 1);
+      setTotalRecords(res.data.pagination?.totalRecords || rows.length);
+      setPage(res.data.pagination?.currentPage || pg);
+    } catch (err) {
+      console.error(err);
+      setLoader(false);
+      Swal.fire("Error!", "Failed to fetch data.", "error");
+    }
+  }, [page, searchQuery, limit]);
 
   useEffect(() => {
-    getAllData();
-  }, [getAllData]);
+    getAllData(page, searchQuery);
+    // eslint-disable-next-line
+  }, [page]);
 
-  /* ───────────────────────── DELETE ───────────────────────── */
+  // ─────────────── DELETE ───────────────
   const handleDelete = (cnoteNumber) => {
     Swal.fire({
       title: "Delete Permanently?",
@@ -63,7 +68,7 @@ function OnCallCNoteDelete() {
           )
           .then(() => {
             Swal.fire("Deleted!", "OnCall C-Note deleted.", "success");
-            getAllData();
+            getAllData(page, searchQuery);
           })
           .catch((err) => {
             console.error(err);
@@ -73,32 +78,27 @@ function OnCallCNoteDelete() {
     });
   };
 
-  /* ───────────────────────── SEARCH ───────────────────────── */
-  const handleSearch = () => {
-    if (!searchQuery.trim()) {
-      setFiltered(data);
-      return;
+  // ─────────────── SEARCH ───────────────
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    // Refresh data when search is cleared
+    if (value === "" || value.trim() === "") {
+      setPage(1);
+      getAllData(1, "");
     }
-
-    const query = searchQuery.toLowerCase();
-
-    const filtered = data.filter((row) => {
-      return (
-        row.cnoteNumber?.toLowerCase().includes(query) ||
-        row.onCallNumber?.toLowerCase().includes(query) ||
-        row.customer?.customername?.toLowerCase().includes(query) ||
-        row.status?.toLowerCase().includes(query) ||
-        row.complaint?.notification_complaintid
-          ?.toLowerCase()
-          .includes(query) ||
-        row.complaint?.materialdescription?.toLowerCase().includes(query)
-      );
-    });
-
-    setFiltered(filtered);
   };
 
-  /* ───────────────────────── HELPERS ───────────────────────── */
+  const handleSearch = () => {
+    setPage(1);
+    getAllData(1, searchQuery);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") handleSearch();
+  };
+
+  // ─────────────── HELPERS ───────────────
   const getRevisionStatus = (row) => {
     if (!row.revisions || row.revisions.length === 0) {
       return {
@@ -106,12 +106,10 @@ function OnCallCNoteDelete() {
         color: "bg-gray-100 text-gray-800",
       };
     }
-
     const currentRev = row.revisions.find(
       (r) => r.revisionNumber === row.currentRevision
     );
     const status = currentRev?.status || row.status || "draft";
-
     const colorMap = {
       approved: "bg-green-100 text-green-800",
       pending: "bg-yellow-100 text-yellow-800",
@@ -120,29 +118,24 @@ function OnCallCNoteDelete() {
       cancelled: "bg-red-100 text-red-800",
       draft: "bg-gray-100 text-gray-800",
     };
-
     return { status, color: colorMap[status] || "bg-gray-100 text-gray-800" };
   };
 
-  const getTotalSpares = (spares) => {
-    return spares?.length || 0;
-  };
-
+  const getTotalSpares = (spares) => spares?.length || 0;
   const getApprovalStatus = (row) => {
     const rsh = row.RSHApproval?.approved;
     const nsh = row.NSHApproval?.approved;
-
     if (rsh && nsh) return { text: "Both Approved", color: "text-green-600" };
     if (rsh) return { text: "RSH Only", color: "text-orange-600" };
     if (nsh) return { text: "NSH Only", color: "text-orange-600" };
     return { text: "Pending", color: "text-red-600" };
   };
 
-  /* ───────────────────────── PAGINATION ───────────────────────── */
+  // ─────────────── PAGINATION ───────────────
   const handlePrev = () => page > 1 && setPage((p) => p - 1);
   const handleNext = () => page < totalPages && setPage((p) => p + 1);
 
-  /* ───────────────────────── RENDER ───────────────────────── */
+  // ─────────────── RENDER ───────────────
   return loader ? (
     <div className="flex items-center justify-center h-[60vh]">
       <span className="CustomLoader" />
@@ -161,13 +154,13 @@ function OnCallCNoteDelete() {
                   placeholder="Search C-Note / OnCall / Customer / Complaint / Device..."
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                  onChange={handleSearchChange}
+                  onKeyDown={handleKeyDown}
+                  className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 
+                  focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
                 />
               </FormControl>
             </div>
-
             <button
               onClick={handleSearch}
               type="button"
@@ -176,37 +169,24 @@ function OnCallCNoteDelete() {
               Search
             </button>
           </div>
-
           {/* Primary Action Buttons */}
           <div className="flex gap-3">
             <button
               type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setPage(1);
+                getAllData(1, "");
+              }}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
             >
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
-
-            {/* <button
-              type="button"
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" />
-              Create New
-            </button> */}
           </div>
         </div>
-
         {/* Secondary Actions Row */}
         <div className="flex flex-wrap justify-end gap-3">
-          {/* <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-          >
-            <Upload className="w-4 h-4" />
-            Upload
-          </button> */}
-
           <button
             type="button"
             className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
@@ -214,7 +194,6 @@ function OnCallCNoteDelete() {
             <Filter className="w-4 h-4" />
             Filter
           </button>
-
           <button
             type="button"
             className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
@@ -225,7 +204,6 @@ function OnCallCNoteDelete() {
           </button>
         </div>
       </div>
-
       {/* TABLE */}
       <div className="relative w-full overflow-x-auto border rounded shadow-sm">
         <table className="w-full text-sm min-w-max">
@@ -249,10 +227,9 @@ function OnCallCNoteDelete() {
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((row, idx) => {
+            {data.map((row) => {
               const revisionStatus = getRevisionStatus(row);
               const approvalStatus = getApprovalStatus(row);
-
               return (
                 <tr key={row._id} className="border-b hover:bg-gray-50">
                   <td className="p-3">
@@ -261,13 +238,8 @@ function OnCallCNoteDelete() {
                       className="w-4 h-4 text-blue-600 rounded"
                     />
                   </td>
-
-                  <td className="p-3 font-bold text-blue-600">
-                    {row.cnoteNumber}
-                  </td>
-
+                  <td className="p-3 font-bold text-blue-600">{row.cnoteNumber}</td>
                   <td className="p-3 font-semibold">{row.onCallNumber}</td>
-
                   <td className="p-3">
                     <div>
                       <div className="font-medium capitalize">
@@ -278,7 +250,6 @@ function OnCallCNoteDelete() {
                       </div>
                     </div>
                   </td>
-
                   <td className="p-3">
                     <div className="max-w-32">
                       <div
@@ -292,23 +263,19 @@ function OnCallCNoteDelete() {
                       </div>
                     </div>
                   </td>
-
                   <td className="p-3 font-mono text-xs">
                     {row.complaint?.notification_complaintid}
                   </td>
-
                   <td className="p-3 text-center">
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
                       {getTotalSpares(row.spares)}
                     </span>
                   </td>
-
                   <td className="p-3 text-center">
                     <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-medium">
                       Rev {row.currentRevision || 0}
                     </span>
                   </td>
-
                   <td className="p-3">
                     <span
                       className={`px-2 py-1 rounded text-xs font-medium ${revisionStatus.color}`}
@@ -316,7 +283,6 @@ function OnCallCNoteDelete() {
                       {revisionStatus.status}
                     </span>
                   </td>
-
                   <td className="p-3">
                     <span
                       className={`text-xs font-medium ${approvalStatus.color}`}
@@ -324,11 +290,9 @@ function OnCallCNoteDelete() {
                       {approvalStatus.text}
                     </span>
                   </td>
-
                   <td className="p-3 font-semibold text-green-600">
                     ₹{row.finalAmount?.toLocaleString("en-IN") || "0"}
                   </td>
-
                   <td className="p-3">
                     <div className="text-xs">
                       <div>{moment(row.createdAt).format("MMM D, YYYY")}</div>
@@ -337,7 +301,6 @@ function OnCallCNoteDelete() {
                       </div>
                     </div>
                   </td>
-
                   <td className="p-3">
                     <div className="flex gap-2">
                       <button
@@ -361,8 +324,7 @@ function OnCallCNoteDelete() {
                 </tr>
               );
             })}
-
-            {filteredData.length === 0 && (
+            {data.length === 0 && (
               <tr>
                 <td colSpan={13} className="text-center py-8 text-gray-500">
                   <div className="flex flex-col items-center gap-2">
@@ -387,13 +349,11 @@ function OnCallCNoteDelete() {
           </tbody>
         </table>
       </div>
-
       {/* PAGINATION */}
       <div className="flex items-center justify-between mt-6 px-2">
         <div className="text-sm text-gray-600">
-          Showing {filteredData.length} of {data.length} entries
+          Showing {data.length} of {totalRecords} entries
         </div>
-
         <div className="flex items-center gap-2">
           <button
             onClick={handlePrev}
@@ -434,7 +394,6 @@ function OnCallCNoteDelete() {
                 </React.Fragment>
               ))}
           </div>
-
           <button
             onClick={handleNext}
             disabled={page === totalPages}

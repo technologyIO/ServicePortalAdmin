@@ -331,7 +331,7 @@ const AdminUserType = () => {
                     key={i._id}
                     className={`border-b transition-colors ${
                       selectedRows?.includes(i?._id)
-                        ? "bg-gray-300"
+                        ? "bg-gray-300" 
                         : "hover:bg-gray-50"
                     }`}
                   >
