@@ -113,16 +113,12 @@ function CloseProposal() {
     setSelectedProposal(null);
   };
 
-  /* ───────────────────────── HELPERS ───────────────────────── */
   const getStatusColor = (status) => {
     const colorMap = {
-      completed: "bg-green-100 text-green-800",
-      approved: "bg-blue-100 text-blue-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      rejected: "bg-red-100 text-red-800",
-      issued: "bg-purple-100 text-purple-800",
-      cancelled: "bg-red-100 text-red-800",
-      draft: "bg-gray-100 text-gray-800",
+      closed_won: "bg-green-100 text-green-800",
+      open: "bg-blue-100 text-blue-800",
+      completed: "bg-purple-100 text-purple-800", // add more if needed
+      draft: "bg-yellow-100 text-yellow-800",
     };
     return colorMap[status?.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
@@ -176,6 +172,7 @@ function CloseProposal() {
                 <input type="checkbox" className="w-4 h-4" />
               </th>
               <th className="p-3 text-left font-medium">Proposal Number</th>
+              <th className="p-3 text-left font-medium">Serial Number</th>
               <th className="p-3 text-left font-medium">Cnote Number</th>
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">CO Number</th>
@@ -198,6 +195,9 @@ function CloseProposal() {
 
                 <td className="p-3 font-bold text-blue-600">
                   {proposal?.proposalNumber}
+                </td>
+                <td className="p-3 font-bold text-gray-600">
+                  {proposal?.serialNumber}
                 </td>
                 <td className="p-3 font-bold text-gray-600">
                   {proposal?.cnoteNumber}
@@ -232,10 +232,10 @@ function CloseProposal() {
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                      proposal.status
+                      proposal.Cmcncmcsostatus
                     )}`}
                   >
-                    {proposal.status}
+                    {proposal.Cmcncmcsostatus}
                   </span>
                 </td>
 

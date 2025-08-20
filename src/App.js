@@ -84,6 +84,10 @@ import OnCallDetailPage from './Components/DataComponents/OnCall/OnCallDetailPag
 import OnCallApproval from './Components/DataComponents/OnCall/OnCallApproval';
 import CMCNCMCList from './Components/DataComponents/Admin/QuoteApproval/CMCNCMCList';
 import CMCNCMCDetailTabs from './Components/DataComponents/Admin/QuoteApproval/CMCNCMCDetailTabs';
+import CLoseCmcNcmc from './Components/DataComponents/Admin/QuoteApproval/CloseCmcNcmc/CLoseCmcNcmc';
+import CloseCMCNCMCDetailPage from './Components/DataComponents/Admin/QuoteApproval/CloseCmcNcmc/CloseCMCNCMCDetailPage';
+import CloseOnCall from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCall';
+import CloseOnCallDetailPage from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCallDetailPage';
 
 
 const PrivateRoute = ({ children }) => {
@@ -416,6 +420,11 @@ const AppContent = () => {
               componentName="CMC/NCMC"
               requiredPermission="read"
             />} />
+            <Route path="/cmc-ncmc-close" element={<ProtectedRoute
+              component={CLoseCmcNcmc}
+              componentName="CMC/NCMC"
+              requiredPermission="read"
+            />} />
             <Route path="/service-charge" element={<ProtectedRoute
               component={ServiceCharge}
               componentName="OnCall Service Charge"
@@ -433,6 +442,11 @@ const AppContent = () => {
             />} />
             <Route path="/on-call-open" element={<ProtectedRoute
               component={OnCall}
+              componentName="OnCall"
+              requiredPermission="read"
+            />} />
+            <Route path="/on-call-close" element={<ProtectedRoute
+              component={CloseOnCall}
               componentName="OnCall"
               requiredPermission="read"
             />} />
@@ -468,7 +482,9 @@ const AppContent = () => {
               />} /> */}
             <Route path="/open-proposal" element={<OpenProposal />} />
             <Route path="/on-call/customer/:customerId" element={<OnCallDetailPage />} />
+            <Route path="/close/on-call/customer/:customerId" element={<CloseOnCallDetailPage />} />
             <Route path="/cmcncmc/customer/:customerId" element={<CMCNCMCDetailTabs />} />
+            <Route path="/close/cmcncmc/customer/:customerId" element={<CloseCMCNCMCDetailPage />} />
             <Route path="/service-manage" element={<ServiceMangePage />} />
             <Route path="/complaint-create" element={<ComplaintCreate />} />
             <Route path="/user-create" element={<UserManagment />} />

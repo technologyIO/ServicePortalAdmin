@@ -1,12 +1,18 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { Eye, Download, ArrowLeft } from "lucide-react";
-import moment from "moment";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
+import moment from "moment";
 import { useParams, useNavigate } from "react-router-dom";
-import OnCallApprovalModal from "./OnCallApprovalModal";
-import OnCallViewModal from "./OnCallViewModal";
+ 
+ 
+import { ArrowLeft, Eye, Edit, Download } from "lucide-react";
+import ApprovalModal from "../ApprovalModal";
+import ViewModal from "../ViewModal";
+
+const TABS = [
+  { id: 1, label: "Opportunity" },
+  { id: 2, label: "Quote" },
+  { id: 3, label: "Contract Note" },
+];
 
 const format = (v) =>
   typeof v === "number"
@@ -14,12 +20,6 @@ const format = (v) =>
         minimumFractionDigits: 2,
       })}`
     : v;
-
-const TABS = [
-  { id: 1, label: "Opportunity" },
-  { id: 2, label: "Quote" },
-  { id: 3, label: "Contract Note" },
-];
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_BASE_URL,
@@ -29,18 +29,20 @@ const api = axios.create({
   },
 });
 
-export default function OnCallDetailPage() {
+export default function CloseCMCNCMCDetailPage() {
   const [tab, setTab] = useState(TABS[0].id);
-  const [onCallList, setOnCallList] = useState([]);
+  const [proposalList, setProposalList] = useState([]);
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedOncall, setSelectedOncall] = useState(null);
+  const [selectedProposal, setSelectedProposal] = useState(null);
   const [selectedRevision, setSelectedRevision] = useState(null);
   const [userId, setUserId] = useState(null);
-  const { customerId } = useParams();
+  const [totalProposals, setTotalProposals] = useState(0);
+  const [pagination, setPagination] = useState(null);
+  const { customerId } = useParams(); // Get customerId from URL
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,56 +50,61 @@ export default function OnCallDetailPage() {
     if (userData) {
       try {
         const parsedData = JSON.parse(userData);
-        if (parsedData?.details?.id) {
-          setUserId(parsedData.details.id);
-        }
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
+        if (parsedData?.details?.id) setUserId(parsedData.details.id);
+      } catch {}
     }
   }, []);
 
   useEffect(() => {
-    async function fetchCustomerOnCalls() {
+    async function fetchCustomerProposals() {
       if (!customerId) {
         setError("No customer ID provided");
         setLoading(false);
         return;
       }
-
       setLoading(true);
       setError(null);
 
       try {
-        console.log("Fetching oncall data for customer ID:", customerId);
-        const res = await api.get(`/phone/oncall/customer/${customerId}`, {
+        console.log("Fetching data for customer ID:", customerId);
+
+        // Use the new customer-specific API endpoint
+        const res = await api.get(`/phone/proposal/customer/${customerId}`, {
           params: {
-            minDiscount: 5,
-            includeCompleted: false,
+            limit: 1000,
+            minDiscount: 5, // Only get proposals with discount > 5%
+            includeCompleted: false, // Exclude completed proposals
           },
         });
+
         console.log("API Response:", res.data);
 
+        // Check if API response is successful
         if (res.data.success) {
-          // ✅ Only keep "Open" status
-          const oncalls = (res.data.data || []).filter(
-            (item) => item.onCallproposalstatus === "Open"
-          );
+          const proposals = res.data.data || [];
+          const customerInfo = res.data.customer;
+          const paginationInfo = res.data.pagination;
 
-          const customerInfo = res.data.customer || null;
-          setOnCallList(oncalls);
+          console.log("Total Proposals fetched:", proposals.length);
+
+          setProposalList(proposals);
           setCustomer(customerInfo);
+          setTotalProposals(paginationInfo?.totalRecords || proposals.length);
+          setPagination(paginationInfo);
 
-          if (oncalls.length === 0 && !customerInfo) {
-            setError("Customer not found or no oncalls with status Open");
+          if (proposals.length === 0 && !customerInfo) {
+            setError("Customer not found");
           }
         } else {
-          setError(res.data.message || "Failed to fetch oncall data");
+          // Handle API error response
+          setError(res.data.message || "Failed to fetch proposals");
         }
       } catch (e) {
-        console.error("Error fetching customer oncalls:", e);
+        console.error("Error fetching customer proposals:", e);
+
+        // Handle different types of errors
         if (e.response?.status === 404) {
-          setError("Customer not found or no oncalls available");
+          setError("Customer not found or no proposals available");
         } else if (e.response?.status === 500) {
           setError("Server error. Please try again later.");
         } else {
@@ -106,70 +113,72 @@ export default function OnCallDetailPage() {
           );
         }
       }
-
       setLoading(false);
     }
-
-    fetchCustomerOnCalls();
+    fetchCustomerProposals();
   }, [customerId]);
 
-  const handleViewOpportunity = (oncall) => {
+  const handleViewOpportunity = (proposal) => {
     let rev = null;
-    if (Array.isArray(oncall.revisions) && oncall.revisions.length > 0) {
+    if (Array.isArray(proposal.revisions) && proposal.revisions.length > 0) {
       rev =
-        oncall.revisions.find(
-          (r) => r.revisionNumber === oncall.currentRevision
-        ) || oncall.revisions[oncall.revisions.length - 1];
+        proposal.revisions.find(
+          (r) => r.revisionNumber === proposal.currentRevision
+        ) || proposal.revisions[proposal.revisions.length - 1];
     }
     const revisionData = rev
-      ? { ...oncall, ...rev.changes, status: rev.status || oncall.status }
-      : oncall;
-
-    setSelectedOncall(revisionData);
+      ? {
+          ...proposal,
+          ...rev.changes,
+          status: rev.status || proposal.status,
+        }
+      : proposal;
+    setSelectedProposal(revisionData);
     setSelectedRevision(rev);
     setShowViewModal(true);
   };
 
-  const handleViewRevision = (oncall, revision) => {
+  const handleViewRevision = (proposal, revision) => {
     const revisionData = {
-      ...oncall,
+      ...proposal,
       ...revision.changes,
-      status: revision.status || oncall.status,
+      status: revision.status || proposal.status,
     };
-    setSelectedOncall(revisionData);
+    setSelectedProposal(revisionData);
     setSelectedRevision(revision);
     setShowViewModal(true);
   };
 
-  const handleEditRevision = (oncall, revision) => {
-    const oncallWithRevision = {
-      ...oncall,
+  const handleEditRevision = (proposal, revision) => {
+    const proposalWithRevision = {
+      ...proposal,
       ...revision.changes,
       revisionData: revision,
-      isCurrentRevision: revision.revisionNumber === oncall.currentRevision,
+      isCurrentRevision: revision.revisionNumber === proposal.currentRevision,
       status: revision.status,
     };
-    setSelectedOncall(oncallWithRevision);
+    setSelectedProposal(proposalWithRevision);
     setShowApprovalModal(true);
   };
 
   const handleCloseModal = () => {
     setShowApprovalModal(false);
     setShowViewModal(false);
-    setSelectedOncall(null);
+    setSelectedProposal(null);
     setSelectedRevision(null);
   };
 
-  const fetchOnCalls = async () => {
+  const fetchProposals = async () => {
+    // Refresh the data by reloading the component
     window.location.reload();
   };
 
-  const handleDownloadQuote = (oncallId) => {
-    navigate(`/quote-template/${oncallId}`);
+  const handleDownloadQuote = (proposalId) => {
+    navigate(`/quote-template/${proposalId}`);
   };
 
-  const handleDownloadContractNote = (oncall) => {
-    alert(`Download contract note for ${oncall.onCallNumber}`);
+  const handleDownloadContractNote = (proposal) => {
+    alert(`Download contract note for ${proposal.proposalNumber}`);
   };
 
   if (loading) {
@@ -177,7 +186,7 @@ export default function OnCallDetailPage() {
       <div className="flex items-center justify-center h-[60vh] text-2xl text-blue-700 font-semibold">
         <div className="flex flex-col items-center gap-4">
           <div className="CustomLoader"></div>
-          <div>Loading customer data...</div>
+          <div>Loading customer proposals...</div>
         </div>
       </div>
     );
@@ -193,7 +202,7 @@ export default function OnCallDetailPage() {
           className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-semibold px-4 py-2 border border-blue-700 rounded"
         >
           <ArrowLeft size={20} />
-          Back to Customer List
+          Back to List
         </button>
       </div>
     );
@@ -211,7 +220,7 @@ export default function OnCallDetailPage() {
           className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-semibold px-4 py-2 border border-blue-700 rounded"
         >
           <ArrowLeft size={20} />
-          Back to Customer List
+          Back to List
         </button>
       </div>
     );
@@ -219,23 +228,26 @@ export default function OnCallDetailPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen p-4">
+      {/* Back Button and Customer Info */}
       <div className="mb-6">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-blue-700 hover:text-blue-900 font-semibold mb-4"
         >
           <ArrowLeft size={20} />
-          Back to Customer List
+          Back to List
         </button>
       </div>
 
-      {onCallList.length === 0 && (
+      {/* Show message if no proposals with discount > 5% */}
+      {proposalList.length === 0 && (
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-6">
-          <strong>Note:</strong> This customer has no OnCalls with discount
+          <strong>Note:</strong> This customer has no proposals with discount
           greater than 5%.
         </div>
       )}
 
+      {/* Tab Navigation */}
       <div className="shadow-xl rounded-lg mb-4">
         <div className="flex w-fit bg-gray-200 rounded-lg overflow-hidden">
           {TABS.map((tabItem, i) => (
@@ -251,6 +263,7 @@ export default function OnCallDetailPage() {
               >
                 {tabItem.label}
               </button>
+              {/* Arrow design */}
               {i < TABS.length - 1 && (
                 <>
                   <div
@@ -280,22 +293,21 @@ export default function OnCallDetailPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-lg p-0 overflow-x-auto">
-        {/* Opportunity Tab */}
+        {/* OPPORTUNITY TAB */}
         {tab === 1 && (
           <div>
-            {onCallList.length === 0 ? (
+            {proposalList.length === 0 ? (
               <div className="text-center py-16 text-lg text-gray-500">
-                No OnCalls found with discount greater than 5%
+                No proposals found with discount greater than 5%
               </div>
             ) : (
               <table className="w-full border mb-4 min-w-[900px]">
                 <thead>
                   <tr className="bg-blue-700 text-white text-lg">
                     <th className="p-3 font-bold">S.No</th>
-                    <th className="p-3 font-bold">OnCall #</th>
+                    <th className="p-3 font-bold">Proposal #</th>
                     <th className="p-3 font-bold">Customer</th>
-                    <th className="p-3 font-bold">Product</th>
-                    <th className="p-3 font-bold">Quantity</th>
+                    <th className="p-3 font-bold">Discount</th>
                     <th className="p-3 font-bold">Final Amount</th>
                     <th className="p-3 font-bold">Created At</th>
                     <th className="p-3 font-bold">Status</th>
@@ -303,45 +315,42 @@ export default function OnCallDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {onCallList.map((oncall, idx) => (
+                  {proposalList.map((proposal, idx) => (
                     <tr
-                      key={oncall._id}
+                      key={proposal._id}
                       className="bg-white border-b text-center hover:bg-gray-50"
                     >
                       <td className="p-3">{idx + 1}</td>
-                      <td className="p-3 font-bold">{oncall.onCallNumber}</td>
                       <td className="p-3 font-bold">
-                        {oncall.customer?.customername}
+                        {proposal.proposalNumber}
                       </td>
-                      <td className="p-3 uppercase">
-                        {oncall.productGroups?.[0]?.productPartNo}
+                      <td className="p-3 font-bold">
+                        {proposal.customer?.customername}
                       </td>
+                      <td className="p-3">{proposal.discountPercentage}%</td>
+                      <td className="p-3">{format(proposal.finalAmount)}</td>
                       <td className="p-3">
-                        {oncall.productGroups?.totalSpares}
-                      </td>
-                      <td className="p-3">{format(oncall.finalAmount)}</td>
-                      <td className="p-3">
-                        {moment(oncall.createdAt).format("DD/MM/YYYY")}
+                        {moment(proposal.createdAt).format("DD/MM/YYYY")}
                       </td>
                       <td className="p-3">
                         <span
                           className={
-                            oncall.status === "approved"
+                            proposal.status === "approved"
                               ? "bg-green-100 text-green-800 px-3 py-1 rounded font-bold text-xs"
-                              : oncall.status === "pending"
+                              : proposal.status === "pending"
                               ? "bg-orange-100 text-orange-800 px-3 py-1 rounded font-bold text-xs"
-                              : oncall.status === "rejected"
+                              : proposal.status === "rejected"
                               ? "bg-red-100 text-red-800 px-3 py-1 rounded font-bold text-xs"
                               : "bg-gray-200 px-3 py-1 rounded font-bold text-xs"
                           }
                         >
-                          {oncall.status.toUpperCase()}
+                          {proposal.status?.toUpperCase()}
                         </span>
                       </td>
                       <td className="p-3">
                         <button
                           className="bg-blue-700 rounded-lg p-2 text-white font-bold text-lg hover:bg-blue-800"
-                          onClick={() => handleViewOpportunity(oncall)}
+                          onClick={() => handleViewOpportunity(proposal)}
                         >
                           <Eye size={22} />
                         </button>
@@ -354,23 +363,35 @@ export default function OnCallDetailPage() {
           </div>
         )}
 
-        {/* Quote Tab */}
+        {/* QUOTE TAB */}
         {tab === 2 && (
           <div className="p-6">
-            {onCallList.length === 0 ? (
+            {proposalList.length === 0 ? (
               <div className="text-center py-16 text-lg text-gray-500">
-                No OnCalls found with discount greater than 5%
+                No proposals found with discount greater than 5%
               </div>
             ) : (
-              onCallList.map((oncall) => (
-                <div key={oncall._id} className="mb-10 border-b pb-5">
+              proposalList.map((proposal, callIdx) => (
+                <div className="mb-10 border-b pb-5" key={proposal._id}>
+                  {/* Proposal Header Info */}
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <h3 className="text-lg font-bold text-blue-700">
+                      Proposal: {proposal.proposalNumber}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Customer: {proposal.customer?.customername} | Final
+                      Amount: {format(proposal.finalAmount)} | Discount:{" "}
+                      {proposal.discountPercentage}%
+                    </p>
+                  </div>
+
                   <div className="overflow-x-auto">
                     <table className="w-full border mb-2 min-w-[1100px]">
                       <thead>
                         <tr className="bg-blue-700 text-white text-sm">
                           <th className="p-3 font-bold">S.No</th>
-                          <th className="p-3 font-bold">OnCall Number</th>
-                          <th className="p-3 font-bold">Material Code</th>
+                          <th className="p-3 font-bold">Proposal Number</th>
+                          <th className="p-3 font-bold">Customer</th>
                           <th className="p-3 font-bold">Discount</th>
                           <th className="p-3 font-bold">Net Amount</th>
                           <th className="p-3 font-bold">Status</th>
@@ -380,9 +401,9 @@ export default function OnCallDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Array.isArray(oncall.revisions) &&
-                        oncall.revisions.length ? (
-                          oncall.revisions
+                        {Array.isArray(proposal.revisions) &&
+                        proposal.revisions.length ? (
+                          proposal.revisions
                             .sort((a, b) => b.revisionNumber - a.revisionNumber)
                             .map((rev, idx) => (
                               <tr
@@ -391,19 +412,21 @@ export default function OnCallDetailPage() {
                               >
                                 <td className="p-3">{idx + 1}</td>
                                 <td className="p-3 font-mono text-sm font-bold">
-                                  {oncall.onCallNumber}
+                                  {proposal.proposalNumber}
                                 </td>
                                 <td className="p-3 text-sm">
-                                  {oncall.productGroups?.[0]?.productPartNo}
-                                  <div className="text-xs text-gray-500">
-                                    {oncall.productGroups?.totalSpares} spares
-                                  </div>
+                                  {proposal.customer?.customername}
                                 </td>
                                 <td className="p-3 font-bold">
-                                  {rev.changes?.discountPercentage || 0}%
+                                  {rev.changes?.discountPercentage ||
+                                    proposal.discountPercentage}
+                                  %
                                 </td>
                                 <td className="p-3 font-bold">
-                                  {format(rev.changes?.finalAmount)}
+                                  {format(
+                                    rev.changes?.finalAmount ||
+                                      proposal.finalAmount
+                                  )}
                                 </td>
                                 <td className="p-3">
                                   <span
@@ -426,7 +449,7 @@ export default function OnCallDetailPage() {
                                       Rev. {rev.revisionNumber}
                                     </span>
                                     {rev.revisionNumber ===
-                                      oncall.currentRevision && (
+                                      proposal.currentRevision && (
                                       <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 font-bold">
                                         Current
                                       </span>
@@ -441,18 +464,18 @@ export default function OnCallDetailPage() {
                                     <button
                                       className="bg-blue-700 rounded p-1 text-white hover:bg-blue-800"
                                       onClick={() =>
-                                        handleViewRevision(oncall, rev)
+                                        handleViewRevision(proposal, rev)
                                       }
                                       title="View Details"
                                     >
                                       <Eye size={16} />
                                     </button>
                                     {rev.revisionNumber ===
-                                      oncall.currentRevision && (
+                                      proposal.currentRevision && (
                                       <button
                                         className="bg-gray-500 rounded p-1 text-white hover:bg-gray-600"
                                         onClick={() =>
-                                          handleDownloadQuote(oncall._id)
+                                          handleDownloadQuote(proposal._id)
                                         }
                                         title="Download Quote"
                                       >
@@ -482,20 +505,20 @@ export default function OnCallDetailPage() {
           </div>
         )}
 
-        {/* Contract Note Tab */}
+        {/* CONTRACT NOTE TAB */}
         {tab === 3 && (
           <div>
-            {onCallList.length === 0 ? (
+            {proposalList.length === 0 ? (
               <div className="text-center py-16 text-lg text-gray-500">
-                No OnCalls found with discount greater than 5%
+                No proposals found with discount greater than 5%
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border mb-6 text-lg min-w-[1000px]">
                   <thead>
                     <tr className="bg-blue-700 text-white">
-                      <th className="p-3 font-bold">OnCall #</th>
-                      <th className="p-3 font-bold">C Note ID</th>
+                      <th className="p-3 font-bold">Proposal #</th>
+                      <th className="p-3 font-bold">Contract ID</th>
                       <th className="p-3 font-bold">Discount</th>
                       <th className="p-3 font-bold">Final Amount</th>
                       <th className="p-3 font-bold">PO Number</th>
@@ -505,38 +528,40 @@ export default function OnCallDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {onCallList.map((oncall) => (
+                    {proposalList.map((proposal, idx) => (
                       <tr
-                        key={oncall._id}
+                        key={proposal._id}
                         className="bg-white border-b font-semibold hover:bg-gray-50"
                       >
-                        <td className="p-3 font-bold">{oncall.onCallNumber}</td>
-                        <td className="p-3">{oncall.cnoteNumber || "--"}</td>
-                        <td className="p-3">{oncall.discountPercentage}%</td>
-                        <td className="p-3">{format(oncall.finalAmount)}</td>
-                        <td className="p-3">{oncall.poNumber || "--"}</td>
+                        <td className="p-3 font-bold">
+                          {proposal.proposalNumber}
+                        </td>
+                        <td className="p-3">{proposal.CoNumber || "--"}</td>
+                        <td className="p-3">{proposal.discountPercentage}%</td>
+                        <td className="p-3">{format(proposal.finalAmount)}</td>
+                        <td className="p-3">{proposal.poNumber || "--"}</td>
                         <td className="p-3">
-                          {moment(oncall.createdAt).format("DD/MM/YYYY")}
+                          {moment(proposal.createdAt).format("DD/MM/YYYY")}
                         </td>
                         <td className="p-3">
                           <span
                             className={
-                              oncall.status === "approved"
+                              proposal.status === "approved"
                                 ? "bg-green-100 text-green-800 px-3 py-1 rounded font-bold text-xs"
-                                : oncall.status === "pending"
+                                : proposal.status === "pending"
                                 ? "bg-orange-100 text-orange-800 px-3 py-1 rounded font-bold text-xs"
-                                : oncall.status === "rejected"
+                                : proposal.status === "rejected"
                                 ? "bg-red-100 text-red-800 px-3 py-1 rounded font-bold text-xs"
                                 : "bg-gray-200 px-3 py-1 rounded font-bold text-xs"
                             }
                           >
-                            {oncall.status.toUpperCase()}
+                            {proposal.status?.toUpperCase()}
                           </span>
                         </td>
                         <td className="p-3">
                           <button
                             className="bg-gray-500 rounded p-2 text-white hover:bg-gray-600"
-                            onClick={() => handleDownloadContractNote(oncall)}
+                            onClick={() => handleDownloadContractNote(proposal)}
                             title="Download Contract Note"
                           >
                             <Download size={18} />
@@ -552,19 +577,19 @@ export default function OnCallDetailPage() {
         )}
       </div>
 
-      <OnCallApprovalModal
+      <ApprovalModal
         open={showApprovalModal}
         onClose={handleCloseModal}
-        proposal={selectedOncall}
-        setProposal={setSelectedOncall}
+        proposal={selectedProposal}
+        setProposal={setSelectedProposal}
         userId={userId}
-        fetchProposals={fetchOnCalls}
+        fetchProposals={fetchProposals}
       />
 
-      <OnCallViewModal
+      <ViewModal
         open={showViewModal}
         onClose={handleCloseModal}
-        proposal={selectedOncall}
+        proposal={selectedProposal}
         revision={selectedRevision}
       />
     </div>

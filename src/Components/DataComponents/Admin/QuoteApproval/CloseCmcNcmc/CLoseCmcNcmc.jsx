@@ -6,7 +6,7 @@ import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
 import { Download, Eye, Filter, RefreshCw, View } from "lucide-react";
-import LoadingSpinner from "../../../../LoadingSpinner";
+import LoadingSpinner from "../../../../../LoadingSpinner";
 
 function Loader() {
   return (
@@ -24,7 +24,7 @@ const api = axios.create({
   },
 });
 
-export default function CMCNCMCList() {
+export default function CLoseCmcNcmc() {
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,7 +53,7 @@ export default function CMCNCMCList() {
       // ✅ Filter: only "Open" + discountPercentage > 5
       const filtered = rawData.filter(
         (item) =>
-          item.Cmcncmcsostatus === "Open" &&
+          item.Cmcncmcsostatus !== "Open" &&
           typeof item.discountPercentage === "number" &&
           item.discountPercentage > 5
       );
@@ -275,7 +275,7 @@ export default function CMCNCMCList() {
                       className="bg-blue-700 text-white p-1 rounded font-bold hover:bg-blue-800 transition-colors text-sm"
                       onClick={() =>
                         navigate(
-                          `/cmcncmc/customer/${proposal.customer?.customercodeid}`
+                          `/close/cmcncmc/customer/${proposal.customer?.customercodeid}`
                         )
                       }
                     >

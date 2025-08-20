@@ -102,16 +102,16 @@ function CNoteDelete() {
 
   // ─────────────── HELPERS ───────────────
   const getRevisionStatus = (row) => {
-    if (!row.revisions || row.revisions.length === 0) {
+    if (!row?.revisions || row?.revisions.length === 0) {
       return {
-        status: row.status || "draft",
+        status: row?.status || "draft",
         color: "bg-gray-100 text-gray-800",
       };
     }
-    const currentRev = row.revisions.find(
-      (r) => r.revisionNumber === row.currentRevision
+    const currentRev = row?.revisions.find(
+      (r) => r.revisionNumber === row?.currentRevision
     );
-    const status = currentRev?.status || row.status || "draft";
+    const status = currentRev?.status || row?.status || "draft";
     const colorMap = {
       approved: "bg-green-100 text-green-800",
       pending: "bg-yellow-100 text-yellow-800",
@@ -126,8 +126,8 @@ function CNoteDelete() {
   const getTotalItems = (items) => items?.length || 0;
 
   const getApprovalStatus = (row) => {
-    const rsh = row.RSHApproval?.approved;
-    const nsh = row.NSHApproval?.approved;
+    const rsh = row?.RSHApproval?.approved;
+    const nsh = row?.NSHApproval?.approved;
     if (rsh && nsh) return { text: "Both Approved", color: "text-green-600" };
     if (rsh) return { text: "RSH Only", color: "text-orange-600" };
     if (nsh) return { text: "NSH Only", color: "text-orange-600" };
@@ -225,6 +225,7 @@ function CNoteDelete() {
                     <input type="checkbox" className="w-4 h-4" />
                   </th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">CNote No.</th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Serial No</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Proposal No.</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Customer</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Items</th>
@@ -242,7 +243,7 @@ function CNoteDelete() {
                   const approvalStatus = getApprovalStatus(row);
                   return (
                     <tr
-                      key={row._id}
+                      key={row?._id}
                       className={`hover:bg-gray-50 transition-colors ${
                         index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                       }`}
@@ -254,27 +255,30 @@ function CNoteDelete() {
                         />
                       </td>
                       <td className="p-3 font-bold text-blue-600">
-                        {row.cnoteNumber}
+                        {row?.cnoteNumber}
                       </td>
-                      <td className="p-3 font-semibold">{row.proposalNumber}</td>
+                      <td className="p-3 font-bold text-gray-600">
+                        {row?.serialNumber}
+                      </td>
+                      <td className="p-3 font-semibold">{row?.proposalNumber}</td>
                       <td className="p-3">
                         <div>
                           <div className="font-medium capitalize">
-                            {row.customer?.customername}
+                            {row?.customer?.customername}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {row.customer?.city}
+                            {row?.customer?.city}
                           </div>
                         </div>
                       </td>
                       <td className="p-3 text-center">
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                          {getTotalItems(row.items)}
+                          {getTotalItems(row?.items)}
                         </span>
                       </td>
                       <td className="p-3 text-center">
                         <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-medium">
-                          Rev {row.currentRevision || 0}
+                          Rev {row?.currentRevision || 0}
                         </span>
                       </td>
                       <td className="p-3">
@@ -292,20 +296,20 @@ function CNoteDelete() {
                         </span>
                       </td>
                       <td className="p-3 font-semibold text-green-600">
-                        ₹{row.finalAmount?.toLocaleString("en-IN") || "0"}
+                        ₹{row?.finalAmount?.toLocaleString("en-IN") || "0"}
                       </td>
                       <td className="p-3">
                         <div className="text-xs">
-                          <div>{moment(row.createdAt).format("MMM D, YYYY")}</div>
+                          <div>{moment(row?.createdAt).format("MMM D, YYYY")}</div>
                           <div className="text-gray-500">
-                            {moment(row.createdAt).format("h:mm A")}
+                            {moment(row?.createdAt).format("h:mm A")}
                           </div>
                         </div>
                       </td>
                       <td className="p-3">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => handleDelete(row.cnoteNumber)}
+                            onClick={() => handleDelete(row?.cnoteNumber)}
                             className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
                             title="Delete CNote"
                           >

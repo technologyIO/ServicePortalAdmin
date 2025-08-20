@@ -158,13 +158,10 @@ function OpenProposal() {
   /* ───────────────────────── HELPERS ───────────────────────── */
   const getStatusColor = (status) => {
     const colorMap = {
-      approved: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      rejected: "bg-red-100 text-red-800",
-      issued: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800",
-      draft: "bg-gray-100 text-gray-800",
-      revised: "bg-orange-100 text-orange-800",
+      closed_won: "bg-green-100 text-green-800",
+      open: "bg-blue-100 text-blue-800",
+      completed: "bg-purple-100 text-purple-800", // add more if needed
+      draft: "bg-yellow-100 text-yellow-800",
     };
     return colorMap[status?.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
@@ -274,11 +271,13 @@ function OpenProposal() {
                 <input type="checkbox" className="w-4 h-4" />
               </th>
               <th className="p-3 text-left font-medium">Proposal Number</th>
+              <th className="p-3 text-left font-medium">Serial Number</th>
               <th className="p-3 text-left font-medium">Cnote Number</th>
               <th className="p-3 text-left font-medium">Customer</th>
               <th className="p-3 text-left font-medium">Items</th>
               <th className="p-3 text-left font-medium">Revision</th>
               <th className="p-3 text-left font-medium">Discount %</th>
+              <th className="p-3 text-left font-medium">Status</th>
               <th className="p-3 text-left font-medium">Final Amount</th>
               <th className="p-3 text-left font-medium">Created</th>
               <th className="p-3 text-left font-medium">CNote PDF</th>
@@ -299,8 +298,11 @@ function OpenProposal() {
                     />
                   </td>
 
-                  <td className="p-3 font-bold text-blue-600">
+                  <td className="p-3 font-bold text-gray-600">
                     {proposal?.proposalNumber}
+                  </td>
+                  <td className="p-3 font-bold text-blue-600">
+                    {proposal?.serialNumber}
                   </td>
                   <td className="p-3 font-bold text-gray-600">
                     {proposal?.cnoteNumber}
@@ -342,7 +344,15 @@ function OpenProposal() {
                   <td className="p-3 font-semibold text-green-600">
                     ₹{proposal.finalAmount?.toLocaleString("en-IN") || "0"}
                   </td>
-
+                  <td>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
+                        proposal.Cmcncmcsostatus
+                      )}`}
+                    >
+                      {proposal.Cmcncmcsostatus}
+                    </span>
+                  </td>
                   <td className="p-3">
                     <div className="text-xs">
                       <div>

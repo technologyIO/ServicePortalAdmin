@@ -5,9 +5,10 @@ import { useNavigate } from "react-router-dom";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Eye, Filter, RefreshCw, View } from "lucide-react";
+import { Download, Eye, Filter, RefreshCw } from "lucide-react";
 import LoadingSpinner from "../../../../LoadingSpinner";
 
+// Show a loader while fetching
 function Loader() {
   return (
     <div className="flex items-center justify-center h-[60vh]">
@@ -24,53 +25,77 @@ const api = axios.create({
   },
 });
 
-export default function CMCNCMCList() {
-  const [proposals, setProposals] = useState([]);
+export default function CloseOnCall() {
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDownloadingGeo, setIsDownloadingGeo] = useState(false);
+  const [isDownloadingHubStock, setIsDownloadingHubStock] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const limit = 50;
+  const limit = 50; // Higher limit for customer grouping
   const navigate = useNavigate();
 
-  const fetchProposals = async (pg = page, query = searchQuery) => {
+  // Fetch data with server-side search
+  const fetchCustomersWithOnCalls = async (pg = page, query = searchQuery) => {
     setLoading(true);
     try {
-      const params = { page: pg, limit };
-      if (query && query.trim()) params.q = query.trim();
+      const params = {
+        page: pg,
+        limit: limit,
+      };
 
+      if (query && query.trim()) {
+        params.q = query.trim();
+      }
+
+      // Use search API if query exists, otherwise use paginated API
       const endpoint =
         query && query.trim()
-          ? "/phone/proposal/search"
-          : "/phone/proposal/paginated";
-
+          ? "/phone/oncall/search"
+          : "/phone/oncall/pagecall";
       const res = await api.get(endpoint, { params });
 
       const rawData = Array.isArray(res.data?.data) ? res.data.data : [];
 
-      // ✅ Filter: only "Open" + discountPercentage > 5
+    
       const filtered = rawData.filter(
         (item) =>
-          item.Cmcncmcsostatus === "Open" &&
+          item.onCallproposalstatus !== "Open" &&
           typeof item.discountPercentage === "number" &&
           item.discountPercentage > 5
       );
+      // Group by customer.customercodeid
+      const grouped = {};
+      filtered.forEach((oncall) => {
+        const custId = oncall.customer?.customercodeid || "unknown";
+        if (!grouped[custId]) {
+          grouped[custId] = {
+            customer: oncall.customer,
+            oncalls: [],
+          };
+        }
+        grouped[custId].oncalls.push(oncall);
+      });
 
-      setProposals(filtered);
+      const customerList = Object.values(grouped);
+      setCustomers(customerList);
 
+      // Update pagination from API response
       if (res.data?.pagination) {
         setTotalPages(res.data.pagination.totalPages || 1);
-        setTotalRecords(res.data.pagination.totalRecords || filtered.length);
+        setTotalRecords(
+          res.data.pagination.totalRecords || customerList.length
+        );
         setPage(res.data.pagination.currentPage || pg);
       } else {
+        // Fallback for non-paginated response
         setTotalPages(1);
-        setTotalRecords(filtered.length);
-        setPage(1);
+        setTotalRecords(customerList.length);
       }
     } catch (error) {
-      setProposals([]);
+      console.error("Error fetching customers:", error);
+      setCustomers([]);
       setTotalPages(1);
       setTotalRecords(0);
     }
@@ -78,39 +103,49 @@ export default function CMCNCMCList() {
   };
 
   useEffect(() => {
-    fetchProposals(page, searchQuery);
+    fetchCustomersWithOnCalls(page, searchQuery);
+    // eslint-disable-next-line
   }, [page]);
 
+  // Handle search input change with auto-refresh on clear
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
+
+    // If search query is cleared, automatically refresh to show all data
     if (value === "" || value.trim() === "") {
       setPage(1);
-      fetchProposals(1, "");
+      fetchCustomersWithOnCalls(1, ""); // Fetch all data when search is cleared
     }
   };
 
+  // Handle search
   const handleSearch = () => {
     setPage(1);
-    fetchProposals(1, searchQuery);
+    fetchCustomersWithOnCalls(1, searchQuery);
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter") handleSearch();
+    if (e.key === "Enter") {
+      handleSearch();
+    }
   };
 
   const handleRefresh = () => {
     setSearchQuery("");
     setPage(1);
-    fetchProposals(1, "");
+    fetchCustomersWithOnCalls(1, "");
   };
 
+  // Pagination handlers
   const handlePreviousPage = () => {
     if (page > 1) setPage(page - 1);
   };
+
   const handleNextPage = () => {
     if (page < totalPages) setPage(page + 1);
   };
+
   const handlePageClick = (pageNum) => {
     if (pageNum >= 1 && pageNum <= totalPages && pageNum !== page) {
       setPage(pageNum);
@@ -119,28 +154,33 @@ export default function CMCNCMCList() {
 
   if (loading) return <Loader />;
 
-  if (!proposals.length)
+  if (!customers.length)
     return (
       <div className="text-center py-16 text-lg font-semibold text-gray-400">
         {searchQuery
-          ? "No proposals found matching your search."
-          : "No proposals with discount > 5% found."}
+          ? "No customers found matching your search."
+          : "No on-calls with discount > 5% found."}
       </div>
     );
 
-  const totalProposalRows = proposals.length;
+  // Calculate total OnCalls for display
+  const totalOnCalls = customers.reduce(
+    (sum, { oncalls }) => sum + oncalls.length,
+    0
+  );
 
   return (
-    <div>
+    <div className="">
       {/* Search Section */}
       <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm mb-4">
+        {/* Top Row: Search and Main Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
           <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
             <div className="relative flex-1">
               <FormControl sx={{ flex: 1 }} size="sm">
                 <Input
                   size="sm"
-                  placeholder="Search Proposal, Customer, Product..."
+                  placeholder="Search OnCall, Customer, Product, Complaint ID..."
                   startDecorator={<SearchIcon />}
                   value={searchQuery}
                   onKeyDown={handleKeyPress}
@@ -158,6 +198,7 @@ export default function CMCNCMCList() {
             </button>
           </div>
           <div className="flex gap-3">
+            {/* Refresh Button */}
             <button
               onClick={handleRefresh}
               type="button"
@@ -168,9 +209,11 @@ export default function CMCNCMCList() {
             </button>
           </div>
         </div>
+
+        {/* Bottom Row: Filter, Download */}
         <div className="flex flex-wrap justify-between items-center gap-3">
           <div className="text-sm text-gray-600">
-            Showing {totalProposalRows} proposals
+            Showing {totalOnCalls} OnCalls from {customers.length} customers
           </div>
           <div className="flex gap-3">
             <button
@@ -181,22 +224,24 @@ export default function CMCNCMCList() {
               Filter
             </button>
             <button
-              disabled={isDownloadingGeo}
+              disabled={isDownloadingHubStock}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                isDownloadingGeo
+                isDownloadingHubStock
                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
               }`}
             >
-              {isDownloadingGeo ? (
+              {isDownloadingHubStock ? (
                 <div className="flex items-center gap-2">
                   <LoadingSpinner />
                   <span className="hidden sm:inline">Downloading...</span>
+                  <span className="sm:hidden">...</span>
                 </div>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
                   <span className="hidden sm:inline">Download Excel</span>
+                  <span className="sm:inline hidden">Download</span>
                 </>
               )}
             </button>
@@ -204,88 +249,108 @@ export default function CMCNCMCList() {
         </div>
       </div>
 
-      {/* Table Container */}
+      {/* Table Container with Fixed Height and Scrolling */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
-          <table className="w-full border-collapse text-sm min-w-max">
-            <thead className="sticky top-0 z-10 bg-blue-700">
-              <tr className="border-b">
-                <th className="p-3 font-bold text-white text-left">
-                  Proposal #
-                </th>
-                <th className="p-3 font-bold text-white text-left">
-                  Serial Number
-                </th>
-                <th className="p-3 font-bold text-white text-left">Customer</th>
-                <th className="p-3 font-bold text-white text-left">City</th>
-                <th className="p-3 font-bold text-white text-left">Discount</th>
-                <th className="p-3 font-bold text-white text-left">
-                  Final Amount
-                </th>
-                <th className="p-3 font-bold text-white text-left">Status</th>
-                <th className="p-3 font-bold text-white text-left">
-                  Created At
-                </th>
-                <th className="p-3 font-bold text-white text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {proposals.map((proposal, idx) => (
-                <tr
-                  key={`${proposal._id}-${idx}`}
-                  className={`hover:bg-gray-50 transition-colors ${
-                    idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
-                  }`}
-                >
-                  <td className="p-3 font-semibold text-blue-700">
-                    {proposal.proposalNumber || "--"}
-                  </td>
-                  <td className="p-3 font-semibold text-blue-700">
-                    {proposal?.serialNumber || "--"}
-                  </td>
-                  <td className="p-3">
-                    <div className="font-medium capitalize">
-                      {proposal.customer?.customername || "--"}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {proposal.customer?.customercode || ""}
-                    </div>
-                  </td>
-                  <td className="p-3">{proposal.customer?.city || "--"}</td>
-                  <td className="p-3">{proposal.discountPercentage}%</td>
-                  <td className="p-3">
-                    ₹{proposal.finalAmount?.toFixed(2) || "--"}
-                  </td>
+          <div className="min-w-full">
+            <table className="w-full border-collapse text-sm min-w-max">
+              <thead className="sticky top-0 z-10 bg-blue-700">
+                <tr className="border-b">
+                  <th className="p-3 font-bold text-white text-left">
+                    OnCall #
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">
+                    Product
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">
+                    Customer Name
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">City</th>
+                  <th className="p-3 font-bold text-white text-left">Staus</th>
 
-                  <td className="flex items-center justify-center ">
-                    <div className="px-3 py-2 rounded  bg-gray-300 mt-2 border">
-                      {proposal.Cmcncmcsostatus}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div>
-                      {moment(proposal.createdAt).format("MMM D, YYYY")}
-                    </div>
-                    <div className="text-gray-500">
-                      {moment(proposal.createdAt).format("h:mm A")}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <button
-                      className="bg-blue-700 text-white p-1 rounded font-bold hover:bg-blue-800 transition-colors text-sm"
-                      onClick={() =>
-                        navigate(
-                          `/cmcncmc/customer/${proposal.customer?.customercodeid}`
-                        )
-                      }
-                    >
-                      <Eye />
-                    </button>
-                  </td>
+                  <th className="p-3 font-bold text-white text-left">
+                    OnCall Date
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {customers.map(({ customer, oncalls }) =>
+                  oncalls.map((oncall, oncallIndex) => (
+                    <tr
+                      key={`${customer?.customercodeid}-${oncall._id}-${oncallIndex}`}
+                      className={`hover:bg-gray-50 transition-colors ${
+                        oncallIndex % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                      }`}
+                    >
+                      <td className="p-3 font-semibold text-blue-700">
+                        {oncall?.onCallNumber || "--"}
+                      </td>
+                      <td className="p-3">
+                        <div className="max-w-32">
+                          <div
+                            className="font-medium text-xs truncate"
+                            title={
+                              oncall?.productGroups?.[0]?.productPartNo ||
+                              oncall?.complaint?.materialdescription
+                            }
+                          >
+                            {oncall?.productGroups?.[0]?.productPartNo ||
+                              oncall?.complaint?.materialdescription ||
+                              "--"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {oncall?.complaint?.serialnumber
+                              ? `S/N: ${oncall.complaint.serialnumber}`
+                              : ""}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div>
+                          <div className="font-medium capitalize">
+                            {customer?.customername || "--"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {customer?.customercode || ""}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3">{customer?.city || "--"}</td>
+
+                      <td className="flex items-center justify-center ">
+                        <div className="px-3 py-2 rounded  bg-gray-300 mt-2 border">
+                          {oncall?.onCallproposalstatus || "--"}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="text-xs">
+                          <div>
+                            {moment(oncall?.createdAt).format("MMM D, YYYY")}
+                          </div>
+                          <div className="text-gray-500">
+                            {moment(oncall?.createdAt).format("h:mm A")}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          className="bg-blue-700 text-white px-4 py-1 rounded font-bold hover:bg-blue-800 transition-colors text-sm"
+                          onClick={() =>
+                            navigate(
+                              `/close/on-call/customer/${customer?.customercodeid}`
+                            )
+                          }
+                        >
+                          <Eye />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

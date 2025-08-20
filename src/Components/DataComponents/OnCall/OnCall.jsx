@@ -5,9 +5,9 @@ import { useNavigate } from "react-router-dom";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Filter, RefreshCw } from "lucide-react";
+import { Download, Eye, Filter, RefreshCw } from "lucide-react";
 import LoadingSpinner from "../../../LoadingSpinner";
-
+ 
 // Show a loader while fetching
 function Loader() {
   return (
@@ -25,7 +25,7 @@ const api = axios.create({
   },
 });
 
-export default function OnCall() {
+export default function CloseOnCall() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,13 +58,13 @@ export default function OnCall() {
 
       const rawData = Array.isArray(res.data?.data) ? res.data.data : [];
 
-      // Filter for discount > 5%
+    
       const filtered = rawData.filter(
         (item) =>
+          item.onCallproposalstatus === "Open" &&
           typeof item.discountPercentage === "number" &&
           item.discountPercentage > 5
       );
-
       // Group by customer.customercodeid
       const grouped = {};
       filtered.forEach((oncall) => {
@@ -266,6 +266,7 @@ export default function OnCall() {
                     Customer Name
                   </th>
                   <th className="p-3 font-bold text-white text-left">City</th>
+                  <th className="p-3 font-bold text-white text-left">Staus</th>
 
                   <th className="p-3 font-bold text-white text-left">
                     OnCall Date
@@ -317,6 +318,11 @@ export default function OnCall() {
                       </td>
                       <td className="p-3">{customer?.city || "--"}</td>
 
+                      <td className="flex items-center justify-center ">
+                        <div className="px-3 py-2 rounded  bg-gray-300 mt-2 border">
+                          {oncall?.onCallproposalstatus || "--"}
+                        </div>
+                      </td>
                       <td className="p-3">
                         <div className="text-xs">
                           <div>
@@ -336,7 +342,7 @@ export default function OnCall() {
                             )
                           }
                         >
-                          Open
+                          <Eye />
                         </button>
                       </td>
                     </tr>

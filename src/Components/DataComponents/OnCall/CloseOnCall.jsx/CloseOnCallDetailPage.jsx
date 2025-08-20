@@ -5,8 +5,8 @@ import { Eye, Download, ArrowLeft } from "lucide-react";
 import moment from "moment";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import OnCallApprovalModal from "./OnCallApprovalModal";
-import OnCallViewModal from "./OnCallViewModal";
+import OnCallApprovalModal from "../OnCallApprovalModal";
+import OnCallViewModal from "../OnCallViewModal";
 
 const format = (v) =>
   typeof v === "number"
@@ -29,7 +29,7 @@ const api = axios.create({
   },
 });
 
-export default function OnCallDetailPage() {
+export default function CloseOnCallDetailPage() {
   const [tab, setTab] = useState(TABS[0].id);
   const [onCallList, setOnCallList] = useState([]);
   const [customer, setCustomer] = useState(null);
@@ -70,7 +70,7 @@ export default function OnCallDetailPage() {
 
       try {
         console.log("Fetching oncall data for customer ID:", customerId);
-        const res = await api.get(`/phone/oncall/customer/${customerId}`, {
+        const res = await api.get(`/phone/oncall/customercmcclose/${customerId}`, {
           params: {
             minDiscount: 5,
             includeCompleted: false,
@@ -79,17 +79,13 @@ export default function OnCallDetailPage() {
         console.log("API Response:", res.data);
 
         if (res.data.success) {
-          // ✅ Only keep "Open" status
-          const oncalls = (res.data.data || []).filter(
-            (item) => item.onCallproposalstatus === "Open"
-          );
-
+          const oncalls = res.data.data || [];
           const customerInfo = res.data.customer || null;
           setOnCallList(oncalls);
           setCustomer(customerInfo);
 
           if (oncalls.length === 0 && !customerInfo) {
-            setError("Customer not found or no oncalls with status Open");
+            setError("Customer not found or no oncalls with discount > 5%");
           }
         } else {
           setError(res.data.message || "Failed to fetch oncall data");

@@ -242,10 +242,10 @@ function OpenOnCallOrder() {
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                      oc.status
+                      oc.onCallproposalstatus
                     )}`}
                   >
-                    {oc.status}
+                    {oc.onCallproposalstatus}
                   </span>
                 </td>
 
