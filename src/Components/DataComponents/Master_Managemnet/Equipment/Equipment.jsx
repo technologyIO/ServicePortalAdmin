@@ -15,6 +15,7 @@ import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import EquipmentBulk from "./EquipmentBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom"; 
 const UserData = () => {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -25,9 +26,10 @@ const UserData = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [loader, setLoader] = useState(true);
   const limit = 10;
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const openModal = () => setIsOpen(true);
+  const openModal = () => navigate("/bulkupload-equipment");
   const closeModal = () => {
     setIsOpen(false);
     getData();
@@ -805,15 +807,11 @@ const UserData = () => {
               Next
             </button>
           </div>
-          {isOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
-              <div className=" ">
-                <EquipmentBulk isOpen={isOpen} onClose={closeModal} />
-              </div>
+          {/* {isOpen && (
+            <div className=" ">
+              <EquipmentBulkUploadPage isOpen={isOpen} onClose={closeModal} />
             </div>
-          )}
+          )} */}
           <Modal
             open={showModal}
             onClose={handleCloseModal}

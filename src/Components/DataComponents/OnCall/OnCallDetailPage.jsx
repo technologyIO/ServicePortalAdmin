@@ -165,8 +165,8 @@ export default function OnCallDetailPage() {
   };
 
   const handleDownloadQuote = (oncallId) => {
-    navigate(`/quote-template/${oncallId}`);
-  };
+    navigate(`/proposal-template/${oncallId}`);
+  }; 
 
   const handleDownloadContractNote = (oncall) => {
     alert(`Download contract note for ${oncall.onCallNumber}`);
@@ -343,7 +343,7 @@ export default function OnCallDetailPage() {
                           className="bg-blue-700 rounded-lg p-2 text-white font-bold text-lg hover:bg-blue-800"
                           onClick={() => handleViewOpportunity(oncall)}
                         >
-                          <Eye size={22} />
+                          <Eye size={22} /> 
                         </button>
                       </td>
                     </tr>

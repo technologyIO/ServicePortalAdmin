@@ -50,7 +50,7 @@ function CloseProposal() {
     setLoading(true);
     try {
       const res = await api.get(
-        `/phone/proposal/allcompleted?page=${page}&limit=${limit}`
+        `/phone/proposal/all?page=${page}&limit=${limit}`
       );
 
       const data = res.data.records || [];
@@ -59,7 +59,9 @@ function CloseProposal() {
 
       // Filter only completed proposals
       const filteredProposals = (data || []).filter(
-        (proposal) => proposal.status?.toLowerCase() === "completed"
+        (proposal) =>
+          // proposal.status?.toLowerCase() === "completed" ||
+          proposal.Cmcncmcsostatus !== "Open"
       );
 
       setProposals(filteredProposals);

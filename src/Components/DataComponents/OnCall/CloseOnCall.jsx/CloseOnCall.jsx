@@ -58,12 +58,10 @@ export default function CloseOnCall() {
 
       const rawData = Array.isArray(res.data?.data) ? res.data.data : [];
 
-    
       const filtered = rawData.filter(
         (item) =>
           item.onCallproposalstatus !== "Open" &&
-          typeof item.discountPercentage === "number" &&
-          item.discountPercentage > 5
+          typeof item.discountPercentage === "number"
       );
       // Group by customer.customercodeid
       const grouped = {};

@@ -14,7 +14,7 @@ const QuoteTemplate = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/phone/oncall/${proposalId}`
+          `${process.env.REACT_APP_BASE_URL}/phone/proposal/${proposalId}`
         );
         setQuoteData(response.data);
         setLoading(false);
@@ -64,7 +64,7 @@ const QuoteTemplate = () => {
       }
 
       pdf.save(
-        `${quoteData?.onCallNumber || "OnCall"}-Rev${
+        `${quoteData?.proposalNumber || "Proposal"}-Rev${
           quoteData?.currentRevision || 0
         }.pdf`
       );
@@ -309,10 +309,8 @@ const QuoteTemplate = () => {
               <p className="font-semibold">
                 <strong>
                   Subject: Your requirement of{" "}
-                  {quoteData.productGroups
-                    .map((group) =>
-                      group.spares.map((spare) => spare.Description).join(", ")
-                    )
+                  {quoteData.items
+                    ?.map((item) => item.equipment.materialdescription)
                     .join(", ")}
                 </strong>
               </p>
@@ -327,18 +325,12 @@ const QuoteTemplate = () => {
                 In line with your requirements, we are pleased to herewith
                 submit our offer for the following:
               </p>
-
               <ol className="list-decimal pl-6 space-y-1">
-                {quoteData.productGroups.map((group) =>
-                  group.spares.map((spare, index) => (
-                    <li
-                      key={`${group.productPartNo}-${index}`}
-                      className="pl-2"
-                    >
-                      {spare.Description}
-                    </li>
-                  ))
-                )}
+                {quoteData.items?.map((item, index) => (
+                  <li key={item._id || index} className="pl-2">
+                    {item.equipment.materialdescription}
+                  </li>
+                ))}
               </ol>
 
               <p>The offer document has the following enclosures</p>
@@ -437,16 +429,11 @@ const QuoteTemplate = () => {
             <div className="mb-8 selectable-text">
               <h2 className="text-lg font-bold mb-4">Offer for</h2>
               <ol className="list-decimal text-sm space-y-2 ml-6">
-                {quoteData.productGroups.map((group) =>
-                  group.spares.map((spare, index) => (
-                    <li
-                      key={`${group.productPartNo}-${index}`}
-                      className="pl-1"
-                    >
-                      {spare.Description}
-                    </li>
-                  ))
-                )}
+                {quoteData.items?.map((item, index) => (
+                  <li key={item._id || index} className="pl-1">
+                    {item.equipment.materialdescription}
+                  </li>
+                ))}
               </ol>
             </div>
 
@@ -568,33 +555,31 @@ const QuoteTemplate = () => {
                 </tr>
               </thead>
               <tbody>
-                {quoteData.productGroups.map((group, groupIndex) =>
-                  group.spares.map((spare, index) => (
-                    <tr key={`${group.productPartNo}-${index}`}>
-                      <td className="border border-black px-2 py-2 text-center">
-                        {groupIndex * group.spares.length + index + 1}
-                      </td>
-                      <td className="border border-black px-2 py-2 text-center">
-                        {spare.PartNumber}
-                      </td>
-                      <td className="border border-black px-2 py-2">
-                        {spare.Description}
-                      </td>
-                      <td className="border border-black px-2 py-2 text-right">
-                        {formatCurrency(spare.Rate)}
-                      </td>
-                      <td className="border border-black px-2 py-2 text-center">
-                        12
-                      </td>
-                      <td className="border border-black px-2 py-2 text-center">
-                        1
-                      </td>
-                      <td className="border border-black px-2 py-2 text-right">
-                        {formatCurrency(spare.Rate)}
-                      </td>
-                    </tr>
-                  ))
-                )}
+                {quoteData.items?.map((item, index) => (
+                  <tr key={item._id || index}>
+                    <td className="border border-black px-2 py-2 text-center">
+                      {index + 1}
+                    </td>
+                    <td className="border border-black px-2 py-2 text-center">
+                      {item.equipment.materialcode}
+                    </td>
+                    <td className="border border-black px-2 py-2">
+                      {item.equipment.materialdescription}
+                    </td>
+                    <td className="border border-black px-2 py-2 text-right">
+                      {formatCurrency(item.pricePerYear)}
+                    </td>
+                    <td className="border border-black px-2 py-2 text-center">
+                      12
+                    </td>
+                    <td className="border border-black px-2 py-2 text-center">
+                      1
+                    </td>
+                    <td className="border border-black px-2 py-2 text-right">
+                      {formatCurrency(item.subtotal)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
 
@@ -752,13 +737,12 @@ const QuoteTemplate = () => {
               </h2>
             </div>
 
-            {/* Equipment Items */}
             <div className="space-y-8 selectable-text">
-              {quoteData.productGroups.map((group, groupIndex) => (
-                <div key={group.productPartNo}>
+              {quoteData.items?.map((item, index) => (
+                <div key={item._id || index}>
                   <h3 className="text-base font-bold mb-4">
-                    {groupIndex + 1}. {group.productPartNo} -{" "}
-                    {group.spares[0]?.Description}
+                    {index + 1}. {item.equipment.materialcode} -{" "}
+                    {item.equipment.materialdescription}
                   </h3>
 
                   <div className="mb-4">
@@ -766,8 +750,8 @@ const QuoteTemplate = () => {
                       Technical Specifications
                     </h4>
                     <p className="text-sm">
-                      {group.spares[0]?.Description} specifications details
-                      would be provided here.
+                      {item.equipment.materialdescription} specifications
+                      details would be provided here.
                     </p>
                   </div>
 
@@ -776,7 +760,7 @@ const QuoteTemplate = () => {
                       Scope of Supply
                     </h4>
                     <p className="text-sm">
-                      1 EA - {group.spares[0]?.Description} Main Unit
+                      1 EA - {item.equipment.materialdescription} Main Unit
                     </p>
                   </div>
 

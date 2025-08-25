@@ -7,6 +7,7 @@ import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
 import { Download, Eye, Filter, RefreshCw, View } from "lucide-react";
 import LoadingSpinner from "../../../../LoadingSpinner";
+import ProposalStatusButton from "../../OnCall/ProposalStatusButton";
 
 function Loader() {
   return (
@@ -54,8 +55,7 @@ export default function CMCNCMCList() {
       const filtered = rawData.filter(
         (item) =>
           item.Cmcncmcsostatus === "Open" &&
-          typeof item.discountPercentage === "number" &&
-          item.discountPercentage > 5
+          typeof item.discountPercentage === "number"
       );
 
       setProposals(filtered);
@@ -124,12 +124,28 @@ export default function CMCNCMCList() {
       <div className="text-center py-16 text-lg font-semibold text-gray-400">
         {searchQuery
           ? "No proposals found matching your search."
-          : "No proposals with discount > 5% found."}
+          : "No proposals found."}
       </div>
     );
 
   const totalProposalRows = proposals.length;
+  const handleProposalStatusUpdate = (proposalId, newStatus, remark) => {
+    // Update local state
+    setProposals((prevProposals) =>
+      prevProposals.map((p) =>
+        p._id === proposalId
+          ? {
+              ...p,
+              Cmcncmcsostatus: newStatus,
+              ...(remark && { proposalRemark: remark }),
+            }
+          : p
+      )
+    );
 
+    console.log(`Proposal status updated to ${newStatus}`);
+    // Optional: Show success toast
+  };
   return (
     <div>
       {/* Search Section */}
@@ -258,9 +274,12 @@ export default function CMCNCMCList() {
                   </td>
 
                   <td className="flex items-center justify-center ">
-                    <div className="px-3 py-2 rounded  bg-gray-300 mt-2 border">
-                      {proposal.Cmcncmcsostatus}
-                    </div>
+                    <ProposalStatusButton
+                      proposal={proposal}
+                      cnoteNumber={proposal?.cnoteNumber}
+                      fetchProposals={fetchProposals}
+                      onStatusUpdate={handleProposalStatusUpdate}
+                    />
                   </td>
                   <td className="p-3">
                     <div>

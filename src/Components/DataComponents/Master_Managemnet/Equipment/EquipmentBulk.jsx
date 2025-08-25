@@ -14,20 +14,71 @@ import {
   Calendar,
   Settings,
   Database,
+  ArrowLeft,
+  RefreshCw,
+  FileText,
+  BarChart3,
+  Activity,
+  Eye,
+  AlertTriangle,
+  XCircle,
+  Edit,
+  Plus,
+  Wrench,
+  Filter,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  FileCheck,
 } from "lucide-react";
-import { useState } from "react";
-import * as XLSX from "xlsx";
+import { useState, useMemo, useEffect, useRef } from "react";
 
-export default function EquipmentBulk({ onClose }) {
+// Import separate components and utilities
+import { validateFileStructure } from "./BulkUpload/EquipmentBulkUploadValidation";
+import { handleDownloadTemplate } from "./BulkUpload/EquipmentBulkUploadTemplate";
+import FileUploadArea from "./BulkUpload/FileUploadArea";
+import ProcessingSteps from "./BulkUpload/ProcessingSteps";
+import LiveUpdates from "./BulkUpload/LiveUpdates";
+import { renderStatusBadge } from "./BulkUpload/Utils/helpers";
+import ResultsTab from "./BulkUpload/ResultsTab";
+
+export default function EquipmentBulkUploadPage() {
+  // All state variables
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+
+  const [jobId, setJobId] = useState(null);
+  const [jobProgress, setJobProgress] = useState({
+    status: "idle",
+    fileName: "",
+    fileSize: 0,
+    totalRecords: 0,
+    processedRecords: 0,
+    createdCount: 0,
+    updatedCount: 0,
+    failedCount: 0,
+    pmCount: 0,
+    progressPercentage: 0,
+    currentOperation: "Ready to start...",
+    startTime: null,
+    endTime: null,
+    estimatedEndTime: null,
+    errorMessage: "",
+    fieldMappingInfo: {
+      detectedFields: [],
+      mappedFields: [],
+      unmappedFields: [],
+    },
+  });
+
   const [processingData, setProcessingData] = useState({
     status: "idle",
     fileName: "",
     fileType: "",
+    fileSize: 0,
     startTime: null,
     endTime: null,
     duration: null,
@@ -35,221 +86,441 @@ export default function EquipmentBulk({ onClose }) {
     processedRecords: 0,
     equipmentResults: [],
     pmResults: [],
+    pagination: {
+      currentPage: 1,
+      totalPages: 1,
+      totalRecords: 0,
+      hasNext: false,
+      hasPrev: false,
+    },
     summary: {
-      totalPMExpected: 0,
-      totalPMCreated: 0,
-      pmCompletionPercentage: 0,
-      statusBreakdown: {
-        Due: 0,
-        Overdue: 0,
-        Lapsed: 0,
+      operations: {
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        pmRegenerated: 0,
       },
-      pmTypeBreakdown: {
-        WPM: 0,
-        EPM: 0,
-        CPM: 0,
-        NPM: 0,
+      pm: {
+        totalExpected: 0,
+        created: 0,
+        failed: 0,
+        skipped: 0,
+        completionPercentage: 0,
       },
+      statusBreakdown: { Due: 0, Overdue: 0, Lapsed: 0 },
+      pmTypeBreakdown: { WPM: 0, EPM: 0, CPM: 0, NPM: 0 },
+      errorBreakdown: {},
+      statusUpdates: { total: 0, byStatus: {} },
+    },
+    performance: {
+      parseTime: 0,
+      validationTime: 0,
+      dbWriteTime: 0,
+      pmGenerationTime: 0,
     },
     errors: [],
     warnings: [],
+    fieldMappingInfo: {
+      detectedFields: [],
+      mappedFields: [],
+      unmappedFields: [],
+    },
   });
+
   const [liveUpdates, setLiveUpdates] = useState([]);
   const [fileValidation, setFileValidation] = useState(null);
+  const progressIntervalRef = useRef(null);
+  // Add these state variables with other states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const perPageLimit = 10; // Items per page
 
-  const validateFileStructure = async (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
+  // Filter states
+  const [equipmentFilter, setEquipmentFilter] = useState("all");
+  const [pmFilter, setPmFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedEquipment, setExpandedEquipment] = useState(new Set());
+  // Add these state variables
+  const [allErrors, setAllErrors] = useState([]);
+  const [allWarnings, setAllWarnings] = useState([]);
+  const [errorSummary, setErrorSummary] = useState({});
 
-      reader.onload = (e) => {
+  useEffect(() => {
+    const fetchErrors = async () => {
+      if (
+        processingData.status === "completed" &&
+        jobId &&
+        allErrors.length === 0
+      ) {
         try {
-          let headers = [];
-          const fileName = file.name.toLowerCase();
+          console.log("Fetching errors for jobId:", jobId); // Debug log
+          const errorData = await fetchAllErrors(jobId);
+          console.log("Received error data:", errorData); // Debug log
 
-          if (fileName.endsWith(".csv")) {
-            // Parse CSV headers
-            const text = e.target.result;
-            const firstLine = text.split("\n")[0];
-            headers = firstLine
-              .split(",")
-              .map((h) => h.trim().replace(/"/g, ""));
-          } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-            // Parse Excel headers
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: "array" });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
-              header: 1,
+          if (errorData && errorData.summary) {
+            setAllErrors(errorData.errors || []);
+            setAllWarnings(errorData.warnings || []);
+            setErrorSummary({
+              totalErrors: errorData.summary.totalErrors || 0,
+              totalWarnings: errorData.summary.totalWarnings || 0,
+              errorBreakdown: errorData.summary.errorsByCategory || {},
+              errorBySource: errorData.summary.errorsBySource || {},
+              failedEquipment: errorData.summary.failedEquipment || [],
             });
-            headers = jsonData[0] || [];
+            console.log("Updated error summary:", errorData.summary); // Debug log
           }
-
-          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
-          const normalizedHeaders = headers.map((h) =>
-            h
-              .toLowerCase()
-              .replace(/[^a-z0-9]/g, "")
-              .trim()
-          );
-
-          // Check for required fields (matching backend FIELD_MAPPINGS) - 8 REQUIRED FIELDS
-          const requiredFields = {
-            materialcode: [
-              "materialcode",
-              "material_code",
-              "partnumber",
-              "part_number",
-              "partno",
-            ],
-            materialdescription: [
-              "materialdescription",
-              "material_description",
-              "description",
-              "product_description",
-            ],
-            serialnumber: ["serialnumber", "serial_number", "serial", "sn"],
-            equipmentid: [
-              "equipment",
-              "equipmentid",
-              "equipment_id",
-              "equipmentid",
-            ],
-            currentcustomer: [
-              "currentcustomer",
-              "current_customer",
-              "customer_code",
-              "customercode",
-              "customer",
-            ],
-            endcustomer: [
-              "endcustomer",
-              "end_customer",
-              "final_customer",
-              "end_user",
-            ],
-            custWarrantystartdate: [
-              "custwarrantystartdate",
-              "custwarrantystart",
-              "cust_warranty_start_date",
-              "warranty_start",
-              "customer_warranty_start",
-            ],
-            custWarrantyenddate: [
-              "custwarrantyenddate",
-              "custwarrantyend",
-              "cust_warranty_end_date",
-              "warranty_end",
-              "customer_warranty_end",
-            ],
-            dealer: ["dealer", "dealer_name", "distributor", "partner"],
-          };
-
-          const foundFields = {};
-          const mappedColumns = {};
-
-          for (const [field, variations] of Object.entries(requiredFields)) {
-            const foundVariation = variations.find((variation) =>
-              normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
-            );
-            foundFields[field] = !!foundVariation;
-
-            if (foundVariation) {
-              // Find the original header name for this variation
-              const originalHeader = headers.find(
-                (h) =>
-                  h
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]/g, "")
-                    .trim() === foundVariation.replace(/[^a-z0-9]/g, "")
-              );
-              mappedColumns[field] = originalHeader;
-            }
-          }
-
-          // All 8 fields are required
-          const isValid =
-            foundFields.materialcode &&
-            foundFields.materialdescription &&
-            foundFields.serialnumber &&
-            foundFields.equipmentid &&
-            foundFields.currentcustomer &&
-            foundFields.endcustomer &&
-            foundFields.custWarrantystartdate &&
-            foundFields.custWarrantyenddate &&
-            foundFields.dealer;
-
-          const missingFields = Object.entries(foundFields)
-            .filter(([field, found]) => !found)
-            .map(([field]) => {
-              const fieldLabels = {
-                materialcode: "Material Code",
-                materialdescription: "Material Description",
-                serialnumber: "Serial Number",
-                equipmentid: "Equipment (ID)",
-                currentcustomer: "Current Customer",
-                endcustomer: "End Customer",
-                custWarrantystartdate: "Customer Warranty Start",
-                custWarrantyenddate: "Customer Warranty End",
-                dealer: "Dealer",
-              };
-              return fieldLabels[field] || field;
-            });
-
-          resolve({
-            isValid,
-            headers: headers,
-            foundFields,
-            mappedColumns,
-            missingFields,
-            totalRequired: Object.keys(requiredFields).length,
-            foundRequired: Object.values(foundFields).filter(Boolean).length,
-          });
         } catch (error) {
-          resolve({
-            isValid: false,
-            error: `File parsing error: ${error.message}`,
-            headers: [],
-            foundFields: {},
-            mappedColumns: {},
-            missingFields: [],
-            totalRequired: 9,
-            foundRequired: 0,
-          });
+          console.error("Failed to fetch errors:", error);
         }
-      };
+      }
+    };
 
-      reader.onerror = () => {
-        resolve({
-          isValid: false,
-          error: "Failed to read file",
-          headers: [],
-          foundFields: {},
-          mappedColumns: {},
-          missingFields: [],
-          totalRequired: 9,
-          foundRequired: 0,
+    fetchErrors();
+  }, [processingData.status, jobId, allErrors.length]);
+
+  // API and polling functions
+  const pollJobProgress = async (jobId) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/bulk/equipment/status/${jobId}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch progress: ${response.status}`);
+      }
+
+      const progressData = await response.json();
+
+      // Update jobProgress state with new data
+      setJobProgress(progressData);
+
+      // Update processing data with latest info
+      setProcessingData((prev) => ({
+        ...prev,
+        processedRecords:
+          progressData.progress?.processedRecords || prev.processedRecords,
+        totalRecords: progressData.progress?.totalRecords || prev.totalRecords,
+      }));
+
+      if (
+        progressData.progress?.currentOperation &&
+        progressData.progress.currentOperation !==
+          jobProgress.progress?.currentOperation
+      ) {
+        addLiveUpdate(`🔄 ${progressData.progress.currentOperation}`, "info");
+      }
+
+      // Add real-time updates for counts
+      if (
+        progressData.counts?.pmGenerated >
+        (jobProgress.counts?.pmGenerated || 0)
+      ) {
+        addLiveUpdate(
+          `⚙️ PM tasks generated: ${progressData.counts.pmGenerated}`,
+          "success"
+        );
+      }
+
+      if (progressData.status === "COMPLETED") {
+        addLiveUpdate(
+          "✅ Processing completed! Fetching results...",
+          "success"
+        );
+
+        // Update final counts
+        setProcessingData((prev) => ({
+          ...prev,
+          summary: {
+            ...prev.summary,
+            ...progressData.summary,
+            totalPMCreated:
+              progressData.counts?.pmGenerated ||
+              progressData.summary?.totalPMCreated,
+          },
+        }));
+
+        await fetchJobResult(jobId);
+        setIsProcessing(false);
+        clearInterval(progressIntervalRef.current);
+        setTimeout(() => setActiveTab("results"), 1000);
+      } else if (progressData.status === "FAILED") {
+        addLiveUpdate(
+          `❌ Processing failed: ${progressData.errorMessage}`,
+          "error"
+        );
+        setError(progressData.errorMessage || "Processing failed");
+        setIsProcessing(false);
+        clearInterval(progressIntervalRef.current);
+      }
+    } catch (error) {
+      console.error("Error polling progress:", error);
+      addLiveUpdate(`⚠️ Progress update failed: ${error.message}`, "warning");
+    }
+  };
+  // Add this helper function to extract all errors from equipment data
+  const extractAllErrors = (equipmentResults) => {
+    const allErrors = [];
+    const allWarnings = [];
+
+    equipmentResults.forEach((equipment) => {
+      // Add equipment-level errors
+      if (equipment.allErrors && equipment.allErrors.length > 0) {
+        equipment.allErrors.forEach((error) => {
+          allErrors.push({
+            ...error,
+            serialNumber: equipment.serialnumber,
+            equipmentId: equipment.equipmentid,
+            lineNumber: equipment.lineNumber,
+            source: "equipment",
+          });
         });
-      };
+      }
 
-      // Read file based on type
-      if (file.name.toLowerCase().endsWith(".csv")) {
-        reader.readAsText(file);
-      } else {
-        reader.readAsArrayBuffer(file);
+      // Add equipment-level warnings
+      if (equipment.warnings && equipment.warnings.length > 0) {
+        equipment.warnings.forEach((warning) => {
+          allWarnings.push({
+            ...warning,
+            serialNumber: equipment.serialnumber,
+            equipmentId: equipment.equipmentid,
+            lineNumber: equipment.lineNumber,
+            source: "equipment",
+          });
+        });
+      }
+
+      // Add PM-related errors
+      if (equipment.pmResults && equipment.pmResults.length > 0) {
+        equipment.pmResults.forEach((pm) => {
+          if (pm.status === "Failed" || pm.error) {
+            allErrors.push({
+              category: pm.category || "PM_Error",
+              field: pm.pmType,
+              message: pm.error || pm.reason || "PM task failed",
+              serialNumber: equipment.serialnumber,
+              equipmentId: equipment.equipmentid,
+              lineNumber: equipment.lineNumber,
+              pmType: pm.pmType,
+              source: "pm",
+            });
+          }
+        });
       }
     });
+
+    return { allErrors, allWarnings };
   };
+  // Add this function to your component
+  const fetchAllErrors = async (jobId) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/bulk/equipment/errors/${jobId}?includeWarnings=true`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch errors: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Return the data in the expected format
+      return {
+        errors: data.errors || [],
+        warnings: data.warnings || [],
+        summary: {
+          totalErrors: data.totalErrors || 0,
+          totalWarnings: data.totalWarnings || 0,
+          errorsByCategory: data.errorBreakdown || {},
+          errorsBySource: data.errorBySource || {},
+          failedEquipment: data.failedEquipment || [],
+        },
+      };
+    } catch (error) {
+      console.error("Error fetching all errors:", error);
+      return {
+        errors: [],
+        warnings: [],
+        summary: {
+          totalErrors: 0,
+          totalWarnings: 0,
+          errorsByCategory: {},
+          errorsBySource: {},
+          failedEquipment: [],
+        },
+      };
+    }
+  };
+
+  // In your main component, update the processingData state when you get the final response
+  const fetchJobResult = async (jobId, page = 1, append = false) => {
+    try {
+      setIsLoadingMore(page > 1);
+
+      const response = await fetch(
+        `${process.env.REACT_APP_BASE_URL}/bulk/equipment/results/${jobId}?page=${page}&limit=${perPageLimit}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch results: ${response.status}`);
+      }
+
+      const resultData = await response.json();
+
+      // Extract PM results from equipment data
+      const allPMResults = [];
+      if (resultData.data && Array.isArray(resultData.data)) {
+        resultData.data.forEach((equipment) => {
+          if (equipment.pmResults && Array.isArray(equipment.pmResults)) {
+            equipment.pmResults.forEach((pm) => {
+              allPMResults.push({
+                ...pm,
+                serialnumber: equipment.serialnumber,
+                equipmentId: equipment.equipmentid,
+                lineNumber: equipment.lineNumber,
+              });
+            });
+          }
+        });
+      }
+
+      setProcessingData((prev) => ({
+        ...prev,
+        status: "completed",
+        endTime: page === 1 ? new Date() : prev.endTime,
+        duration:
+          page === 1
+            ? `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`
+            : prev.duration,
+        equipmentResults: append
+          ? [...(prev.equipmentResults || []), ...(resultData.data || [])]
+          : resultData.data || [],
+        pmResults: append
+          ? [...(prev.pmResults || []), ...allPMResults]
+          : allPMResults,
+        pagination: {
+          currentPage: page,
+          totalPages: resultData.pagination?.totalPages || 1,
+          totalRecords: resultData.pagination?.total || 0,
+          hasNext: resultData.pagination?.hasNext || false,
+          hasPrev: resultData.pagination?.hasPrev || false,
+        },
+        summary:
+          page === 1
+            ? {
+                ...prev.summary,
+                totalPMCreated: jobProgress.counts?.pmGenerated || 0,
+                totalPMExpected: jobProgress.summary?.totalPMExpected || 0,
+                operationBreakdown: {
+                  created: jobProgress.counts?.created || 0,
+                  updated: jobProgress.counts?.updated || 0,
+                  failed: jobProgress.counts?.failed || 0,
+                  pmRegenerated:
+                    jobProgress.summary?.operationBreakdown?.pmRegenerated || 0,
+                },
+                pmTypeBreakdown: jobProgress.summary?.pmTypeBreakdown || {},
+                statusBreakdown: jobProgress.summary?.statusBreakdown || {},
+                performance: jobProgress.summary?.performance || {},
+              }
+            : prev.summary,
+        errors: page === 1 ? resultData.errors || [] : prev.errors,
+        warnings: page === 1 ? resultData.warnings || [] : prev.warnings,
+      }));
+
+      setCurrentPage(page);
+      setIsLoadingMore(false);
+
+      // Fetch error details on first page load
+      if (page === 1) {
+        try {
+          console.log("Fetching errors in fetchJobResult for jobId:", jobId); // Debug log
+          const errorData = await fetchAllErrors(jobId);
+          console.log("Error data in fetchJobResult:", errorData); // Debug log
+
+          if (errorData && errorData.summary) {
+            setAllErrors(errorData.errors || []);
+            setAllWarnings(errorData.warnings || []);
+            setErrorSummary({
+              totalErrors: errorData.summary.totalErrors || 0,
+              totalWarnings: errorData.summary.totalWarnings || 0,
+              errorBreakdown: errorData.summary.errorsByCategory || {},
+              errorBySource: errorData.summary.errorsBySource || {},
+              failedEquipment: errorData.summary.failedEquipment || [],
+            });
+          }
+        } catch (errorFetchError) {
+          console.error("Failed to fetch error details:", errorFetchError);
+        }
+
+        // Live updates only for first page
+        const pmGenerated = jobProgress.counts?.pmGenerated || 0;
+        const pmRegenerated =
+          jobProgress.summary?.operationBreakdown?.pmRegenerated || 0;
+
+        if (pmRegenerated > 0) {
+          addLiveUpdate(
+            `📊 Equipment: ${pmRegenerated} PM regenerated`,
+            "success"
+          );
+        }
+
+        if (pmGenerated > 0) {
+          addLiveUpdate(`⚙️ PM Tasks: ${pmGenerated} created`, "success");
+        }
+
+        if (allPMResults.length > 0) {
+          addLiveUpdate(
+            `📋 Extracted ${allPMResults.length} individual PM tasks from equipment records`,
+            "info"
+          );
+        }
+
+        const processedCount = jobProgress.progress?.processedRecords || 0;
+        if (processedCount > 0) {
+          addLiveUpdate(
+            `✅ Successfully processed ${processedCount} equipment records`,
+            "success"
+          );
+        }
+      } else {
+        addLiveUpdate(
+          `📄 Loaded page ${page} - ${
+            resultData.data?.length || 0
+          } more records`,
+          "info"
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching results:", error);
+      addLiveUpdate(`❌ Failed to fetch results: ${error.message}`, "error");
+      setIsLoadingMore(false);
+    }
+  };
+
+  const startProgressPolling = (jobId) => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+    progressIntervalRef.current = setInterval(() => {
+      pollJobProgress(jobId);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       message,
       type,
       timestamp: new Date().toLocaleTimeString(),
     };
-    setLiveUpdates((prev) => [update, ...prev.slice(0, 24)]);
+    setLiveUpdates((prev) => [update, ...prev.slice(0, 49)]);
   };
 
+  // File handling functions
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
     validateAndSetFile(selectedFile);
@@ -265,19 +536,24 @@ export default function EquipmentBulk({ onClose }) {
     }
 
     const fileExtension = selectedFile.name.split(".").pop()?.toLowerCase();
-    if (!["csv", "xls", "xlsx"].includes(fileExtension || "")) {
-      setError("Please upload a CSV or Excel file (.csv, .xls, .xlsx)");
+    if (
+      !["csv", "xls", "xlsx", "tsv", "json", "xml"].includes(
+        fileExtension || ""
+      )
+    ) {
+      setError(
+        "Please upload a supported file (.csv, .xls, .xlsx, .tsv, .json, .xml)"
+      );
       setFile(null);
       return;
     }
 
-    if (selectedFile.size > 50 * 1024 * 1024) {
-      setError("File size exceeds 50MB limit");
+    if (selectedFile.size > 500 * 1024 * 1024) {
+      setError("File size exceeds 500MB limit");
       setFile(null);
       return;
     }
 
-    // Set file and show validation loading
     setFile(selectedFile);
     setError("Validating file structure...");
     addLiveUpdate(
@@ -289,7 +565,6 @@ export default function EquipmentBulk({ onClose }) {
       "info"
     );
 
-    // Validate file structure
     const validation = await validateFileStructure(selectedFile);
     setFileValidation(validation);
 
@@ -316,13 +591,12 @@ export default function EquipmentBulk({ onClose }) {
       return;
     }
 
-    setError(""); // Clear error if validation passes
+    setError("");
     addLiveUpdate(
       `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
       "success"
     );
 
-    // Show mapped columns
     if (validation.mappedColumns) {
       const mappedList = Object.entries(validation.mappedColumns)
         .map(([field, header]) => `${field}: "${header}"`)
@@ -331,6 +605,7 @@ export default function EquipmentBulk({ onClose }) {
     }
   };
 
+  // Drag and drop handlers
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -348,40 +623,19 @@ export default function EquipmentBulk({ onClose }) {
     validateAndSetFile(droppedFile);
   };
 
+  // Upload handler
   const handleUpload = async () => {
     if (!file) return;
 
     setIsProcessing(true);
     setLiveUpdates([]);
     setProcessingData({
+      ...processingData,
       status: "processing",
       fileName: file.name,
       fileType: file.name.split(".").pop()?.toUpperCase() || "Unknown",
+      fileSize: file.size,
       startTime: new Date(),
-      endTime: null,
-      duration: null,
-      totalRecords: 0,
-      processedRecords: 0,
-      equipmentResults: [],
-      pmResults: [],
-      summary: {
-        totalPMExpected: 0,
-        totalPMCreated: 0,
-        pmCompletionPercentage: 0,
-        statusBreakdown: {
-          Due: 0,
-          Overdue: 0,
-          Lapsed: 0,
-        },
-        pmTypeBreakdown: {
-          WPM: 0,
-          EPM: 0,
-          CPM: 0,
-          NPM: 0,
-        },
-      },
-      errors: [],
-      warnings: [],
     });
 
     const formData = new FormData();
@@ -391,10 +645,10 @@ export default function EquipmentBulk({ onClose }) {
       addLiveUpdate("🚀 Starting file upload and validation...", "info");
 
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 600000); // 10 minute timeout
+      const timeoutId = setTimeout(() => abortController.abort(), 900000);
 
       const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/bulk/equipment/bulk-upload`,
+        `${process.env.REACT_APP_BASE_URL}/bulk/equipment/start`,
         {
           method: "POST",
           body: formData,
@@ -406,89 +660,35 @@ export default function EquipmentBulk({ onClose }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.errors?.[0] || `HTTP error! status: ${response.status}`
-        );
+        let message = `HTTP error! status: ${response.status}`;
+        if (errorData.errors) {
+          if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+            message = errorData.errors[0].message || message;
+          } else if (typeof errorData.errors === "string") {
+            message = errorData.errors;
+          } else if (typeof errorData.errors === "object") {
+            message = JSON.stringify(errorData.errors);
+          }
+        }
+        throw new Error(message);
       }
 
-      addLiveUpdate(
-        "✅ File uploaded successfully. Processing data...",
-        "success"
-      );
-
-      // Handle JSON response (not streaming)
       const data = await response.json();
 
-      setProcessingData((prev) => {
-        const newData = {
-          ...prev,
-          ...data,
-          equipmentResults: data.equipmentResults || [],
-          pmResults: data.pmResults || [],
-          summary: data.summary
-            ? { ...prev.summary, ...data.summary }
-            : prev.summary,
-          errors: data.errors || [],
-          warnings: data.warnings || [],
-        };
-
-        // Add detailed live updates based on response
-        if (data.status === "completed") {
-          addLiveUpdate(
-            `🎉 Processing completed successfully in ${data.duration}!`,
-            "success"
-          );
-          addLiveUpdate(
-            `📊 Equipment processed: ${data.totalRecords} records`,
-            "info"
-          );
-          addLiveUpdate(
-            `⚙️ PM tasks created: ${data.summary?.totalPMCreated || 0}`,
-            "success"
-          );
-
-          // PM Type breakdown
-          if (data.summary?.pmTypeBreakdown) {
-            const { WPM, EPM, CPM, NPM } = data.summary.pmTypeBreakdown;
-            if (WPM > 0) addLiveUpdate(`🔧 Warranty PMs (WPM): ${WPM}`, "info");
-            if (EPM > 0) addLiveUpdate(`🔧 Extended PMs (EPM): ${EPM}`, "info");
-            if (CPM > 0)
-              addLiveUpdate(`🔧 Comprehensive PMs (CPM): ${CPM}`, "info");
-            if (NPM > 0)
-              addLiveUpdate(`🔧 Non-comprehensive PMs (NPM): ${NPM}`, "info");
-          }
-
-          // Status breakdown
-          if (data.summary?.statusBreakdown) {
-            const { Due, Overdue, Lapsed } = data.summary.statusBreakdown;
-            if (Due > 0) addLiveUpdate(`📅 Due tasks: ${Due}`, "warning");
-            if (Overdue > 0)
-              addLiveUpdate(`⚠️ Overdue tasks: ${Overdue}`, "error");
-            if (Lapsed > 0)
-              addLiveUpdate(`❌ Lapsed tasks: ${Lapsed}`, "error");
-          }
-
-          setIsProcessing(false);
-          setTimeout(() => setActiveTab("results"), 2000);
-        } else if (data.status === "failed") {
-          addLiveUpdate("❌ Processing failed!", "error");
-          if (data.errors?.length > 0) {
-            data.errors.forEach((err) =>
-              addLiveUpdate(`Error: ${err}`, "error")
-            );
-          }
-          setIsProcessing(false);
-        }
-
-        // Add warnings if any
-        if (data.warnings?.length > 0) {
-          data.warnings.forEach((warning) =>
-            addLiveUpdate(`⚠️ ${warning}`, "warning")
-          );
-        }
-
-        return newData;
-      });
+      if (data.jobId) {
+        setJobId(data.jobId);
+        addLiveUpdate(
+          `✅ Upload started successfully. Job ID: ${data.jobId}`,
+          "success"
+        );
+        addLiveUpdate(
+          "🔄 Processing in progress... Real-time updates will appear below",
+          "info"
+        );
+        startProgressPolling(data.jobId);
+      } else {
+        throw new Error("No job ID received from server");
+      }
     } catch (err) {
       console.error("Upload error:", err);
       const errorMessage =
@@ -498,7 +698,6 @@ export default function EquipmentBulk({ onClose }) {
       addLiveUpdate(`❌ Upload failed: ${errorMessage}`, "error");
       setError(`Upload failed: ${errorMessage}`);
       setIsProcessing(false);
-
       setProcessingData((prev) => ({
         ...prev,
         status: "failed",
@@ -508,59 +707,59 @@ export default function EquipmentBulk({ onClose }) {
     }
   };
 
-  // Updated CSV template with all required fields matching backend field mappings
-  const csvTemplate = `Material Code,Material Description,Serial Number,Equipment,Current Customer,End Customer,CustWarrantyStart,CustWarrantyEnd,DealerWarrantyStart,DealerWarrantyEnd,Dealer,PAL number,IR Number
-,,,,,,,,,,`;
-
-  const handleDownloadTemplate = () => {
-    // Create workbook and worksheet
-    const workbook = XLSX.utils.book_new();
-
-    // Create data with headers and empty rows
-    const data = [
-      [
-        "Material Code",
-        "Material Description",
-        "Serial Number",
-        "Equipment",
-        "Current Customer",
-        "End Customer",
-        "CustWarrantyStart",
-        "CustWarrantyEnd",
-        "DealerWarrantyStart",
-        "DealerWarrantyEnd",
-        "Dealer",
-        "PAL number",
-        "IR Number",
-        "Status",
-      ], // Headers with Status field added
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
-    ];
-
-    // Convert to worksheet
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Equipment Template");
-
-    // Write and download file
-    XLSX.writeFile(workbook, "equipment_bulk_upload_template.xlsx");
-
+  // Template download handler
+  const handleDownloadTemplateClick = () => {
+    handleDownloadTemplate();
     addLiveUpdate("📁 Template downloaded successfully", "success");
   };
 
+  // Reset function
   const resetForm = () => {
     setFile(null);
     setError("");
     setActiveTab("upload");
     setLiveUpdates([]);
     setIsProcessing(false);
+    setFileValidation(null);
+    setEquipmentFilter("all");
+    setPmFilter("all");
+    setSearchTerm("");
+    setExpandedEquipment(new Set());
+    setJobId(null);
+
+    // Add these lines to reset error states
+    setAllErrors([]);
+    setAllWarnings([]);
+    setErrorSummary({});
+
+    setJobProgress({
+      status: "idle",
+      fileName: "",
+      fileSize: 0,
+      totalRecords: 0,
+      processedRecords: 0,
+      createdCount: 0,
+      updatedCount: 0,
+      failedCount: 0,
+      pmCount: 0,
+      progressPercentage: 0,
+      currentOperation: "Ready to start...",
+      startTime: null,
+      endTime: null,
+      estimatedEndTime: null,
+      errorMessage: "",
+      fieldMappingInfo: {
+        detectedFields: [],
+        mappedFields: [],
+        unmappedFields: [],
+      },
+    });
+
     setProcessingData({
       status: "idle",
       fileName: "",
       fileType: "",
+      fileSize: 0,
       startTime: null,
       endTime: null,
       duration: null,
@@ -569,898 +768,1263 @@ export default function EquipmentBulk({ onClose }) {
       equipmentResults: [],
       pmResults: [],
       summary: {
-        totalPMExpected: 0,
-        totalPMCreated: 0,
-        pmCompletionPercentage: 0,
-        statusBreakdown: {
-          Due: 0,
-          Overdue: 0,
-          Lapsed: 0,
+        operations: {
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          failed: 0,
+          pmRegenerated: 0,
         },
-        pmTypeBreakdown: {
-          WPM: 0,
-          EPM: 0,
-          CPM: 0,
-          NPM: 0,
+        pm: {
+          totalExpected: 0,
+          created: 0,
+          failed: 0,
+          skipped: 0,
+          completionPercentage: 0,
         },
+        statusBreakdown: { Due: 0, Overdue: 0, Lapsed: 0 },
+        pmTypeBreakdown: { WPM: 0, EPM: 0, CPM: 0, NPM: 0 },
+        errorBreakdown: {},
+        statusUpdates: { total: 0, byStatus: {} },
+      },
+      performance: {
+        parseTime: 0,
+        validationTime: 0,
+        dbWriteTime: 0,
+        pmGenerationTime: 0,
       },
       errors: [],
       warnings: [],
+      fieldMappingInfo: {
+        detectedFields: [],
+        mappedFields: [],
+        unmappedFields: [],
+      },
     });
   };
 
-  const renderStatusBadge = (status) => {
-    const statusMap = {
-      Created: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        label: "Created",
-        icon: "✓",
-      },
-      Updated: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Updated",
-        icon: "↻",
-      },
-      Failed: {
-        bg: "bg-red-100",
-        text: "text-red-800",
-        label: "Failed",
-        icon: "✕",
-      },
-      Due: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Due",
-        icon: "⏰",
-      },
-      Overdue: {
-        bg: "bg-red-100",
-        text: "text-red-800",
-        label: "Overdue",
-        icon: "⚠",
-      },
-      Lapsed: {
-        bg: "bg-gray-100",
-        text: "text-gray-800",
-        label: "Lapsed",
-        icon: "🔒",
-      },
-      Completed: {
-        bg: "bg-purple-100",
-        text: "text-purple-800",
-        label: "Completed",
-        icon: "✓",
-      },
-      Success: {
-        bg: "bg-green-100",
-        text: "text-green-800",
-        label: "Success",
-        icon: "✓",
-      },
-      Processing: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Processing",
-        icon: "⟳",
-      },
-    };
+  // Filtered results
+  const filteredEquipmentResults = useMemo(() => {
+    let filtered = processingData.equipmentResults || [];
 
-    const config = statusMap[status] || {
-      bg: "bg-gray-100",
-      text: "text-gray-800",
-      label: status || "Unknown",
-      icon: "?",
-    };
+    if (equipmentFilter !== "all") {
+      filtered = filtered.filter((item) => {
+        const status = item.status.toLowerCase();
+        return (
+          status === equipmentFilter ||
+          (equipmentFilter === "pmregenerated" && status === "pmregenerated") ||
+          (equipmentFilter === "created" && status === "created") ||
+          (equipmentFilter === "updated" && status === "updated") ||
+          (equipmentFilter === "failed" && status === "failed")
+        );
+      });
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (item) =>
+          item.serialnumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.equipmentid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.reason?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [processingData.equipmentResults, equipmentFilter, searchTerm]);
+
+  const filteredPMResults = useMemo(() => {
+    let filtered = processingData.pmResults || [];
+
+    if (pmFilter !== "all") {
+      filtered = filtered.filter((item) => {
+        const status =
+          item.status?.toLowerCase() || item.pmStatus?.toLowerCase() || "";
+        return status === pmFilter;
+      });
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (item) =>
+          item.serialnumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.pmType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.equipmentId?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [processingData.pmResults, pmFilter, searchTerm]);
+
+  const toggleEquipmentExpansion = (serialnumber) => {
+    const newExpanded = new Set(expandedEquipment);
+    if (newExpanded.has(serialnumber)) {
+      newExpanded.delete(serialnumber);
+    } else {
+      newExpanded.add(serialnumber);
+    }
+    setExpandedEquipment(newExpanded);
+  };
+  // Add this component before the Equipment Results section
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    totalRecords,
+    hasNext,
+    hasPrev,
+    onPageChange,
+    isLoading,
+    recordsShown,
+    type = "equipment",
+  }) => {
+    const startRecord = (currentPage - 1) * perPageLimit + 1;
+    const endRecord = Math.min(currentPage * perPageLimit, totalRecords);
 
     return (
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
-      >
-        <span className="mr-1">{config.icon}</span>
-        {config.label}
-      </span>
+      <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="text-sm text-gray-600">
+          Showing {recordsShown} {type} records
+          {totalRecords > 0 && (
+            <span className="text-gray-500">
+              ({startRecord}-{endRecord} of {totalRecords} total)
+            </span>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange(currentPage - 1)}
+              disabled={!hasPrev || isLoading}
+              className={`px-3 py-2 text-sm font-medium rounded-md border ${
+                !hasPrev || isLoading
+                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Previous
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = i + 1;
+                const isActive = pageNum === currentPage;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => onPageChange(pageNum)}
+                    disabled={isLoading}
+                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                      isActive
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              {totalPages > 5 && (
+                <>
+                  <span className="px-2 text-gray-500">...</span>
+                  <button
+                    onClick={() => onPageChange(totalPages)}
+                    disabled={isLoading || currentPage === totalPages}
+                    className={`px-3 py-2 text-sm font-medium rounded-md border ${
+                      currentPage === totalPages || isLoading
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => onPageChange(currentPage + 1)}
+              disabled={!hasNext || isLoading}
+              className={`px-3 py-2 text-sm font-medium rounded-md border ${
+                !hasNext || isLoading
+                  ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={14} className="animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                "Next"
+              )}
+            </button>
+          </div>
+        )}
+      </div>
     );
   };
 
-  const getProcessingSteps = () => {
-    const steps = [
-      {
-        id: 1,
-        title: "File Validation & Parsing",
-        description: `Parsing ${processingData.fileName} (${processingData.fileType}) with field mapping`,
-        status: processingData.status !== "idle" ? "completed" : "pending",
-      },
-      {
-        id: 2,
-        title: "Equipment Data Processing",
-        description: `${processingData.processedRecords}/${processingData.totalRecords} equipment records processed`,
-        status:
-          processingData.processedRecords > 0
-            ? processingData.processedRecords === processingData.totalRecords
-              ? "completed"
-              : "active"
-            : processingData.status === "processing"
-            ? "active"
-            : "pending",
-      },
-      {
-        id: 3,
-        title: "PM Task Generation",
-        description: `${processingData.summary.totalPMCreated}/${processingData.summary.totalPMExpected} PM tasks created with status calculation`,
-        status:
-          processingData.summary.totalPMCreated > 0
-            ? processingData.summary.pmCompletionPercentage === 100
-              ? "completed"
-              : "active"
-            : processingData.processedRecords === processingData.totalRecords &&
-              processingData.status === "processing"
-            ? "active"
-            : "pending",
-      },
-      {
-        id: 4,
-        title: "Database Commit & Finalization",
-        description: "Saving all data and generating final report",
-        status: processingData.status === "completed" ? "completed" : "pending",
-      },
-    ];
-
-    return steps;
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                  <Database size={24} />
+    <div className="min-h-screen overflow-y-auto bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => window.history.back()}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Equipment Bulk Upload & PM Generation
+                </h1>
+                <p className="text-sm text-gray-500">
+                  Import equipment data with intelligent field mapping and
+                  automatic PM task generation
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              {processingData.status === "completed" && (
+                <div className="flex items-center space-x-2 text-sm text-green-600 bg-green-50 px-3 py-1 rounded-full">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Processing Complete</span>
                 </div>
-                Equipment Bulk Upload & PM Generation
-              </h2>
-              <p className="text-blue-100 mt-1">
-                Import equipment data with intelligent field mapping and
-                automatic PM task generation
+              )}
+              {isProcessing && (
+                <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>{jobProgress.progressPercentage}% Complete</span>
+                </div>
+              )}
+              {jobId && (
+                <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  Job: {jobId}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Template Download Section */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200 p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2 mb-2">
+                <FileSpreadsheet size={24} />
+                Download Template with Smart Field Mapping
+              </h3>
+              <p className="text-blue-700 mb-4">
+                Get the Excel/CSV template with all required fields. Our system
+                supports flexible field naming and intelligent column mapping.
               </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  9 Required Fields
+                </span>
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  Smart Mapping
+                </span>
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                  Multi-Format Support
+                </span>
+                <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
+                  Auto PM Generation
+                </span>
+              </div>
             </div>
             <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              disabled={isProcessing}
+              onClick={handleDownloadTemplateClick}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
             >
-              <X size={24} />
+              <Download size={20} />
+              Download Template
             </button>
           </div>
         </div>
 
-        {/* Template Download Section */}
-        <div className="flex m-6 justify-between items-center p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-200">
-          <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 flex items-center gap-2 mb-2">
-              <FileSpreadsheet size={20} />
-              Download Template with Smart Field Mapping
-            </h3>
-            <p className="text-sm text-blue-700 mb-3">
-              Get the Excel/CSV template with all required fields. Our system
-              supports flexible field naming!
-            </p>
-          </div>
-          <button
-            onClick={handleDownloadTemplate}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
-          >
-            <Download size={16} />
-            Download Template
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 p-6  h-[350px] overflow-y-auto">
-          {/* Tabs */}
-          <div className="mb-6">
-            <div className="flex border-b border-gray-200">
+        {/* Navigation Tabs */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6" aria-label="Tabs">
               <button
-                className={`px-6 py-3 font-medium text-sm transition-colors relative ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
                   activeTab === "upload"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
                 onClick={() => setActiveTab("upload")}
               >
-                <Upload size={16} className="inline mr-2" />
-                Upload & Process
-                {isProcessing && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                )}
+                <div className="flex items-center gap-2">
+                  <Upload size={16} />
+                  Upload & Process
+                  {isProcessing && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                  )}
+                </div>
               </button>
               <button
-                className={`px-6 py-3 font-medium text-sm transition-colors relative ${
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
                   activeTab === "results"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
                 onClick={() => setActiveTab("results")}
                 disabled={processingData.status !== "completed"}
               >
-                <TrendingUp size={16} className="inline mr-2" />
-                Results & Analytics
-                {processingData.status === "completed" && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></span>
-                )}
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={16} />
+                  Results & Analytics
+                  {processingData.status === "completed" && (
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></span>
+                  )}
+                </div>
               </button>
-            </div>
+              <button
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+                  activeTab === "equipment"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                onClick={() => setActiveTab("equipment")}
+                disabled={processingData.status !== "completed"}
+              >
+                <div className="flex items-center gap-2">
+                  <Database size={16} />
+                  Equipment Details
+                  {processingData.equipmentResults?.length > 0 && (
+                    <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full text-xs">
+                      {processingData.equipmentResults.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+              {/* PM Tasks Tab */}
+              <button
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+                  activeTab === "pm"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                onClick={() => setActiveTab("pm")}
+                disabled={processingData.status !== "completed"}
+              >
+                <div className="flex items-center gap-2">
+                  <Wrench size={16} />
+                  PM Tasks
+                  {processingData.pmResults?.length > 0 && (
+                    <span className="ml-1 px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs">
+                      {processingData.pmResults.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+
+              {/* Update the errors tab button condition */}
+              {(errorSummary.totalErrors > 0 ||
+                errorSummary.totalWarnings > 0 ||
+                allErrors.length > 0 ||
+                allWarnings.length > 0 ||
+                processingData.status === "completed") && (
+                <button
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
+                    activeTab === "errors"
+                      ? "border-red-500 text-red-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                  onClick={() => setActiveTab("errors")}
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    Issues & Errors
+                    {((errorSummary.totalErrors || 0) +
+                      (errorSummary.totalWarnings || 0) ||
+                      allErrors.length + allWarnings.length) > 0 && (
+                      <span className="ml-1 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs">
+                        {(errorSummary.totalErrors || 0) +
+                          (errorSummary.totalWarnings || 0) ||
+                          allErrors.length + allWarnings.length}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )}
+            </nav>
           </div>
 
-          {/* Upload Tab */}
-          {activeTab === "upload" && (
-            <div className="space-y-6 ">
-              {/* Error Display */}
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md flex items-start gap-3">
-                  <AlertCircle
-                    size={20}
-                    className="text-red-500 flex-shrink-0 mt-0.5"
-                  />
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">
-                      Upload Error
-                    </h3>
-                    <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
-                      {error}
-                    </p>
+          {/* Tab Content */}
+          <div className="p-6">
+            {/* Upload Tab */}
+            {activeTab === "upload" && (
+              <div className="space-y-8">
+                {/* Error Display */}
+                {error && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+                    <div className="flex items-start">
+                      <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 mr-3" />
+                      <div>
+                        <h3 className="text-sm font-medium text-red-800">
+                          Upload Error
+                        </h3>
+                        <div className="mt-1 text-sm text-red-700">
+                          <pre className="whitespace-pre-wrap font-sans">
+                            {error}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* File Upload Section */}
-              {!isProcessing && (
-                <div className="space-y-6 ">
-                  <div
-                    className={`relative border-2 border-dashed rounded-xl transition-all duration-300 ${
-                      isDragging
-                        ? "border-blue-500 bg-blue-50 scale-[1.02] shadow-lg"
-                        : file
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                    }`}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                  >
-                    <div className="flex flex-col items-center justify-center py-16">
-                      {file ? (
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-100">
-                            <FileSpreadsheet
-                              size={32}
-                              className="text-green-600"
-                            />
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center gap-3 justify-center">
-                              <span className="font-semibold text-lg text-gray-900">
-                                {file.name}
-                              </span>
-                              <button
-                                className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setFile(null);
-                                  addLiveUpdate("File removed", "info");
-                                }}
-                              >
-                                <X size={16} />
-                              </button>
+                {!isProcessing ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* File Upload Area */}
+                    <div className="lg:col-span-2">
+                      <FileUploadArea
+                        file={file}
+                        isDragging={isDragging}
+                        fileValidation={fileValidation}
+                        handleDragOver={handleDragOver}
+                        handleDragLeave={handleDragLeave}
+                        handleDrop={handleDrop}
+                        handleFileChange={handleFileChange}
+                        setFile={setFile}
+                        setFileValidation={setFileValidation}
+                        addLiveUpdate={addLiveUpdate}
+                      />
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end gap-4 mt-6">
+                        {file && (
+                          <button
+                            onClick={resetForm}
+                            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                          >
+                            Reset
+                          </button>
+                        )}
+                        <button
+                          onClick={handleUpload}
+                          disabled={
+                            !file || (fileValidation && !fileValidation.isValid)
+                          }
+                          className={`px-8 py-3 rounded-lg flex items-center gap-2 font-medium transition-all ${
+                            !file || (fileValidation && !fileValidation.isValid)
+                              ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                              : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
+                          }`}
+                        >
+                          <Upload size={16} />
+                          {fileValidation && fileValidation.isValid
+                            ? "Upload & Process Equipment ✓"
+                            : "Upload & Process Equipment"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Updates Sidebar */}
+                    <div className="space-y-6">
+                      <LiveUpdates
+                        liveUpdates={liveUpdates}
+                        isProcessing={false}
+                        jobProgress={jobProgress}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* Processing View */
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Processing Steps */}
+                    <div className="lg:col-span-2 space-y-8">
+                      <ProcessingSteps
+                        processingData={processingData}
+                        jobProgress={jobProgress}
+                      />
+                      {/* Statistics */}
+
+                      {processingData.status !== "idle" && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-3xl font-bold text-blue-600">
+                                  {jobProgress?.progress?.processedRecords ||
+                                    processingData?.processedRecords ||
+                                    0}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Equipment Processed
+                                </div>
+                                <div className="text-xs text-blue-500 mt-1">
+                                  of{" "}
+                                  {jobProgress?.progress?.totalRecords ||
+                                    processingData?.totalRecords ||
+                                    0}{" "}
+                                  total
+                                </div>
+                              </div>
+                              <div className="text-2xl">
+                                {jobProgress?.progress?.processedRecords ===
+                                jobProgress?.progress?.totalRecords
+                                  ? "✅"
+                                  : "⏳"}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-500 mt-2 space-x-4">
-                              <span>
-                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                              </span>
-                              <span>•</span>
-                              <span>{file.type || "Unknown type"}</span>
+                            {jobProgress?.progress?.percentage && (
+                              <div className="mt-2">
+                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                  <span>Progress</span>
+                                  <span>
+                                    {jobProgress.progress.percentage}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                    style={{
+                                      width: `${jobProgress.progress.percentage}%`,
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="bg-white border border-green-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-3xl font-bold text-green-600">
+                                  {jobProgress?.counts?.pmGenerated ||
+                                    jobProgress?.summary?.totalPMCreated ||
+                                    processingData?.summary?.totalPMCreated ||
+                                    0}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  PM Tasks Created
+                                </div>
+                                <div className="text-xs text-green-500 mt-1">
+                                  {jobProgress?.summary
+                                    ?.pmCompletionPercentage ||
+                                    processingData?.summary
+                                      ?.pmCompletionPercentage ||
+                                    (jobProgress?.status === "COMPLETED"
+                                      ? "100"
+                                      : "0")}
+                                  % complete
+                                </div>
+                              </div>
+                              <div className="text-2xl">
+                                {jobProgress?.counts?.pmGenerated > 0
+                                  ? "⚙️"
+                                  : "⏸️"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-purple-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-3xl font-bold text-purple-600">
+                                  {jobProgress?.summary?.operationBreakdown
+                                    ?.pmRegenerated ||
+                                    processingData?.summary?.operationBreakdown
+                                      ?.pmRegenerated ||
+                                    (jobProgress?.status === "COMPLETED"
+                                      ? jobProgress?.progress?.processedRecords
+                                      : 0) ||
+                                    0}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  PM Regenerated
+                                </div>
+                                <div className="text-xs text-purple-500 mt-1">
+                                  Equipment refreshed
+                                </div>
+                              </div>
+                              <div className="text-2xl">🔄</div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-3xl font-bold text-red-600">
+                                  {jobProgress?.counts?.failed ||
+                                    processingData?.summary?.operationBreakdown
+                                      ?.failed ||
+                                    (processingData?.warnings?.length || 0) +
+                                      (processingData?.errors?.length || 0)}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Issues
+                                </div>
+                                <div className="text-xs text-red-500 mt-1">
+                                  {jobProgress?.counts?.failed > 0
+                                    ? "Errors found"
+                                    : "No issues"}
+                                </div>
+                              </div>
+                              <div className="text-2xl">
+                                {(jobProgress?.counts?.failed || 0) > 0
+                                  ? "❌"
+                                  : "✅"}
+                              </div>
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 mb-6">
-                            <Upload size={32} className="text-blue-600" />
-                          </div>
-                          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                            Upload Equipment Data
-                          </h3>
-                          <p className="text-gray-600 mb-4 text-center max-w-md">
-                            Select or drag & drop your Excel/CSV file. Our
-                            intelligent system will automatically map fields and
-                            generate PM tasks.
-                          </p>
-                          <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
-                              .CSV
-                            </span>
-                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-medium">
-                              .XLS
-                            </span>
-                            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
-                              .XLSX
-                            </span>
-                            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full font-medium">
-                              Max 50MB
-                            </span>
-                          </div>
-                        </>
                       )}
-                    </div>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      className="hidden"
-                      accept=".csv,.xls,.xlsx"
-                      onChange={handleFileChange}
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="absolute inset-0 cursor-pointer"
-                    >
-                      <span className="sr-only">Upload file</span>
-                    </label>
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex justify-end gap-3">
-                    {file && (
-                      <button
-                        onClick={resetForm}
-                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Reset
-                      </button>
-                    )}
-                    <button
-                      onClick={handleUpload}
-                      disabled={
-                        !file || (fileValidation && !fileValidation.isValid)
-                      }
-                      className={`px-8 py-3 rounded-lg flex items-center gap-2 font-medium transition-all ${
-                        !file || (fileValidation && !fileValidation.isValid)
-                          ? "bg-gray-300 cursor-not-allowed text-gray-500"
-                          : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
-                      }`}
-                    >
-                      <Upload size={16} />
-                      {fileValidation && fileValidation.isValid
-                        ? "Upload & Process Equipment ✓"
-                        : "Upload & Process Equipment"}
-                    </button>
-                  </div>
-                </div>
-              )}
+                      {/* Overall Progress Bar */}
+                      {isProcessing &&
+                        jobProgress?.progress?.percentage !== undefined && (
+                          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm mb-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="text-lg font-semibold text-gray-800">
+                                Processing Progress
+                              </h3>
+                              <span className="text-sm text-gray-500">
+                                {jobProgress.timing?.elapsedTime}s elapsed
+                              </span>
+                            </div>
 
-              {/* Processing Status */}
-              {isProcessing && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Processing Steps */}
-                  <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <Settings
-                          className="text-blue-600 animate-spin"
-                          size={20}
-                        />
-                        Processing Status
-                      </h3>
-                      <div className="space-y-4">
-                        {getProcessingSteps().map((step) => (
-                          <div key={step.id} className="flex items-start gap-4">
-                            <div className="flex-shrink-0 mt-1">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-gray-700">
+                                {jobProgress.progress?.currentOperation ||
+                                  "Processing..."}
+                              </span>
+                              <span className="text-sm font-medium text-blue-600">
+                                {jobProgress.progress.percentage}%
+                              </span>
+                            </div>
+
+                            <div className="w-full bg-gray-200 rounded-full h-3">
                               <div
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                                  step.status === "completed"
-                                    ? "bg-green-500 text-white shadow-lg"
-                                    : step.status === "active"
-                                    ? "bg-blue-500 text-white shadow-lg animate-pulse"
-                                    : "bg-gray-200 text-gray-500"
-                                }`}
-                              >
-                                {step.status === "completed" ? (
-                                  <CheckCircle2 size={16} />
-                                ) : step.status === "active" ? (
-                                  <Clock size={16} className="animate-spin" />
-                                ) : (
-                                  step.id
-                                )}
-                              </div>
+                                className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all duration-500 ease-out"
+                                style={{
+                                  width: `${jobProgress.progress.percentage}%`,
+                                }}
+                              ></div>
                             </div>
-                            <div className="flex-1">
-                              <h4
-                                className={`font-medium ${
-                                  step.status === "active"
-                                    ? "text-blue-600"
-                                    : "text-gray-800"
-                                }`}
-                              >
-                                {step.title}
-                              </h4>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {step.description}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
-                    {/* Statistics */}
-                    {processingData.status !== "idle" && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-sm">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {processingData.processedRecords}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            Equipment Processed
-                          </div>
-                          <div className="text-xs text-blue-500 mt-1">
-                            of {processingData.totalRecords} total
-                          </div>
-                        </div>
-                        <div className="bg-white border border-green-200 rounded-lg p-4 shadow-sm">
-                          <div className="text-2xl font-bold text-green-600">
-                            {processingData.summary.totalPMCreated}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            PM Tasks Created
-                          </div>
-                          <div className="text-xs text-green-500 mt-1">
-                            {processingData.summary.pmCompletionPercentage}%
-                            complete
-                          </div>
-                        </div>
-                        <div className="bg-white border border-yellow-200 rounded-lg p-4 shadow-sm">
-                          <div className="text-2xl font-bold text-yellow-600">
-                            {processingData.summary.statusBreakdown.Due || 0}
-                          </div>
-                          <div className="text-sm text-gray-600">Due Tasks</div>
-                        </div>
-                        <div className="bg-white border border-red-200 rounded-lg p-4 shadow-sm">
-                          <div className="text-2xl font-bold text-red-600">
-                            {processingData.warnings?.length +
-                              processingData.errors?.length || 0}
-                          </div>
-                          <div className="text-sm text-gray-600">Issues</div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Live Updates */}
-                  <div className="space-y-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                      <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        Live Updates
-                      </h4>
-                      <div className="space-y-2 max-h-80 overflow-y-auto">
-                        {liveUpdates.length > 0 ? (
-                          liveUpdates.map((update) => (
-                            <div
-                              key={update.id}
-                              className={`p-3 rounded-lg text-sm border-l-4 ${
-                                update.type === "error"
-                                  ? "bg-red-50 text-red-700 border-red-400"
-                                  : update.type === "success"
-                                  ? "bg-green-50 text-green-700 border-green-400"
-                                  : update.type === "warning"
-                                  ? "bg-yellow-50 text-yellow-700 border-yellow-400"
-                                  : "bg-blue-50 text-blue-700 border-blue-400"
-                              }`}
-                            >
-                              <div className="flex justify-between items-start">
-                                <span className="flex-1">{update.message}</span>
-                                <span className="text-xs opacity-75 ml-2">
-                                  {update.timestamp}
-                                </span>
-                              </div>
+                            <div className="flex justify-between text-xs text-gray-500 mt-2">
+                              <span>
+                                {jobProgress.progress?.processedRecords || 0} /{" "}
+                                {jobProgress.progress?.totalRecords || 0}{" "}
+                                records
+                              </span>
+                              <span>
+                                {jobProgress.timing?.duration
+                                  ? `Completed in ${jobProgress.timing.duration}s`
+                                  : `ETA: ${Math.max(
+                                      0,
+                                      Math.round(
+                                        (jobProgress.timing?.estimatedEndTime -
+                                          Date.now()) /
+                                          1000
+                                      )
+                                    )}s`}
+                              </span>
                             </div>
-                          ))
-                        ) : (
-                          <div className="text-sm text-gray-500 text-center py-8">
-                            Processing will start soon...
                           </div>
                         )}
-                      </div>
+                    </div>
+
+                    {/* Live Updates During Processing */}
+                    <div>
+                      <LiveUpdates
+                        liveUpdates={liveUpdates}
+                        isProcessing={true}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Results Tab */}
+
+            {activeTab === "results" &&
+              processingData.status === "completed" && (
+                <ResultsTab
+                  processingData={processingData}
+                  jobProgress={jobProgress}
+                />
+              )}
+            {/* Equipment Details Tab */}
+            {activeTab === "equipment" &&
+              processingData.status === "completed" && (
+                <div className="space-y-6">
+                  {/* Filters and Search */}
+
+                  <PaginationControls
+                    currentPage={processingData.pagination?.currentPage || 1}
+                    totalPages={processingData.pagination?.totalPages || 1}
+                    totalRecords={processingData.pagination?.totalRecords || 0}
+                    hasNext={processingData.pagination?.hasNext || false}
+                    hasPrev={processingData.pagination?.hasPrev || false}
+                    onPageChange={(page) => fetchJobResult(jobId, page, false)}
+                    isLoading={isLoadingMore}
+                    recordsShown={filteredEquipmentResults.length}
+                    type="equipment"
+                  />
+
+                  {/* Equipment Results */}
+                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                    <div className="p-4 border-b border-gray-200 bg-gray-50">
+                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <Database size={20} />
+                        Equipment Processing Results (
+                        {filteredEquipmentResults.length})
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                      {filteredEquipmentResults.length > 0 ? (
+                        filteredEquipmentResults.map((equipment, index) => (
+                          <div
+                            key={index}
+                            className="p-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="font-semibold text-gray-900 text-lg">
+                                    {equipment.serialnumber}
+                                  </span>
+                                  {renderStatusBadge(equipment.status)}
+                                  {equipment.equipmentid && (
+                                    <span className="text-sm text-gray-500">
+                                      ID: {equipment.equipmentid}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {equipment.reason && (
+                                  <p className="text-sm text-gray-600 mb-2">
+                                    <span className="font-medium">Reason:</span>{" "}
+                                    {equipment.reason}
+                                  </p>
+                                )}
+
+                                {equipment.changedFields &&
+                                  equipment.changedFields.length > 0 && (
+                                    <div className="mb-2">
+                                      <span className="text-sm font-medium text-gray-700">
+                                        Changed fields (
+                                        {equipment.changedFields.length}):
+                                      </span>
+                                      <div className="mt-1">
+                                        {equipment.changedFields.map(
+                                          (field, fieldIndex) => (
+                                            <span
+                                              key={fieldIndex}
+                                              className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 mb-1"
+                                            >
+                                              {field}
+                                            </span>
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                {equipment.error && (
+                                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                                    <p className="text-sm text-red-700">
+                                      <span className="font-medium">
+                                        Error:
+                                      </span>{" "}
+                                      {equipment.error}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {equipment.validationErrors &&
+                                  equipment.validationErrors.length > 0 && (
+                                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                                      <p className="text-sm font-medium text-red-800 mb-2">
+                                        Validation Errors:
+                                      </p>
+                                      <ul className="text-sm text-red-700 space-y-1">
+                                        {equipment.validationErrors.map(
+                                          (error, errorIndex) => (
+                                            <li key={errorIndex}>
+                                              • {error.message}
+                                            </li>
+                                          )
+                                        )}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                {/* PM Results for this equipment */}
+                                {equipment.pmResults &&
+                                  equipment.pmResults.length > 0 && (
+                                    <div className="mt-3">
+                                      <button
+                                        onClick={() =>
+                                          toggleEquipmentExpansion(
+                                            equipment.serialnumber
+                                          )
+                                        }
+                                        className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                                      >
+                                        {expandedEquipment.has(
+                                          equipment.serialnumber
+                                        ) ? (
+                                          <ChevronUp size={16} />
+                                        ) : (
+                                          <ChevronDown size={16} />
+                                        )}
+                                        PM Tasks ({equipment.pmResults.length})
+                                      </button>
+
+                                      {expandedEquipment.has(
+                                        equipment.serialnumber
+                                      ) && (
+                                        <div className="mt-2 pl-4 border-l-2 border-blue-200">
+                                          <div className="space-y-2">
+                                            {equipment.pmResults.map(
+                                              (pm, pmIndex) => (
+                                                <div
+                                                  key={pmIndex}
+                                                  className="flex items-center justify-between p-2 bg-gray-50 rounded border"
+                                                >
+                                                  <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                      <span className="font-medium text-sm">
+                                                        {pm.pmType}
+                                                      </span>
+                                                      {renderStatusBadge(
+                                                        pm.status
+                                                      )}
+                                                    </div>
+                                                    {pm.dueMonth && (
+                                                      <div className="text-xs text-gray-600">
+                                                        Due: {pm.dueMonth}
+                                                        {pm.dueDate &&
+                                                          ` (${pm.dueDate})`}
+                                                        {pm.pmStatus &&
+                                                          ` - Status: ${pm.pmStatus}`}
+                                                      </div>
+                                                    )}
+                                                    {pm.reason && (
+                                                      <div className="text-xs text-gray-600 mt-1">
+                                                        Reason: {pm.reason}
+                                                      </div>
+                                                    )}
+                                                    {pm.error && (
+                                                      <div className="text-xs text-red-600 mt-1">
+                                                        Error: {pm.error}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                {/* Additional metadata */}
+                                <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-500">
+                                  {equipment.recordIndex !== undefined && (
+                                    <span>
+                                      Row: {equipment.recordIndex + 1}
+                                    </span>
+                                  )}
+                                  {equipment.lineNumber && (
+                                    <span>Line: {equipment.lineNumber}</span>
+                                  )}
+                                  {equipment.changeCount && (
+                                    <span>
+                                      Changes: {equipment.changeCount}
+                                    </span>
+                                  )}
+                                  {equipment.willGeneratePMs && (
+                                    <span className="text-green-600">
+                                      ✓ PM Generation
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-12 text-center text-gray-500">
+                          <Database
+                            size={48}
+                            className="mx-auto mb-4 text-gray-300"
+                          />
+                          <p className="text-lg font-medium">
+                            No equipment records found
+                          </p>
+                          <p className="text-sm">
+                            {equipmentFilter !== "all"
+                              ? `No records match the selected filter: ${equipmentFilter}`
+                              : "No equipment data available"}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* Completion Message */}
-              {processingData.status === "completed" && !isProcessing && (
-                <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border border-green-200 rounded-xl p-8 text-center">
-                  <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mx-auto mb-6">
-                    <CheckCircle2 size={32} className="text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-green-800 mb-3">
-                    🎉 Processing Completed Successfully!
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
-                    <div>
-                      <div className="font-semibold text-green-700">
-                        {processingData.totalRecords}
-                      </div>
-                      <div className="text-green-600">Equipment Processed</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-green-700">
-                        {processingData.summary.totalPMCreated}
-                      </div>
-                      <div className="text-green-600">PM Tasks Created</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-green-700">
-                        {processingData.duration}
-                      </div>
-                      <div className="text-green-600">Processing Time</div>
-                    </div>
-                    <div>
-                      <div className="font-semibold text-green-700">
-                        {processingData.summary.pmCompletionPercentage}%
-                      </div>
-                      <div className="text-green-600">Success Rate</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("results")}
-                    className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl"
-                  >
-                    View Detailed Results & Analytics
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Results Tab */}
-          {activeTab === "results" && processingData.status === "completed" && (
-            <div className="space-y-6 h-[500px] overflow-y-auto">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-700">
-                        Equipment Created
-                      </p>
-                      <p className="text-2xl font-bold text-green-800 mt-2">
-                        {
-                          processingData.equipmentResults.filter(
-                            (e) => e.status === "Created"
-                          ).length
-                        }
-                      </p>
-                    </div>
-                    <div className="bg-green-200 p-3 rounded-full">
-                      <CheckCircle2 size={24} className="text-green-700" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-700">
-                        Equipment Updated
-                      </p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">
-                        {
-                          processingData.equipmentResults.filter(
-                            (e) => e.status === "Updated"
-                          ).length
-                        }
-                      </p>
-                    </div>
-                    <div className="bg-blue-200 p-3 rounded-full">
-                      <Database size={24} className="text-blue-700" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-purple-700">
-                        PM Tasks Created
-                      </p>
-                      <p className="text-2xl font-bold text-purple-800 mt-2">
-                        {processingData.summary.totalPMCreated}
-                      </p>
-                    </div>
-                    <div className="bg-purple-200 p-3 rounded-full">
-                      <Settings size={24} className="text-purple-700" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-700">
-                        Failed Records
-                      </p>
-                      <p className="text-2xl font-bold text-red-800 mt-2">
-                        {
-                          processingData.equipmentResults.filter(
-                            (e) => e.status === "Failed"
-                          ).length
-                        }
-                      </p>
-                    </div>
-                    <div className="bg-red-200 p-3 rounded-full">
-                      <AlertCircle size={24} className="text-red-700" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* PM Type Breakdown */}
-              {Object.values(processingData.summary.pmTypeBreakdown).some(
-                (count) => count > 0
-              ) && (
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <TrendingUp size={20} />
-                    PM Task Type Distribution
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">
-                        {processingData.summary.pmTypeBreakdown.WPM}
-                      </div>
-                      <div className="text-sm font-medium text-blue-700">
-                        Warranty PM
-                      </div>
-                      <div className="text-xs text-blue-600 mt-1">
-                        Customer warranty period
-                      </div>
-                    </div>
-                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="text-3xl font-bold text-green-600 mb-1">
-                        {processingData.summary.pmTypeBreakdown.EPM}
-                      </div>
-                      <div className="text-sm font-medium text-green-700">
-                        Extended PM
-                      </div>
-                      <div className="text-xs text-green-600 mt-1">
-                        Dealer/Extended warranty
-                      </div>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="text-3xl font-bold text-purple-600 mb-1">
-                        {processingData.summary.pmTypeBreakdown.CPM}
-                      </div>
-                      <div className="text-sm font-medium text-purple-700">
-                        Comprehensive PM
-                      </div>
-                      <div className="text-xs text-purple-600 mt-1">
-                        ZDRC AMC contracts
-                      </div>
-                    </div>
-                    <div className="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
-                      <div className="text-3xl font-bold text-orange-600 mb-1">
-                        {processingData.summary.pmTypeBreakdown.NPM}
-                      </div>
-                      <div className="text-sm font-medium text-orange-700">
-                        Non-comprehensive PM
-                      </div>
-                      <div className="text-xs text-orange-600 mt-1">
-                        ZDRN AMC contracts
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Status Breakdown */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Calendar size={20} />
-                  PM Status Distribution (Based on Due Dates)
-                </h3>
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div className="text-3xl font-bold text-yellow-600 mb-1">
-                      {processingData.summary.statusBreakdown.Due}
-                    </div>
-                    <div className="text-sm font-medium text-yellow-700">
-                      Due Tasks
-                    </div>
-                    <div className="text-xs text-yellow-600 mt-1">
-                      Current/upcoming month
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
-                    <div className="text-3xl font-bold text-red-600 mb-1">
-                      {processingData.summary.statusBreakdown.Overdue}
-                    </div>
-                    <div className="text-sm font-medium text-red-700">
-                      Overdue Tasks
-                    </div>
-                    <div className="text-xs text-red-600 mt-1">
-                      1-2 months past due
-                    </div>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="text-3xl font-bold text-gray-600 mb-1">
-                      {processingData.summary.statusBreakdown.Lapsed}
-                    </div>
-                    <div className="text-sm font-medium text-gray-700">
-                      Lapsed Tasks
-                    </div>
-                    <div className="text-xs text-gray-600 mt-1">
-                      More than 2 months past
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 text-blue-700 text-sm">
-                    <Info size={16} />
-                    <span className="font-medium">PM Logic Applied:</span>
-                  </div>
-                  <ul className="text-xs text-blue-600 mt-2 space-y-1 ml-5">
-                    <li>
-                      • Shows PM as "Due" one month in advance (May shows June
-                      PM)
-                    </li>
-                    <li>• 2-month grace period for overdue tasks</li>
-                    <li>
-                      • Frequency based on product master (2x/year, 4x/year,
-                      etc.)
-                    </li>
-                    <li>• Preserves already completed PM tasks</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Processing Summary */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="font-medium text-gray-800 mb-4">
-                  Processing Summary
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">File Processed:</span>
-                    <span className="font-medium">
-                      {processingData.fileName}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Processing Time:</span>
-                    <span className="font-medium">
-                      {processingData.duration}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Completed At:</span>
-                    <span className="font-medium">
-                      {new Date(processingData.endTime).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Detailed Results */}
-              <div className="grid grid-cols-1  ">
-                {/* Equipment Results */}
-
+            {/* PM Tasks Tab */}
+            {activeTab === "pm" && processingData.status === "completed" && (
+              <div className="space-y-6">
+                <PaginationControls
+                  currentPage={processingData.pagination?.currentPage || 1}
+                  totalPages={processingData.pagination?.totalPages || 1}
+                  totalRecords={processingData.pagination?.totalRecords || 0}
+                  hasNext={processingData.pagination?.hasNext || false}
+                  hasPrev={processingData.pagination?.hasPrev || false}
+                  onPageChange={(page) => fetchJobResult(jobId, page, false)}
+                  isLoading={isLoadingMore}
+                  recordsShown={filteredPMResults.length}
+                  type="PM"
+                />
                 {/* PM Results */}
-                <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
                   <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <h3 className="font-medium text-gray-800 flex items-center gap-2">
-                      <Settings size={16} />
-                      PM Task Results ({processingData.pmResults.length})
+                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                      <Wrench size={20} />
+                      PM Task Results ({filteredPMResults.length})
                     </h3>
                   </div>
-                  <div className="max-h-80 overflow-y-auto">
-                    {processingData.pmResults.length > 0 ? (
-                      processingData.pmResults.map((item, index) => (
+                  <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                    {filteredPMResults.length > 0 ? (
+                      filteredPMResults.map((pm, index) => (
                         <div
                           key={index}
-                          className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                          className="p-4 hover:bg-gray-50 transition-colors"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-sm text-gray-800 truncate">
-                                {item.serialnumber} - {item.pmType || "PM"}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Due: {item.dueMonth || "N/A"}
-                                {item.dueDate && (
-                                  <span className="ml-2">
-                                    • Date: {item.dueDate}
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="font-semibold text-gray-900">
+                                  {pm.serialnumber || pm.serialNumber} -{" "}
+                                  {pm.pmType}
+                                </span>
+                                {renderStatusBadge(pm.status || pm.pmStatus)}
+                                {pm.equipmentId && (
+                                  <span className="text-sm text-gray-500">
+                                    Equipment: {pm.equipmentId}
                                   </span>
                                 )}
-                                {item.created && (
-                                  <span className="ml-2">
-                                    • Status: {item.created}
-                                  </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                {pm.dueMonth && (
+                                  <div>
+                                    <span className="font-medium">
+                                      Due Month:
+                                    </span>{" "}
+                                    {pm.dueMonth}
+                                  </div>
                                 )}
-                              </p>
-                              {item.error && (
-                                <p className="text-xs text-red-500 mt-1 truncate">
-                                  {item.error}
+                                {pm.dueDate && (
+                                  <div>
+                                    <span className="font-medium">
+                                      Due Date:
+                                    </span>{" "}
+                                    {pm.dueDate}
+                                  </div>
+                                )}
+                                {pm.pmStatus && (
+                                  <div>
+                                    <span className="font-medium">
+                                      PM Status:
+                                    </span>{" "}
+                                    {pm.pmStatus}
+                                  </div>
+                                )}
+                              </div>
+
+                              {pm.reason && (
+                                <p className="text-sm text-gray-600 mt-2">
+                                  <span className="font-medium">Reason:</span>{" "}
+                                  {pm.reason}
                                 </p>
                               )}
-                            </div>
-                            <div className="ml-4">
-                              {renderStatusBadge(item.status)}
+
+                              {pm.error && (
+                                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                                  <p className="text-sm text-red-700">
+                                    <span className="font-medium">Error:</span>{" "}
+                                    {pm.error}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="p-8 text-center text-gray-500">
-                        No PM tasks created
+                      <div className="p-12 text-center text-gray-500">
+                        <Wrench
+                          size={48}
+                          className="mx-auto mb-4 text-gray-300"
+                        />
+                        <p className="text-lg font-medium">No PM tasks found</p>
+                        <p className="text-sm">
+                          {pmFilter !== "all"
+                            ? `No PM tasks match the selected filter: ${pmFilter}`
+                            : "No PM task data available"}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+            )}
+            {activeTab === "errors" && (
+              <div className="space-y-6">
+                {/* <div className="bg-gray-100 p-4 rounded mb-4">
+                  <h4 className="font-bold">Debug Info:</h4>
+                  <p>Processing Status: {processingData.status}</p>
+                  <p>Job ID: {jobId}</p>
+                  <p>All Errors Length: {allErrors.length}</p>
+                  <p>All Warnings Length: {allWarnings.length}</p>
+                  <p>Error Summary: {JSON.stringify(errorSummary, null, 2)}</p>
+                </div> */}
+                {/* ✅ Proper loading condition */}
+                {processingData.status !== "completed" ? (
+                  <div className="flex items-center justify-center p-8">
+                    <RefreshCw className="animate-spin mr-2" size={20} />
+                    <span>Loading error details...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-2xl font-bold text-red-600">
+                              {errorSummary.totalErrors || 0}
+                            </div>
+                            <div className="text-sm text-red-700">
+                              Total Errors
+                            </div>
+                          </div>
+                          <XCircle className="h-8 w-8 text-red-500" />
+                        </div>
+                      </div>
 
-              {/* Warnings and Errors */}
-              {(processingData.warnings?.length > 0 ||
-                processingData.errors?.length > 0) && (
-                <div className="space-y-4">
-                  {processingData.warnings?.length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <h4 className="font-medium text-yellow-800 mb-2 flex items-center gap-2">
-                        <AlertCircle size={16} />
-                        Warnings ({processingData.warnings.length})
-                      </h4>
-                      <div className="space-y-1">
-                        {processingData.warnings.map((warning, index) => (
-                          <p key={index} className="text-sm text-yellow-700">
-                            • {warning}
-                          </p>
-                        ))}
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-2xl font-bold text-yellow-600">
+                              {errorSummary.totalWarnings || 0}
+                            </div>
+                            <div className="text-sm text-yellow-700">
+                              Total Warnings
+                            </div>
+                          </div>
+                          <AlertTriangle className="h-8 w-8 text-yellow-500" />
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {errorSummary.failedEquipment?.length || 0}
+                            </div>
+                            <div className="text-sm text-blue-700">
+                              Failed Records
+                            </div>
+                          </div>
+                          <AlertCircle className="h-8 w-8 text-blue-500" />
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {processingData.errors?.length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <h4 className="font-medium text-red-800 mb-2 flex items-center gap-2">
-                        <AlertCircle size={16} />
-                        Errors ({processingData.errors.length})
-                      </h4>
-                      <div className="space-y-1">
-                        {processingData.errors.map((error, index) => (
-                          <p key={index} className="text-sm text-red-700">
-                            • {error}
-                          </p>
-                        ))}
+                    {/* Error Breakdown */}
+                    {errorSummary.errorBreakdown &&
+                      Object.keys(errorSummary.errorBreakdown).length > 0 && (
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
+                          <div className="p-4 border-b border-gray-200 bg-gray-50">
+                            <h3 className="text-lg font-semibold text-gray-800">
+                              Error Breakdown by Category
+                            </h3>
+                          </div>
+                          <div className="p-6">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {Object.entries(errorSummary.errorBreakdown).map(
+                                ([category, count]) => (
+                                  <div
+                                    key={category}
+                                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                  >
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {category}
+                                    </span>
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+                                      {count}
+                                    </span>
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Individual Errors */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                      <div className="p-4 border-b border-gray-200 bg-gray-50">
+                        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                          <AlertTriangle size={20} />
+                          All Errors ({allErrors.length})
+                        </h3>
+                      </div>
+                      <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                        {allErrors.length > 0 ? (
+                          allErrors.map((error, index) => (
+                            <div
+                              key={error.id || index}
+                              className="p-4 hover:bg-gray-50"
+                            >
+                              <div className="flex items-start space-x-3">
+                                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                      {error.category}
+                                    </span>
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                      {error.source}
+                                    </span>
+                                    {error.lineNumber && (
+                                      <span className="text-xs text-gray-500">
+                                        Line {error.lineNumber}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="text-sm text-red-800 font-medium mb-1">
+                                    {error.message}
+                                  </p>
+
+                                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                                    {error.serialNumber && (
+                                      <span>
+                                        Serial:{" "}
+                                        <strong>{error.serialNumber}</strong>
+                                      </span>
+                                    )}
+                                    {error.equipmentId && (
+                                      <span>
+                                        Equipment:{" "}
+                                        <strong>{error.equipmentId}</strong>
+                                      </span>
+                                    )}
+                                    {error.field && (
+                                      <span>
+                                        Field: <strong>{error.field}</strong>
+                                      </span>
+                                    )}
+                                    {error.pmType && (
+                                      <span>
+                                        PM Type: <strong>{error.pmType}</strong>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-12 text-center text-gray-500">
+                            <CheckCircle2
+                              size={48}
+                              className="mx-auto mb-4 text-green-300"
+                            />
+                            <p className="text-lg font-medium">
+                              No errors found
+                            </p>
+                            <p className="text-sm">
+                              All records were processed successfully
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={resetForm}
-                  className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Upload Another File
-                </button>
+                    {/* Warnings Section */}
+                    {allWarnings.length > 0 && (
+                      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                        <div className="p-4 border-b border-gray-200 bg-gray-50">
+                          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <AlertCircle size={20} />
+                            All Warnings ({allWarnings.length})
+                          </h3>
+                        </div>
+                        <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
+                          {allWarnings.map((warning, index) => (
+                            <div
+                              key={warning.id || index}
+                              className="p-4 hover:bg-gray-50"
+                            >
+                              <div className="flex items-start space-x-3">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                      {warning.category}
+                                    </span>
+                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                      {warning.source}
+                                    </span>
+                                    {warning.lineNumber && (
+                                      <span className="text-xs text-gray-500">
+                                        Line {warning.lineNumber}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <p className="text-sm text-yellow-800 font-medium mb-1">
+                                    {warning.message}
+                                  </p>
+
+                                  <div className="flex items-center gap-4 text-xs text-gray-600">
+                                    {warning.serialNumber && (
+                                      <span>
+                                        Serial:{" "}
+                                        <strong>{warning.serialNumber}</strong>
+                                      </span>
+                                    )}
+                                    {warning.equipmentId && (
+                                      <span>
+                                        Equipment:{" "}
+                                        <strong>{warning.equipmentId}</strong>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

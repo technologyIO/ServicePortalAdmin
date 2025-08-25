@@ -14,7 +14,7 @@ const ProposalQuoteTemplate = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/phone/proposal/${proposalId}`
+          `${process.env.REACT_APP_BASE_URL}/phone/oncall/${proposalId}`
         );
         setQuoteData(response.data);
         setLoading(false);

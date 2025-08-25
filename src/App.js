@@ -88,6 +88,7 @@ import CLoseCmcNcmc from './Components/DataComponents/Admin/QuoteApproval/CloseC
 import CloseCMCNCMCDetailPage from './Components/DataComponents/Admin/QuoteApproval/CloseCmcNcmc/CloseCMCNCMCDetailPage';
 import CloseOnCall from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCall';
 import CloseOnCallDetailPage from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCallDetailPage';
+import EquipmentBulk from './Components/DataComponents/Master_Managemnet/Equipment/EquipmentBulk';
 
 
 const PrivateRoute = ({ children }) => {
@@ -490,6 +491,7 @@ const AppContent = () => {
             <Route path="/user-create" element={<UserManagment />} />
             <Route path="/proposal/:id" element={<ProposalApprovalPage />} />
             <Route path="/close-proposal" element={<CloseProposal />} />
+            <Route path="/bulkupload-equipment" element={<EquipmentBulk />} />
             {/* <Route path="/role-manage" element={<ProtectedRoute
                 component={RoleManagement}
                 componentName="Role Manage"

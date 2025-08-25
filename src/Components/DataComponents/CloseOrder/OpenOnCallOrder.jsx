@@ -9,6 +9,7 @@ import moment from "moment";
 import toast from "react-hot-toast";
 import { Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import StatusButton from "./OnCallStatusButton";
 
 // Axios instance
 const api = axios.create({
@@ -40,12 +41,9 @@ function OpenOnCallOrder() {
       const rows = res.data.data || res.data;
       const pages = res.data.totalPages || Math.ceil(rows.length / limit);
 
-      // exclude completed/issued
-      const open = rows.filter(
-        (r) =>
-          r.status.toLowerCase() !== "issued" &&
-          r.status.toLowerCase() !== "completed"
-      );
+      // exclude completed, issued, and CLOSED_WON
+      const open = rows.filter((r) => r.onCallproposalstatus === "Open");
+
       setOnCalls(open);
       setTotalPages(pages);
     } catch (err) {
@@ -59,6 +57,26 @@ function OpenOnCallOrder() {
   useEffect(() => {
     fetchOnCalls();
   }, [page]);
+  // Parent component में add करें:
+  const handleStatusUpdate = (onCallId, newStatus, remark) => {
+    // Update the local state/data
+    setOnCalls((prevOnCalls) =>
+      prevOnCalls.map((oc) =>
+        oc._id === onCallId
+          ? {
+              ...oc,
+              onCallproposalstatus: newStatus,
+              ...(remark && { proposalRemark: remark }),
+            }
+          : oc
+      )
+    );
+
+    // Optional: Show success message
+    console.log(
+      `Status updated to ${newStatus}${remark ? ` with remark: ${remark}` : ""}`
+    );
+  };
 
   // Search
   const handleSearch = async () => {
@@ -118,15 +136,18 @@ function OpenOnCallOrder() {
   };
   // Status styling
   const getStatusColor = (status) => {
-    const colorMap = {
-      approved: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      rejected: "bg-red-100 text-red-800",
-      issued: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800",
-      draft: "bg-gray-100 text-gray-800",
-    };
-    return colorMap[status?.toLowerCase()] || "bg-gray-100 text-gray-800";
+    switch (status?.toLowerCase()) {
+      case "open":
+        return "bg-gray-200 text-green-800 border border-gray-300";
+      case "dropped":
+        return "bg-red-100 text-red-800 border border-red-200";
+      case "closed_won":
+        return "bg-blue-100 text-blue-800 border border-blue-200";
+      case "closed_lost":
+        return "bg-gray-100 text-gray-800 border border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-600 border border-gray-200";
+    }
   };
 
   // Pagination handlers
@@ -141,7 +162,7 @@ function OpenOnCallOrder() {
     );
   }
   const handleDownloadQuote = (proposalId) => {
-    navigate(`/quote-template/${proposalId}`);
+    navigate(`/proposal-template/${proposalId}`);
   };
   return (
     <>
@@ -202,14 +223,12 @@ function OpenOnCallOrder() {
                     className="w-4 h-4 text-blue-600 rounded"
                   />
                 </td>
-
                 <td className="p-3 font-bold text-blue-600">
                   {oc.cnoteNumber}
                 </td>
                 <td className="p-3 font-bold text-blue-600">
                   {oc.onCallNumber}
                 </td>
-
                 <td className="p-3">
                   <div>
                     <div className="font-medium capitalize">
@@ -220,7 +239,6 @@ function OpenOnCallOrder() {
                     </div>
                   </div>
                 </td>
-
                 <td className="p-3">
                   <div className="max-w-32">
                     <div
@@ -234,19 +252,19 @@ function OpenOnCallOrder() {
                     </div>
                   </div>
                 </td>
-
                 <td className="p-3 font-mono text-xs">
                   {oc.complaint?.notification_complaintid}
                 </td>
 
-                <td className="p-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                      oc.onCallproposalstatus
-                    )}`}
-                  >
-                    {oc.onCallproposalstatus}
-                  </span>
+                <td>
+                  <StatusButton
+                    onCallId={oc._id}
+                    currentStatus={oc.onCallproposalstatus}
+                    cnoteNumber={oc.cnoteNumber}  
+                    onStatusUpdate={handleStatusUpdate}
+                    getStatusColor={getStatusColor}
+                    fetchOnCalls={fetchOnCalls}
+                  />
                 </td>
 
                 <td className="p-3 text-center">
@@ -254,11 +272,9 @@ function OpenOnCallOrder() {
                     {oc.discountPercentage?.toFixed(1)}%
                   </span>
                 </td>
-
                 <td className="p-3 font-semibold text-green-600">
                   ₹{oc.finalAmount?.toLocaleString("en-IN") || "0"}
                 </td>
-
                 <td className="p-3">
                   <div className="text-xs">
                     <div>{moment(oc.createdAt).format("MMM D, YYYY")}</div>
@@ -267,7 +283,6 @@ function OpenOnCallOrder() {
                     </div>
                   </div>
                 </td>
-
                 <td className="p-3">
                   <button
                     onClick={() =>
@@ -292,7 +307,6 @@ function OpenOnCallOrder() {
                     </svg>
                   </button>
                 </td>
-
                 <td className="p-3">
                   <button
                     onClick={() => handleDownloadQuote(oc?._id)}
@@ -312,7 +326,6 @@ function OpenOnCallOrder() {
                     </svg>
                   </button>
                 </td>
-
                 <td className="p-3">
                   <button
                     onClick={() => openModal(oc)}

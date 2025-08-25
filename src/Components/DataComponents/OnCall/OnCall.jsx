@@ -7,7 +7,8 @@ import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
 import { Download, Eye, Filter, RefreshCw } from "lucide-react";
 import LoadingSpinner from "../../../LoadingSpinner";
- 
+import OnCallOpportunityButton from "./OnCallOpportunityButton";
+
 // Show a loader while fetching
 function Loader() {
   return (
@@ -35,6 +36,7 @@ export default function CloseOnCall() {
   const [totalRecords, setTotalRecords] = useState(0);
   const limit = 50; // Higher limit for customer grouping
   const navigate = useNavigate();
+  const [onCalls, setOnCalls] = useState([]);
 
   // Fetch data with server-side search
   const fetchCustomersWithOnCalls = async (pg = page, query = searchQuery) => {
@@ -58,12 +60,10 @@ export default function CloseOnCall() {
 
       const rawData = Array.isArray(res.data?.data) ? res.data.data : [];
 
-    
       const filtered = rawData.filter(
         (item) =>
           item.onCallproposalstatus === "Open" &&
-          typeof item.discountPercentage === "number" &&
-          item.discountPercentage > 5
+          typeof item.discountPercentage === "number"
       );
       // Group by customer.customercodeid
       const grouped = {};
@@ -106,6 +106,28 @@ export default function CloseOnCall() {
     fetchCustomersWithOnCalls(page, searchQuery);
     // eslint-disable-next-line
   }, [page]);
+  // Parent component में add करें:
+  const handleOpportunityStatusUpdate = (onCallId, newStatus, remark) => {
+    // Update the local state/data
+    setOnCalls((prevOnCalls) =>
+      prevOnCalls.map((oc) =>
+        oc._id === onCallId
+          ? {
+              ...oc,
+              onCallproposalstatus: newStatus,
+              ...(remark && { proposalRemark: remark }),
+            }
+          : oc
+      )
+    );
+
+    // Optional: Show success message
+    console.log(
+      `OnCall Opportunity status updated to ${newStatus}${
+        remark ? ` with remark: ${remark}` : ""
+      }`
+    );
+  };
 
   // Handle search input change with auto-refresh on clear
   const handleSearchChange = (e) => {
@@ -266,7 +288,7 @@ export default function CloseOnCall() {
                     Customer Name
                   </th>
                   <th className="p-3 font-bold text-white text-left">City</th>
-                  <th className="p-3 font-bold text-white text-left">Staus</th>
+                  <th className="p-3 font-bold text-white text-left">Status</th>
 
                   <th className="p-3 font-bold text-white text-left">
                     OnCall Date
@@ -318,11 +340,16 @@ export default function CloseOnCall() {
                       </td>
                       <td className="p-3">{customer?.city || "--"}</td>
 
-                      <td className="flex items-center justify-center ">
-                        <div className="px-3 py-2 rounded  bg-gray-300 mt-2 border">
-                          {oncall?.onCallproposalstatus || "--"}
-                        </div>
+                      <td className="flex items-center justify-center">
+                        <OnCallOpportunityButton
+                          onCallId={oncall._id}
+                          currentStatus={oncall?.onCallproposalstatus}
+                          cnoteNumber={oncall?.cnoteNumber}
+                          fetchCustomersWithOnCalls={fetchCustomersWithOnCalls}
+                          onStatusUpdate={handleOpportunityStatusUpdate}
+                        />
                       </td>
+
                       <td className="p-3">
                         <div className="text-xs">
                           <div>

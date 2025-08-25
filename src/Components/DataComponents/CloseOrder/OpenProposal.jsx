@@ -9,6 +9,7 @@ import moment from "moment";
 import toast from "react-hot-toast";
 import { Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import StatusDateCell from "./StatusDateCell";
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -48,7 +49,22 @@ function OpenProposal() {
       }
     }
   }, []);
+  const handleProposalStatusUpdate = (proposalId, newStatus, remark) => {
+    // Update local state
+    setProposals((prevProposals) =>
+      prevProposals.map((p) =>
+        p._id === proposalId
+          ? {
+              ...p,
+              Cmcncmcsostatus: newStatus,
+              ...(remark && { proposalRemark: remark }),
+            }
+          : p
+      )
+    );
 
+    console.log(`Proposal status updated to ${newStatus}`);
+  };
   /* ───────────────────────── API CALLS ───────────────────────── */
   const fetchProposals = useCallback(async () => {
     setLoading(true);
@@ -62,7 +78,7 @@ function OpenProposal() {
 
       // Filter out completed proposals
       const filteredProposals = data.filter(
-        (proposal) => proposal.status?.toLowerCase() !== "completed"
+        (proposal) => proposal.Cmcncmcsostatus === "Open"
       );
 
       setProposals(filteredProposals);
@@ -153,7 +169,7 @@ function OpenProposal() {
     }
   };
   const handleDownloadQuote = (proposalId) => {
-    navigate(`/proposal-template/${proposalId}`);
+    navigate(`/quote-template/${proposalId}`);
   };
   /* ───────────────────────── HELPERS ───────────────────────── */
   const getStatusColor = (status) => {
@@ -341,26 +357,21 @@ function OpenProposal() {
                     </span>
                   </td>
 
+                  <td className="p-3">
+                    <StatusDateCell
+                      cnoteNumber={proposal.cnoteNumber}
+                      fetchProposals={fetchProposals}
+                      proposal={proposal}
+                      onStatusUpdate={handleProposalStatusUpdate}
+                    />
+                  </td>
                   <td className="p-3 font-semibold text-green-600">
                     ₹{proposal.finalAmount?.toLocaleString("en-IN") || "0"}
                   </td>
-                  <td>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                        proposal.Cmcncmcsostatus
-                      )}`}
-                    >
-                      {proposal.Cmcncmcsostatus}
-                    </span>
-                  </td>
+
                   <td className="p-3">
-                    <div className="text-xs">
-                      <div>
-                        {moment(proposal.createdAt).format("MMM D, YYYY")}
-                      </div>
-                      <div className="text-gray-500">
-                        {moment(proposal.createdAt).format("h:mm A")}
-                      </div>
+                    <div>
+                      {moment(proposal.createdAt).format("MMM D, YYYY")}
                     </div>
                   </td>
 

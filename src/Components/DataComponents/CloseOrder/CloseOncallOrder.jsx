@@ -59,9 +59,17 @@ function CloseOnCallOrder() {
 
       // Filter only completed OnCall orders
       const filteredOnCalls = data.filter(
-        (onCall) => onCall.status?.toLowerCase() === "completed"
+        (onCall) =>
+          onCall.onCallproposalstatus !== "Open"  
+          // onCall.status?.toLowerCase() === "completed"
       );
 
+      // const filtered = rawData.filter(
+      //   (item) =>
+      //     item.onCallproposalstatus !== "CLOSED_WON" &&
+      //     typeof item.discountPercentage === "number" &&
+      //     item.discountPercentage > 5
+      // );
       setOnCalls(filteredOnCalls);
       setFilteredData(filteredOnCalls);
       setTotalPages(pagesCount);

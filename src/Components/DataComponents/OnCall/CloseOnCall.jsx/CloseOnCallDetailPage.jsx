@@ -161,7 +161,7 @@ export default function CloseOnCallDetailPage() {
   };
 
   const handleDownloadQuote = (oncallId) => {
-    navigate(`/quote-template/${oncallId}`);
+    navigate(`/proposal-template/${oncallId}`);
   };
 
   const handleDownloadContractNote = (oncall) => {

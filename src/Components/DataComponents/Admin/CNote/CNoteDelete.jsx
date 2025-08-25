@@ -231,7 +231,7 @@ function CNoteDelete() {
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Items</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Current Rev</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Status</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Approvals</th>
+                  {/* <th className="p-3 text-left font-medium text-white whitespace-nowrap">Approvals</th> */}
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Final Amount</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Created</th>
                   <th className="p-3 text-left font-medium text-white whitespace-nowrap">Action</th>
@@ -288,13 +288,13 @@ function CNoteDelete() {
                           {revisionStatus.status}
                         </span>
                       </td>
-                      <td className="p-3">
+                      {/* <td className="p-3">
                         <span
                           className={`text-xs font-medium ${approvalStatus.color}`}
                         >
                           {approvalStatus.text}
                         </span>
-                      </td>
+                      </td> */}
                       <td className="p-3 font-semibold text-green-600">
                         ₹{row?.finalAmount?.toLocaleString("en-IN") || "0"}
                       </td>
