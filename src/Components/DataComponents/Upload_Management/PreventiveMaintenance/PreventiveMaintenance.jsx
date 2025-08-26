@@ -141,7 +141,28 @@ function PreventiveMaintenance() {
       setSelectedRows([]);
     }
   };
+  const handleToggleStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
+    try {
+      const response = await axios.put(
+        `${process.env.REACT_APP_BASE_URL}/upload/pms/${id}`,
+        { status: newStatus }
+      );
+
+      if (response.status === 200) {
+        toast.success(
+          `Equipment ${
+            newStatus === "Active" ? "activated" : "deactivated"
+          } successfully!`
+        );
+        getData(); // Refresh the data
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
   const handleRowSelect = (countryId) => {
     if (selectedRows.includes(countryId)) {
       // Deselect the row
@@ -669,6 +690,9 @@ function PreventiveMaintenance() {
                     PM Status (Comp, Due, Overdue, Lapse)
                   </th>
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Action
                   </th>
                 </tr>
@@ -752,6 +776,19 @@ function PreventiveMaintenance() {
                           {item?.pmStatus}
                         </span>
                       </td>
+                      <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
+                        <span
+                          className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
+                            item?.status === "Active"
+                              ? "bg-green-100 text-green-800 border-green-400"
+                              : item?.status === "Inactive"
+                              ? "bg-red-100 text-red-800 border-red-400"
+                              : "bg-gray-100 text-gray-800 border-gray-400"
+                          }`}
+                        >
+                          {item?.status}
+                        </span>
+                      </td>
 
                       <td className="p-4 align-middle whitespace-nowrap">
                         <div className="flex gap-4">
@@ -793,6 +830,21 @@ function PreventiveMaintenance() {
                               </svg>
                             </button>
                           )}
+                          <td className="align-middle whitespace-nowrap">
+                            <div className="flex gap-2 items-center justify-center">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only peer "
+                                  checked={item?.status === "Active"}
+                                  onChange={() =>
+                                    handleToggleStatus(item?._id, item?.status)
+                                  }
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                              </label>
+                            </div>
+                          </td>
                         </div>
                       </td>
                     </tr>
