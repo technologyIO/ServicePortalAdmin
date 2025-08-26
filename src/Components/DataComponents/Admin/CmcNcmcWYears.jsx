@@ -30,7 +30,7 @@ function CmcNcmcWYears() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
-
+  const [isSpinning, setisSpinning] = useState(false);
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
   const [cityList, setCityList] = useState([]);
@@ -348,19 +348,19 @@ function CmcNcmcWYears() {
                 {/* Refresh Button */}
                 <button
                   type="button"
+                  onClick={() => {
+                    setisSpinning(true);
+                    getData();
+                    setTimeout(() => setisSpinning(false), 1000);
+                  }}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw
+                    className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+                  />
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
-                <button
-                  onClick={openModal}
-                  type="button"
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload
-                </button>
+
                 <button
                   onClick={handleCloseModal}
                   type="button"
@@ -374,6 +374,14 @@ function CmcNcmcWYears() {
 
             {/* Bottom Row: Filter, Download Excel */}
             <div className="flex flex-wrap justify-end gap-3">
+              <button
+                onClick={openModal}
+                type="button"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
               <button
                 type="button"
                 className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"

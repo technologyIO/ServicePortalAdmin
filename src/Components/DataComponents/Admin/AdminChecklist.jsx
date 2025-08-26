@@ -45,7 +45,7 @@ const AdminChecklist = () => {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
-
+  const [isSpinning, setIsSpinning] = useState(false);
   const [checkpointtype, setcheckpointtype] = useState([]);
   const [productgroup, setproductgroup] = useState([]);
   const limit = 10;
@@ -427,135 +427,142 @@ const AdminChecklist = () => {
         </div>
       ) : (
         <>
-         <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
-  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
-    {/* Search and actions row */}
-    <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
-      <div className="relative flex-1">
-        <FormControl sx={{ flex: 1 }} size="sm">
-          <Input
-            size="sm"
-            placeholder="Search records, users, or data..."
-            startDecorator={<SearchIcon />}
-            value={searchQuery}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (searchQuery.trim()) {
-                  handleSearch(1);
-                } else {
-                  setIsSearchMode(false);
-                  setPage(1);
-                  getAllData(1);
-                }
-              }
-            }}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchQuery(value);
-              if (value === "" && isSearchMode) {
-                setIsSearchMode(false);
-                setPage(1);
-                getAllData(1);
-              }
-            }}
-            className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
-          />
-        </FormControl>
-      </div>
+          <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
+              {/* Search and actions row */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
+                <div className="relative flex-1">
+                  <FormControl sx={{ flex: 1 }} size="sm">
+                    <Input
+                      size="sm"
+                      placeholder="Search records, users, or data..."
+                      startDecorator={<SearchIcon />}
+                      value={searchQuery}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          if (searchQuery.trim()) {
+                            handleSearch(1);
+                          } else {
+                            setIsSearchMode(false);
+                            setPage(1);
+                            getAllData(1);
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSearchQuery(value);
+                        if (value === "" && isSearchMode) {
+                          setIsSearchMode(false);
+                          setPage(1);
+                          getAllData(1);
+                        }
+                      }}
+                      className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                    />
+                  </FormControl>
+                </div>
 
-      <button
-        onClick={() => handleSearch(1)}
-        type="button"
-        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
-      >
-        Search
-      </button>
-    </div>
+                <button
+                  onClick={() => handleSearch(1)}
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  Search
+                </button>
+              </div>
 
-    {/* Main actions row */}
-    <div className="flex gap-3">
-      {/* Refresh always visible */}
-      <button
-        type="button"
-        className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-      >
-        <RefreshCw className="w-4 h-4" />
-        <span className="hidden sm:inline">Refresh</span>
-      </button>
+              {/* Main actions row */}
+              <div className="flex gap-3">
+                {/* Refresh always visible */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSpinning(true);
+                    getAllData();
+                    setTimeout(() => setIsSpinning(false), 1000);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+                  />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
 
-      {/* Create New button */}
-      <button
-        onClick={() => handleOpenModal()}
-        type="button"
-        className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
-      >
-        <Plus className="w-4 h-4" />
-        Create New
-      </button>
+                {/* Create New button */}
+                <button
+                  onClick={() => handleOpenModal()}
+                  type="button"
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create New
+                </button>
 
-      {/* Conditionally show Delete Selected */}
-      {selectedRows?.length > 0 && (
-        <div className="animate-in slide-in-from-right-2 duration-300">
-          <button
-            onClick={handleBulkDelete}
-            type="button"
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
-          >
-            <span className="hidden sm:inline">Delete Selected</span>
-            <span className="sm:hidden">Delete</span>
-            <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
-              ({selectedRows.length})
-            </span>
-          </button>
-        </div>
-      )}
-    </div>
-  </div>
+                {/* Conditionally show Delete Selected */}
+                {selectedRows?.length > 0 && (
+                  <div className="animate-in slide-in-from-right-2 duration-300">
+                    <button
+                      onClick={handleBulkDelete}
+                      type="button"
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
+                    >
+                      <span className="hidden sm:inline">Delete Selected</span>
+                      <span className="sm:hidden">Delete</span>
+                      <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
+                        ({selectedRows.length})
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-  {/* Secondary actions row */}
-  <div className="flex flex-wrap justify-end gap-3">
-    <button
-      onClick={openModal}
-      type="button"
-      className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-    >
-      <Upload className="w-4 h-4" />
-      Upload
-    </button>
+            {/* Secondary actions row */}
+            <div className="flex flex-wrap justify-end gap-3">
+              <button
+                onClick={openModal}
+                type="button"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+              >
+                <Upload className="w-4 h-4" />
+                Upload
+              </button>
 
-    <button
-      type="button"
-      className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-    >
-      <Filter className="w-4 h-4" />
-      Filter
-    </button>
+              <button
+                type="button"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+              >
+                <Filter className="w-4 h-4" />
+                Filter
+              </button>
 
-    <button
-      onClick={downloadChecklistExcel}
-      disabled={isDownloadingChecklist}
-      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-        isDownloadingChecklist
-          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-          : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-      }`}
-    >
-      {isDownloadingChecklist ? (
-        <div className="flex items-center gap-2">
-          <LoadingSpinner />
-          <span className="hidden sm:inline">Downloading...</span>
-          <span className="sm:hidden">...</span>
-        </div>
-      ) : (
-        <>
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Download Excel</span>
-          <span className="sm:inline hidden">Download</span>
-        </>
-      )}
-    </button>
-  </div>
-</div>
+              <button
+                onClick={downloadChecklistExcel}
+                disabled={isDownloadingChecklist}
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isDownloadingChecklist
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                }`}
+              >
+                {isDownloadingChecklist ? (
+                  <div className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Download Excel</span>
+                    <span className="sm:inline hidden">Download</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
 
           {/* Add this div before the table */}
           <div className="flex justify-between items-center ">

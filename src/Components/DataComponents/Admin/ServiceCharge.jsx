@@ -42,7 +42,7 @@ function ServiceCharge() {
   const [isSearchMode, setIsSearchMode] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
-
+  const [isSpinning, setisSpinning] = useState(false);
   const [isDownloadingServiceCharge, setIsDownloadingServiceCharge] =
     useState(false);
 
@@ -391,9 +391,16 @@ function ServiceCharge() {
           <div className="flex gap-3">
             <button
               type="button"
+              onClick={() => {
+                setisSpinning(true);
+                getData();
+                setTimeout(() => setisSpinning(false), 1000);
+              }}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-md font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw
+                className={`w-4 h-4 ${isSpinning ? "animate-spin" : ""}`}
+              />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
