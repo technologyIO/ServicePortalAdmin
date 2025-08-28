@@ -135,6 +135,7 @@ export default function EquipmentBulkUploadPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const perPageLimit = 10; // Items per page
+  const [errorActiveTab, setErrorActiveTab] = useState("errors");
 
   // Filter states
   const [equipmentFilter, setEquipmentFilter] = useState("all");
@@ -492,7 +493,89 @@ export default function EquipmentBulkUploadPage() {
       setIsLoadingMore(false);
     }
   };
+  const downloadErrorsAsExcel = () => {
+    try {
+      // Prepare data for download
+      const errorData = allErrors.map((error, index) => ({
+        "Sr No": index + 1,
+        Category: error.category || "",
+        Source: error.source || "",
+        Message: error.message || "",
+        "Serial Number": error.serialNumber || "",
+        "Equipment ID": error.equipmentId || "",
+        "Line Number": error.lineNumber || "",
+        Field: error.field || "",
+        "PM Type": error.pmType || "",
+      }));
 
+      const warningData = allWarnings.map((warning, index) => ({
+        "Sr No": index + 1,
+        Category: warning.category || "",
+        Source: warning.source || "",
+        Message: warning.message || "",
+        "Serial Number": warning.serialNumber || "",
+        "Equipment ID": warning.equipmentId || "",
+        "Line Number": warning.lineNumber || "",
+        Field: warning.field || "",
+      }));
+
+      // Create CSV content
+      const createCSV = (data, title) => {
+        if (!data.length) return "";
+
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+          headers.join(","),
+          ...data.map((row) =>
+            headers
+              .map(
+                (header) =>
+                  `"${row[header]?.toString()?.replace(/"/g, '""') || ""}"`
+              )
+              .join(",")
+          ),
+        ].join("\n");
+
+        return csvContent;
+      };
+
+      const errorCSV = createCSV(errorData, "Errors");
+      const warningCSV = createCSV(warningData, "Warnings");
+
+      // Combine both in one file with separate sections
+      const combinedContent = [
+        "ERRORS SECTION",
+        errorCSV,
+        "",
+        "WARNINGS SECTION",
+        warningCSV,
+      ].join("\n");
+
+      // Download file
+      const blob = new Blob([combinedContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute(
+        "download",
+        `equipment-upload-errors-${new Date().toISOString().split("T")[0]}.csv`
+      );
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      addLiveUpdate(`📁 Errors data downloaded successfully`, "success");
+    } catch (error) {
+      console.error("Error downloading data:", error);
+      addLiveUpdate(
+        `❌ Failed to download errors data: ${error.message}`,
+        "error"
+      );
+    }
+  };
   const startProgressPolling = (jobId) => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
@@ -1089,45 +1172,6 @@ export default function EquipmentBulkUploadPage() {
                   )}
                 </div>
               </button>
-              <button
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                  activeTab === "equipment"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-                onClick={() => setActiveTab("equipment")}
-                disabled={processingData.status !== "completed"}
-              >
-                <div className="flex items-center gap-2">
-                  <Database size={16} />
-                  Equipment Details
-                  {processingData.equipmentResults?.length > 0 && (
-                    <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-600 rounded-full text-xs">
-                      {processingData.equipmentResults.length}
-                    </span>
-                  )}
-                </div>
-              </button>
-              {/* PM Tasks Tab */}
-              <button
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors relative ${
-                  activeTab === "pm"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-                onClick={() => setActiveTab("pm")}
-                disabled={processingData.status !== "completed"}
-              >
-                <div className="flex items-center gap-2">
-                  <Wrench size={16} />
-                  PM Tasks
-                  {processingData.pmResults?.length > 0 && (
-                    <span className="ml-1 px-2 py-0.5 bg-green-100 text-green-600 rounded-full text-xs">
-                      {processingData.pmResults.length}
-                    </span>
-                  )}
-                </div>
-              </button>
 
               {/* Update the errors tab button condition */}
               {(errorSummary.totalErrors > 0 ||
@@ -1458,347 +1502,9 @@ export default function EquipmentBulkUploadPage() {
                   jobProgress={jobProgress}
                 />
               )}
-            {/* Equipment Details Tab */}
-            {activeTab === "equipment" &&
-              processingData.status === "completed" && (
-                <div className="space-y-6">
-                  {/* Filters and Search */}
 
-                  <PaginationControls
-                    currentPage={processingData.pagination?.currentPage || 1}
-                    totalPages={processingData.pagination?.totalPages || 1}
-                    totalRecords={processingData.pagination?.totalRecords || 0}
-                    hasNext={processingData.pagination?.hasNext || false}
-                    hasPrev={processingData.pagination?.hasPrev || false}
-                    onPageChange={(page) => fetchJobResult(jobId, page, false)}
-                    isLoading={isLoadingMore}
-                    recordsShown={filteredEquipmentResults.length}
-                    type="equipment"
-                  />
-
-                  {/* Equipment Results */}
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                    <div className="p-4 border-b border-gray-200 bg-gray-50">
-                      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                        <Database size={20} />
-                        Equipment Processing Results (
-                        {filteredEquipmentResults.length})
-                      </h3>
-                    </div>
-                    <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                      {filteredEquipmentResults.length > 0 ? (
-                        filteredEquipmentResults.map((equipment, index) => (
-                          <div
-                            key={index}
-                            className="p-4 hover:bg-gray-50 transition-colors"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <span className="font-semibold text-gray-900 text-lg">
-                                    {equipment.serialnumber}
-                                  </span>
-                                  {renderStatusBadge(equipment.status)}
-                                  {equipment.equipmentid && (
-                                    <span className="text-sm text-gray-500">
-                                      ID: {equipment.equipmentid}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {equipment.reason && (
-                                  <p className="text-sm text-gray-600 mb-2">
-                                    <span className="font-medium">Reason:</span>{" "}
-                                    {equipment.reason}
-                                  </p>
-                                )}
-
-                                {equipment.changedFields &&
-                                  equipment.changedFields.length > 0 && (
-                                    <div className="mb-2">
-                                      <span className="text-sm font-medium text-gray-700">
-                                        Changed fields (
-                                        {equipment.changedFields.length}):
-                                      </span>
-                                      <div className="mt-1">
-                                        {equipment.changedFields.map(
-                                          (field, fieldIndex) => (
-                                            <span
-                                              key={fieldIndex}
-                                              className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs mr-1 mb-1"
-                                            >
-                                              {field}
-                                            </span>
-                                          )
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                {equipment.error && (
-                                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                                    <p className="text-sm text-red-700">
-                                      <span className="font-medium">
-                                        Error:
-                                      </span>{" "}
-                                      {equipment.error}
-                                    </p>
-                                  </div>
-                                )}
-
-                                {equipment.validationErrors &&
-                                  equipment.validationErrors.length > 0 && (
-                                    <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                                      <p className="text-sm font-medium text-red-800 mb-2">
-                                        Validation Errors:
-                                      </p>
-                                      <ul className="text-sm text-red-700 space-y-1">
-                                        {equipment.validationErrors.map(
-                                          (error, errorIndex) => (
-                                            <li key={errorIndex}>
-                                              • {error.message}
-                                            </li>
-                                          )
-                                        )}
-                                      </ul>
-                                    </div>
-                                  )}
-
-                                {/* PM Results for this equipment */}
-                                {equipment.pmResults &&
-                                  equipment.pmResults.length > 0 && (
-                                    <div className="mt-3">
-                                      <button
-                                        onClick={() =>
-                                          toggleEquipmentExpansion(
-                                            equipment.serialnumber
-                                          )
-                                        }
-                                        className="flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
-                                      >
-                                        {expandedEquipment.has(
-                                          equipment.serialnumber
-                                        ) ? (
-                                          <ChevronUp size={16} />
-                                        ) : (
-                                          <ChevronDown size={16} />
-                                        )}
-                                        PM Tasks ({equipment.pmResults.length})
-                                      </button>
-
-                                      {expandedEquipment.has(
-                                        equipment.serialnumber
-                                      ) && (
-                                        <div className="mt-2 pl-4 border-l-2 border-blue-200">
-                                          <div className="space-y-2">
-                                            {equipment.pmResults.map(
-                                              (pm, pmIndex) => (
-                                                <div
-                                                  key={pmIndex}
-                                                  className="flex items-center justify-between p-2 bg-gray-50 rounded border"
-                                                >
-                                                  <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                      <span className="font-medium text-sm">
-                                                        {pm.pmType}
-                                                      </span>
-                                                      {renderStatusBadge(
-                                                        pm.status
-                                                      )}
-                                                    </div>
-                                                    {pm.dueMonth && (
-                                                      <div className="text-xs text-gray-600">
-                                                        Due: {pm.dueMonth}
-                                                        {pm.dueDate &&
-                                                          ` (${pm.dueDate})`}
-                                                        {pm.pmStatus &&
-                                                          ` - Status: ${pm.pmStatus}`}
-                                                      </div>
-                                                    )}
-                                                    {pm.reason && (
-                                                      <div className="text-xs text-gray-600 mt-1">
-                                                        Reason: {pm.reason}
-                                                      </div>
-                                                    )}
-                                                    {pm.error && (
-                                                      <div className="text-xs text-red-600 mt-1">
-                                                        Error: {pm.error}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              )
-                                            )}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                {/* Additional metadata */}
-                                <div className="mt-3 flex flex-wrap gap-4 text-xs text-gray-500">
-                                  {equipment.recordIndex !== undefined && (
-                                    <span>
-                                      Row: {equipment.recordIndex + 1}
-                                    </span>
-                                  )}
-                                  {equipment.lineNumber && (
-                                    <span>Line: {equipment.lineNumber}</span>
-                                  )}
-                                  {equipment.changeCount && (
-                                    <span>
-                                      Changes: {equipment.changeCount}
-                                    </span>
-                                  )}
-                                  {equipment.willGeneratePMs && (
-                                    <span className="text-green-600">
-                                      ✓ PM Generation
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-12 text-center text-gray-500">
-                          <Database
-                            size={48}
-                            className="mx-auto mb-4 text-gray-300"
-                          />
-                          <p className="text-lg font-medium">
-                            No equipment records found
-                          </p>
-                          <p className="text-sm">
-                            {equipmentFilter !== "all"
-                              ? `No records match the selected filter: ${equipmentFilter}`
-                              : "No equipment data available"}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            {/* PM Tasks Tab */}
-            {activeTab === "pm" && processingData.status === "completed" && (
-              <div className="space-y-6">
-                <PaginationControls
-                  currentPage={processingData.pagination?.currentPage || 1}
-                  totalPages={processingData.pagination?.totalPages || 1}
-                  totalRecords={processingData.pagination?.totalRecords || 0}
-                  hasNext={processingData.pagination?.hasNext || false}
-                  hasPrev={processingData.pagination?.hasPrev || false}
-                  onPageChange={(page) => fetchJobResult(jobId, page, false)}
-                  isLoading={isLoadingMore}
-                  recordsShown={filteredPMResults.length}
-                  type="PM"
-                />
-                {/* PM Results */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                  <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                      <Wrench size={20} />
-                      PM Task Results ({filteredPMResults.length})
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                    {filteredPMResults.length > 0 ? (
-                      filteredPMResults.map((pm, index) => (
-                        <div
-                          key={index}
-                          className="p-4 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <span className="font-semibold text-gray-900">
-                                  {pm.serialnumber || pm.serialNumber} -{" "}
-                                  {pm.pmType}
-                                </span>
-                                {renderStatusBadge(pm.status || pm.pmStatus)}
-                                {pm.equipmentId && (
-                                  <span className="text-sm text-gray-500">
-                                    Equipment: {pm.equipmentId}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                                {pm.dueMonth && (
-                                  <div>
-                                    <span className="font-medium">
-                                      Due Month:
-                                    </span>{" "}
-                                    {pm.dueMonth}
-                                  </div>
-                                )}
-                                {pm.dueDate && (
-                                  <div>
-                                    <span className="font-medium">
-                                      Due Date:
-                                    </span>{" "}
-                                    {pm.dueDate}
-                                  </div>
-                                )}
-                                {pm.pmStatus && (
-                                  <div>
-                                    <span className="font-medium">
-                                      PM Status:
-                                    </span>{" "}
-                                    {pm.pmStatus}
-                                  </div>
-                                )}
-                              </div>
-
-                              {pm.reason && (
-                                <p className="text-sm text-gray-600 mt-2">
-                                  <span className="font-medium">Reason:</span>{" "}
-                                  {pm.reason}
-                                </p>
-                              )}
-
-                              {pm.error && (
-                                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                                  <p className="text-sm text-red-700">
-                                    <span className="font-medium">Error:</span>{" "}
-                                    {pm.error}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="p-12 text-center text-gray-500">
-                        <Wrench
-                          size={48}
-                          className="mx-auto mb-4 text-gray-300"
-                        />
-                        <p className="text-lg font-medium">No PM tasks found</p>
-                        <p className="text-sm">
-                          {pmFilter !== "all"
-                            ? `No PM tasks match the selected filter: ${pmFilter}`
-                            : "No PM task data available"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
             {activeTab === "errors" && (
               <div className="space-y-6">
-                {/* <div className="bg-gray-100 p-4 rounded mb-4">
-                  <h4 className="font-bold">Debug Info:</h4>
-                  <p>Processing Status: {processingData.status}</p>
-                  <p>Job ID: {jobId}</p>
-                  <p>All Errors Length: {allErrors.length}</p>
-                  <p>All Warnings Length: {allWarnings.length}</p>
-                  <p>Error Summary: {JSON.stringify(errorSummary, null, 2)}</p>
-                </div> */}
-                {/* ✅ Proper loading condition */}
                 {processingData.status !== "completed" ? (
                   <div className="flex items-center justify-center p-8">
                     <RefreshCw className="animate-spin mr-2" size={20} />
@@ -1851,175 +1557,289 @@ export default function EquipmentBulkUploadPage() {
                       </div>
                     </div>
 
-                    {/* Error Breakdown */}
-                    {errorSummary.errorBreakdown &&
-                      Object.keys(errorSummary.errorBreakdown).length > 0 && (
-                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
-                          <div className="p-4 border-b border-gray-200 bg-gray-50">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                              Error Breakdown by Category
-                            </h3>
-                          </div>
-                          <div className="p-6">
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                              {Object.entries(errorSummary.errorBreakdown).map(
-                                ([category, count]) => (
-                                  <div
-                                    key={category}
-                                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                                  >
-                                    <span className="text-sm font-medium text-gray-700">
-                                      {category}
-                                    </span>
-                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
-                                      {count}
-                                    </span>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                    {/* Download Button */}
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={downloadErrorsAsExcel}
+                        disabled={
+                          allErrors.length === 0 && allWarnings.length === 0
+                        }
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          allErrors.length === 0 && allWarnings.length === 0
+                            ? "bg-gray-300 cursor-not-allowed text-gray-500"
+                            : "bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                        }`}
+                      >
+                        <Download size={16} />
+                        Download Errors & Warnings (CSV)
+                      </button>
+                    </div>
 
-                    {/* Individual Errors */}
+                    {/* Sub-tabs for Errors */}
                     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                      <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                          <AlertTriangle size={20} />
-                          All Errors ({allErrors.length})
-                        </h3>
+                      <div className="border-b border-gray-200">
+                        <nav
+                          className="flex space-x-6 px-6"
+                          aria-label="Error Tabs"
+                        >
+                          <button
+                            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                              errorActiveTab === "errors"
+                                ? "border-red-500 text-red-600"
+                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            }`}
+                            onClick={() => setErrorActiveTab("errors")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <XCircle size={16} />
+                              Errors ({allErrors.length})
+                            </div>
+                          </button>
+
+                          <button
+                            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                              errorActiveTab === "warnings"
+                                ? "border-yellow-500 text-yellow-600"
+                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            }`}
+                            onClick={() => setErrorActiveTab("warnings")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle size={16} />
+                              Warnings ({allWarnings.length})
+                            </div>
+                          </button>
+
+                          <button
+                            className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                              errorActiveTab === "failed"
+                                ? "border-blue-500 text-blue-600"
+                                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                            }`}
+                            onClick={() => setErrorActiveTab("failed")}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Database size={16} />
+                              Failed Records (
+                              {
+                                filteredEquipmentResults.filter(
+                                  (eq) => eq.status.toLowerCase() === "failed"
+                                ).length
+                              }
+                              )
+                            </div>
+                          </button>
+                        </nav>
                       </div>
-                      <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
-                        {allErrors.length > 0 ? (
-                          allErrors.map((error, index) => (
-                            <div
-                              key={error.id || index}
-                              className="p-4 hover:bg-gray-50"
-                            >
-                              <div className="flex items-start space-x-3">
-                                <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                                      {error.category}
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                                      {error.source}
-                                    </span>
-                                    {error.lineNumber && (
-                                      <span className="text-xs text-gray-500">
-                                        Line {error.lineNumber}
-                                      </span>
-                                    )}
-                                  </div>
 
-                                  <p className="text-sm text-red-800 font-medium mb-1">
-                                    {error.message}
-                                  </p>
-
-                                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                                    {error.serialNumber && (
-                                      <span>
-                                        Serial:{" "}
-                                        <strong>{error.serialNumber}</strong>
-                                      </span>
-                                    )}
-                                    {error.equipmentId && (
-                                      <span>
-                                        Equipment:{" "}
-                                        <strong>{error.equipmentId}</strong>
-                                      </span>
-                                    )}
-                                    {error.field && (
-                                      <span>
-                                        Field: <strong>{error.field}</strong>
-                                      </span>
-                                    )}
-                                    {error.pmType && (
-                                      <span>
-                                        PM Type: <strong>{error.pmType}</strong>
-                                      </span>
-                                    )}
+                      {/* Sub-tab Content */}
+                      <div className="p-6">
+                        {/* Errors Tab Content */}
+                        {errorActiveTab === "errors" && (
+                          <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                            {allErrors.length > 0 ? (
+                              allErrors.map((error, index) => (
+                                <div
+                                  key={error.id || index}
+                                  className="p-4 hover:bg-gray-50"
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <XCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
+                                          {error.category}
+                                        </span>
+                                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                          {error.source}
+                                        </span>
+                                        {error.lineNumber && (
+                                          <span className="text-xs text-gray-500">
+                                            Line {error.lineNumber}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-red-800 font-medium mb-1">
+                                        {error.message}
+                                      </p>
+                                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                                        {error.serialNumber && (
+                                          <span>
+                                            Serial:{" "}
+                                            <strong>
+                                              {error.serialNumber}
+                                            </strong>
+                                          </span>
+                                        )}
+                                        {error.equipmentId && (
+                                          <span>
+                                            Equipment:{" "}
+                                            <strong>{error.equipmentId}</strong>
+                                          </span>
+                                        )}
+                                        {error.field && (
+                                          <span>
+                                            Field:{" "}
+                                            <strong>{error.field}</strong>
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
+                              ))
+                            ) : (
+                              <div className="p-12 text-center text-gray-500">
+                                <CheckCircle2
+                                  size={48}
+                                  className="mx-auto mb-4 text-green-300"
+                                />
+                                <p className="text-lg font-medium">
+                                  No errors found
+                                </p>
+                                <p className="text-sm">
+                                  All records were processed successfully
+                                </p>
                               </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="p-12 text-center text-gray-500">
-                            <CheckCircle2
-                              size={48}
-                              className="mx-auto mb-4 text-green-300"
-                            />
-                            <p className="text-lg font-medium">
-                              No errors found
-                            </p>
-                            <p className="text-sm">
-                              All records were processed successfully
-                            </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Warnings Tab Content */}
+                        {errorActiveTab === "warnings" && (
+                          <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                            {allWarnings.length > 0 ? (
+                              allWarnings.map((warning, index) => (
+                                <div
+                                  key={warning.id || index}
+                                  className="p-4 hover:bg-gray-50"
+                                >
+                                  <div className="flex items-start space-x-3">
+                                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+                                          {warning.category}
+                                        </span>
+                                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                          {warning.source}
+                                        </span>
+                                        {warning.lineNumber && (
+                                          <span className="text-xs text-gray-500">
+                                            Line {warning.lineNumber}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-yellow-800 font-medium mb-1">
+                                        {warning.message}
+                                      </p>
+                                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                                        {warning.serialNumber && (
+                                          <span>
+                                            Serial:{" "}
+                                            <strong>
+                                              {warning.serialNumber}
+                                            </strong>
+                                          </span>
+                                        )}
+                                        {warning.equipmentId && (
+                                          <span>
+                                            Equipment:{" "}
+                                            <strong>
+                                              {warning.equipmentId}
+                                            </strong>
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="p-12 text-center text-gray-500">
+                                <CheckCircle2
+                                  size={48}
+                                  className="mx-auto mb-4 text-green-300"
+                                />
+                                <p className="text-lg font-medium">
+                                  No warnings found
+                                </p>
+                                <p className="text-sm">
+                                  All records processed without warnings
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Failed Records Tab Content */}
+                        {errorActiveTab === "failed" && (
+                          <div className="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+                            {filteredEquipmentResults.filter(
+                              (eq) => eq.status.toLowerCase() === "failed"
+                            ).length > 0 ? (
+                              filteredEquipmentResults
+                                .filter(
+                                  (eq) => eq.status.toLowerCase() === "failed"
+                                )
+                                .map((equipment, index) => (
+                                  <div
+                                    key={index}
+                                    className="p-4 hover:bg-gray-50 transition-colors"
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-3 mb-2">
+                                          <span className="font-semibold text-gray-900 text-lg">
+                                            {equipment.serialnumber}
+                                          </span>
+                                          {renderStatusBadge(equipment.status)}
+                                          {equipment.equipmentid && (
+                                            <span className="text-sm text-gray-500">
+                                              ID: {equipment.equipmentid}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {equipment.reason && (
+                                          <p className="text-sm text-gray-600 mb-2">
+                                            <span className="font-medium">
+                                              Reason:
+                                            </span>{" "}
+                                            {equipment.reason}
+                                          </p>
+                                        )}
+                                        {equipment.error && (
+                                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                                            <p className="text-sm text-red-700">
+                                              <span className="font-medium">
+                                                Error:
+                                              </span>{" "}
+                                              {equipment.error}
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))
+                            ) : (
+                              <div className="p-12 text-center text-gray-500">
+                                <Database
+                                  size={48}
+                                  className="mx-auto mb-4 text-gray-300"
+                                />
+                                <p className="text-lg font-medium">
+                                  No failed records
+                                </p>
+                                <p className="text-sm">
+                                  All equipment records processed successfully
+                                </p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
-
-                    {/* Warnings Section */}
-                    {allWarnings.length > 0 && (
-                      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                        <div className="p-4 border-b border-gray-200 bg-gray-50">
-                          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                            <AlertCircle size={20} />
-                            All Warnings ({allWarnings.length})
-                          </h3>
-                        </div>
-                        <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-                          {allWarnings.map((warning, index) => (
-                            <div
-                              key={warning.id || index}
-                              className="p-4 hover:bg-gray-50"
-                            >
-                              <div className="flex items-start space-x-3">
-                                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                                      {warning.category}
-                                    </span>
-                                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                                      {warning.source}
-                                    </span>
-                                    {warning.lineNumber && (
-                                      <span className="text-xs text-gray-500">
-                                        Line {warning.lineNumber}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <p className="text-sm text-yellow-800 font-medium mb-1">
-                                    {warning.message}
-                                  </p>
-
-                                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                                    {warning.serialNumber && (
-                                      <span>
-                                        Serial:{" "}
-                                        <strong>{warning.serialNumber}</strong>
-                                      </span>
-                                    )}
-                                    {warning.equipmentId && (
-                                      <span>
-                                        Equipment:{" "}
-                                        <strong>{warning.equipmentId}</strong>
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>

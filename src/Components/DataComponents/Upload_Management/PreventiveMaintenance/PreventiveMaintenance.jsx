@@ -3,7 +3,16 @@ import React, { useEffect, useState } from "react";
 import FormControl from "@mui/joy/FormControl";
 
 import Input from "@mui/joy/Input";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+} from "lucide-react";
 
 import SearchIcon from "@mui/icons-material/Search";
 
@@ -26,19 +35,30 @@ function PreventiveMaintenance() {
   const [loader, setLoader] = useState(true);
   const limit = 10;
   const [totalRecords, setTotalRecords] = useState(0);
-  const [searchTotalRecords, setSearchTotalRecords] = useState(0); // New state for search total
+  const [searchTotalRecords, setSearchTotalRecords] = useState(0);
+
+  // Filter states - only 3 filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    pmStatus: "",
+    region: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+  const [regionOptions, setRegionOptions] = useState([]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
-  const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [isDownloadingPM, setIsDownloadingPM] = useState(false);
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
   const [isSpinning, setisSpinning] = useState(false);
+
   const downloadPMExcel = async () => {
     setIsDownloadingPM(true);
     try {
@@ -70,14 +90,7 @@ function PreventiveMaintenance() {
       setIsDownloadingPM(false);
     }
   };
-  const getCities = () => {
-    axios
-      .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
-      .then((res) => {
-        setCityList(res.data.city);
-      })
-      .catch((err) => console.log(err));
-  };
+
   // Add this function inside your PreventiveMaintenance component
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
@@ -131,6 +144,27 @@ function PreventiveMaintenance() {
     // getCities();
   }, []);
 
+  const getRegionOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/upload/pms/regions`
+      );
+      if (response.data.success) {
+        setRegionOptions(response.data.regions);
+      }
+    } catch (error) {
+      console.error("Error fetching regions:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (name, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -173,6 +207,101 @@ function PreventiveMaintenance() {
     }
   };
 
+  const applyFilters = async () => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(1);
+
+    try {
+      const params = new URLSearchParams();
+      params.append("page", "1");
+      params.append("limit", limit.toString());
+
+      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.pmStatus) params.append("pmStatus", filters.pmStatus);
+      if (filters.region) params.append("region", filters.region);
+
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL
+        }/upload/pms/filter?${params.toString()}`
+      );
+
+      if (response.data.success) {
+        setData(response.data.data);
+        setTotalPages(response.data.pagination.totalPages);
+        setTotalRecords(response.data.pagination.totalRecords);
+        setSearchTotalRecords(response.data.pagination.totalRecords);
+        toast.success(
+          `Found ${response.data.pagination.totalRecords} filtered records`
+        );
+      }
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setData([]);
+      setTotalPages(1);
+      setTotalRecords(0);
+      toast.error("Error applying filters");
+    } finally {
+      setLoader(false);
+    }
+  };
+  const clearAllFilters = () => {
+    setFilters({
+      dateFrom: "",
+      dateTo: "",
+      pmStatus: "",
+      region: "",
+    });
+    setIsFilterMode(false);
+    setPage(1);
+    getData();
+    toast.success("Filters cleared");
+  };
+  const handleFilterPagination = async (newPage) => {
+    if (!isFilterMode) return;
+
+    setLoader(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("page", newPage.toString());
+      params.append("limit", limit.toString());
+
+      if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.pmStatus) params.append("pmStatus", filters.pmStatus);
+      if (filters.region) params.append("region", filters.region);
+
+      const response = await axios.get(
+        `${
+          process.env.REACT_APP_BASE_URL
+        }/upload/pms/filter?${params.toString()}`
+      );
+
+      if (response.data.success) {
+        setData(response.data.data);
+        setPage(newPage);
+      }
+    } catch (error) {
+      console.error("Error in filter pagination:", error);
+    } finally {
+      setLoader(false);
+    }
+  };
+
+  // Initialize
+  useEffect(() => {
+    getRegionOptions();
+    getData();
+  }, []);
+
+  useEffect(() => {
+    if (data.length > 0) {
+      getRegionOptions();
+    }
+  }, [data]);
   const handleCloseModal = () => {
     setShowModal((prev) => !prev);
     setEditModal(false);
@@ -368,11 +497,12 @@ function PreventiveMaintenance() {
       });
   };
 
-  // Updated useEffect to handle search mode
   useEffect(() => {
-    if (isSearchMode && searchQuery.trim()) {
+    if (isFilterMode) {
+      handleFilterPagination(page);
+    } else if (isSearchMode && searchQuery.trim()) {
       handleSearchWithPagination();
-    } else if (!isSearchMode) {
+    } else if (!isSearchMode && !isFilterMode) {
       getData();
     }
   }, [page]);
@@ -563,58 +693,199 @@ function PreventiveMaintenance() {
                 )}
               </div>
             </div>
-
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
+            <div className="flex flex-wrap justify-end items-center gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
+                    showFilters || isFilterMode
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Filter
+                  {showFilters ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                  {isFilterMode && (
+                    <span className="ml-1 bg-blue-700/30 px-2 py-0.5 rounded-full text-xs">
+                      Active
+                    </span>
+                  )}
+                </button>
+              </div>
 
               <button
                 onClick={downloadPMExcel}
                 disabled={isDownloadingPM}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 ${
                   isDownloadingPM
                     ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700"
                 }`}
               >
                 {isDownloadingPM ? (
                   <div className="flex items-center gap-2">
                     <LoadingSpinner />
                     <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
                   </div>
                 ) : (
                   <>
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
                   </>
                 )}
               </button>
             </div>
+            {showFilters && (
+              <div className="mt-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Date From */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 From Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.dateFrom}
+                      onChange={(e) =>
+                        handleFilterChange("dateFrom", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Date To */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 To Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.dateTo}
+                      onChange={(e) =>
+                        handleFilterChange("dateTo", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* PM Status */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📊 PM Status
+                    </label>
+                    <select
+                      value={filters.pmStatus}
+                      onChange={(e) =>
+                        handleFilterChange("pmStatus", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Due">Due</option>
+                      <option value="Overdue">Overdue</option>
+                      <option value="Lapse">Lapse</option>
+                    </select>
+                  </div>
+
+                  {/* Region with Autocomplete */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      🌍 Region
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Type to search regions..."
+                        value={filters.region}
+                        onChange={(e) =>
+                          handleFilterChange("region", e.target.value)
+                        }
+                        list="regionOptions"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <datalist id="regionOptions">
+                        {regionOptions.map((region, index) => (
+                          <option key={index} value={region} />
+                        ))}
+                      </datalist>
+                      {filters.region && (
+                        <button
+                          onClick={() => handleFilterChange("region", "")}
+                          className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filter Actions */}
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Apply Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Active Filter Indicators */}
+            {isFilterMode && (
+              <div className="flex flex-wrap gap-2">
+                {filters.dateFrom && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                    From: {filters.dateFrom}
+                  </span>
+                )}
+                {filters.dateTo && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                    To: {filters.dateTo}
+                  </span>
+                )}
+                {filters.pmStatus && (
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                    Status: {filters.pmStatus}
+                  </span>
+                )}
+                {filters.region && (
+                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                    Region: {filters.region}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* {selectedRows?.length > 0 && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 focus:ring-red-800 font-medium rounded-[4px] text-sm px-5 py-2.5 text-center me-2 mb-2"
-              >
-                Delete Selected
-              </button>
-            </div>
-          )} */}
-
-          {/* Updated total records display */}
-          <div className="flex items-center justify-between bg-gray-50 p-2 rounded ">
+          <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-700">
-                {isSearchMode ? (
+                {isFilterMode ? (
+                  <>
+                    Filtered Results:{" "}
+                    <span className="font-bold text-blue-600">
+                      {totalRecords}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">
+                      (filters applied)
+                    </span>
+                  </>
+                ) : isSearchMode ? (
                   <>
                     Search Results:{" "}
                     <span className="font-bold text-blue-600">
@@ -636,9 +907,25 @@ function PreventiveMaintenance() {
             </div>
             <div className="text-sm text-gray-600">
               Showing {data.length > 0 ? (page - 1) * limit + 1 : 0} to{" "}
-              {Math.min(page * limit, getCurrentTotalRecords())} of{" "}
-              {getCurrentTotalRecords()}{" "}
-              {isSearchMode ? "search results" : "entries"}
+              {Math.min(
+                page * limit,
+                isFilterMode
+                  ? totalRecords
+                  : isSearchMode
+                  ? searchTotalRecords
+                  : totalRecords
+              )}{" "}
+              of{" "}
+              {isFilterMode
+                ? totalRecords
+                : isSearchMode
+                ? searchTotalRecords
+                : totalRecords}{" "}
+              {isFilterMode
+                ? "filtered results"
+                : isSearchMode
+                ? "search results"
+                : "entries"}
             </div>
           </div>
 
@@ -858,8 +1145,10 @@ function PreventiveMaintenance() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="14" className="text-center p-8 text-gray-500">
-                      {isSearchMode
+                    <td colSpan="15" className="text-center p-8 text-gray-500">
+                      {isFilterMode
+                        ? "No records match the applied filters"
+                        : isSearchMode
                         ? `No search results found for "${searchQuery}"`
                         : "No records found"}
                     </td>
