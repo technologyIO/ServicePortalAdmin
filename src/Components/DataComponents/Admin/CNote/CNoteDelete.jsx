@@ -26,28 +26,34 @@ function CNoteDelete() {
   const limit = 10;
 
   // ──────────────────────── API CALLS ────────────────────────
-  const getAllData = useCallback(async (pg = page, query = searchQuery) => {
-    setLoader(true);
-    try {
-      const params = { page: pg, limit };
-      if (query && query.trim()) params.q = query.trim();
+  const getAllData = useCallback(
+    async (pg = page, query = searchQuery) => {
+      setLoader(true);
+      try {
+        const params = { page: pg, limit };
+        if (query && query.trim()) params.q = query.trim();
 
-      // Choose API according to search
-      const apiUrl = query && query.trim() ? "/phone/cnote/search" : "/phone/cnote/paginated";
-      const res = await api.get(apiUrl, { params });
-      
-      setLoader(false);
-      const rows = res.data.data || [];
-      setData(rows);
-      setTotalPages(res.data.pagination?.totalPages || 1);
-      setTotalRecords(res.data.pagination?.totalRecords || rows.length);
-      setPage(res.data.pagination?.currentPage || pg);
-    } catch (err) {
-      console.error(err);
-      setLoader(false);
-      Swal.fire("Error!", "Failed to fetch data.", "error");
-    }
-  }, [page, searchQuery, limit]);
+        // Choose API according to search
+        const apiUrl =
+          query && query.trim()
+            ? "/phone/cnote/search"
+            : "/phone/cnote/paginated";
+        const res = await api.get(apiUrl, { params });
+
+        setLoader(false);
+        const rows = res.data.data || [];
+        setData(rows);
+        setTotalPages(res.data.pagination?.totalPages || 1);
+        setTotalRecords(res.data.pagination?.totalRecords || rows.length);
+        setPage(res.data.pagination?.currentPage || pg);
+      } catch (err) {
+        console.error(err);
+        setLoader(false);
+        Swal.fire("Error!", "Failed to fetch data.", "error");
+      }
+    },
+    [page, searchQuery, limit]
+  );
 
   useEffect(() => {
     getAllData(page, searchQuery);
@@ -224,17 +230,38 @@ function CNoteDelete() {
                   <th className="p-3 text-left">
                     <input type="checkbox" className="w-4 h-4" />
                   </th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">CNote No.</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Serial No</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Proposal No.</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Customer</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Items</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Current Rev</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Status</th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    CNote No.
+                  </th>
+                  {/* <th className="p-3 text-left font-medium text-white whitespace-nowrap">Serial No</th> */}
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Proposal No.
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Customer
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Items
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Current Rev
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Status
+                  </th>
                   {/* <th className="p-3 text-left font-medium text-white whitespace-nowrap">Approvals</th> */}
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Final Amount</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Created</th>
-                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">Action</th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Final Amount
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Cnote Download
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Created
+                  </th>
+                  <th className="p-3 text-left font-medium text-white whitespace-nowrap">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -257,10 +284,12 @@ function CNoteDelete() {
                       <td className="p-3 font-bold text-blue-600">
                         {row?.cnoteNumber}
                       </td>
-                      <td className="p-3 font-bold text-gray-600">
+                      {/* <td className="p-3 font-bold text-gray-600">
                         {row?.serialNumber}
+                      </td> */}
+                      <td className="p-3 font-semibold">
+                        {row?.proposalNumber}
                       </td>
-                      <td className="p-3 font-semibold">{row?.proposalNumber}</td>
                       <td className="p-3">
                         <div>
                           <div className="font-medium capitalize">
@@ -298,9 +327,34 @@ function CNoteDelete() {
                       <td className="p-3 font-semibold text-green-600">
                         ₹{row?.finalAmount?.toLocaleString("en-IN") || "0"}
                       </td>
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() =>
+                            window.open(
+                              `${process.env.REACT_APP_BASE_URL}/phone/cnote/proposal/${row.proposalNumber}/cnote-pdf`,
+                              "_blank"
+                            )
+                          }
+                          className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                          title="Download CNote PDF"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            fill="currentColor"
+                            viewBox="0 0 16 16"
+                          >
+                            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z" />
+                            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 1-.708.708l3 3z" />
+                          </svg>
+                        </button>
+                      </td>
                       <td className="p-3">
                         <div className="text-xs">
-                          <div>{moment(row?.createdAt).format("MMM D, YYYY")}</div>
+                          <div>
+                            {moment(row?.createdAt).format("MMM D, YYYY")}
+                          </div>
                           <div className="text-gray-500">
                             {moment(row?.createdAt).format("h:mm A")}
                           </div>

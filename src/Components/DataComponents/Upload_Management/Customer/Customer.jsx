@@ -527,6 +527,22 @@ function Customer() {
   }, [searchQuery]);
 
   const handleSubmit = (id) => {
+    // Validation check करें before submit
+    if (selectedCountries.length === 0) {
+      toast.error("Please select at least one country");
+      return;
+    }
+
+    if (selectedRegions.length === 0) {
+      toast.error("Please select at least one region");
+      return;
+    }
+
+    if (selectedCities.length === 0) {
+      toast.error("Please select at least one city");
+      return;
+    }
+
     if (editModal && id) {
       handleEditCountry(id);
     } else {
@@ -1102,6 +1118,7 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Customer Code (ID)
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
@@ -1117,9 +1134,11 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Customer Name{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("customername", e.target.value)
                         }
@@ -1131,9 +1150,11 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Hospital Name{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("hospitalname", e.target.value)
                         }
@@ -1146,6 +1167,7 @@ function Customer() {
                       <div className="flex items-center justify-between gap-2">
                         <label className="block mb-2 text-sm font-medium text-gray-900 ">
                           Country
+                          <span className="text-red-500 text-lg ml-1">*</span>
                         </label>
                         <button
                           type="button"
@@ -1159,29 +1181,37 @@ function Customer() {
                       </div>
                       <Autocomplete
                         multiple
-                        className=" w-full"
                         options={countryOptions}
                         value={selectedCountries}
-                        getOptionLabel={(option) =>
-                          option ? option.label : ""
-                        }
+                        getOptionLabel={(option) => option?.label || ""}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="country"
                             label="Select country"
+                            required
+                            error={selectedCountries.length === 0}
+                            helperText={
+                              selectedCountries.length === 0
+                                ? "At least one country is required"
+                                : ""
+                            }
                           />
                         )}
-                        sx={{ width: 300 }}
                         onChange={(event, value) => setSelectedCountries(value)}
                         disableCloseOnSelect
                       />
+                      {selectedCountries.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one country
+                        </span>
+                      )}
                     </div>
                     {/* REGION FIELD + BUTTON */}
                     <div className="relative w-full mb-5 group">
                       <div className="flex items-center justify-between gap-2">
                         <label className="block mb-2 text-sm font-medium text-gray-900 ">
                           Region
+                          <span className="text-red-500 text-lg ml-1">*</span>
                         </label>
                         <button
                           type="button"
@@ -1198,30 +1228,41 @@ function Customer() {
                         multiple
                         options={filteredRegions}
                         value={selectedRegions}
-                        onChange={(event, newValue) =>
-                          setSelectedRegions(newValue)
-                        }
                         getOptionLabel={(option) => option?.label || ""}
+                        onChange={(e, value) => setSelectedRegions(value)}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            label="Region"
+                            label="Select region"
                             placeholder="Select regions"
+                            required
+                            error={selectedRegions.length === 0}
+                            helperText={
+                              selectedRegions.length === 0
+                                ? "At least one region is required"
+                                : ""
+                            }
                           />
                         )}
-                        isOptionEqualToValue={(option, value) =>
-                          option.id === value.id
-                        }
+                        disableCloseOnSelect
+                        disabled={!selectedCountries.length}
                       />
+                      {selectedRegions.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one region
+                        </span>
+                      )}
                     </div>
                     {/* CITY FIELD + BUTTON */}
                     <div className="relative w-full mb-5 group">
                       <div className="flex items-center justify-between gap-2">
                         <label className="block mb-2 text-sm font-medium text-gray-900 ">
                           City
+                          <span className="text-red-500 text-lg ml-1">*</span>
                         </label>
                         <button
                           type="button"
+                          required
                           className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
                           onClick={handleCitySelectAll}
                           disabled={!filteredCities.length}
@@ -1233,24 +1274,32 @@ function Customer() {
                       </div>
                       <Autocomplete
                         multiple
-                        className=" w-full"
                         options={filteredCities}
                         value={selectedCities}
-                        getOptionLabel={(option) =>
-                          option ? option.label : ""
-                        }
+                        getOptionLabel={(option) => option?.label || ""}
+                        onChange={(e, value) => setSelectedCities(value)}
                         renderInput={(params) => (
                           <TextField
                             {...params}
-                            name="city"
                             label="Select city"
+                            placeholder="Select cities"
+                            required
+                            error={selectedCities.length === 0}
+                            helperText={
+                              selectedCities.length === 0
+                                ? "At least one city is required"
+                                : ""
+                            }
                           />
                         )}
-                        sx={{ width: 300 }}
-                        onChange={(event, value) => setSelectedCities(value)}
                         disableCloseOnSelect
                         disabled={!selectedRegions.length}
                       />
+                      {selectedCities.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one city
+                        </span>
+                      )}
                     </div>
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
@@ -1269,9 +1318,11 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Postal Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("postalcode", e.target.value)
                         }
@@ -1297,9 +1348,11 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Telephone{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("telephone", e.target.value)
                         }
@@ -1339,9 +1392,11 @@ function Customer() {
                     <div className="relative  w-full mb-5 group">
                       <label class="block mb-2 text-sm font-medium text-gray-900 ">
                         Email{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
                       <input
                         type="text"
+                        required
                         onChange={(e) =>
                           handleFormData("email", e.target.value)
                         }

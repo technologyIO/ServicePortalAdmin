@@ -366,7 +366,7 @@ function PreventiveMaintenance() {
     setIsSearchMode(true);
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/upload/pmsearch?q=${searchQuery}&page=${page}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/upload/search?q=${searchQuery}&page=${page}&limit=${limit}`
       );
 
       let searchData = [];
@@ -416,59 +416,39 @@ function PreventiveMaintenance() {
   };
 
   // Updated initial search function
-  const handleSearch = async () => {
+  const handleSearch = async (newPage = 1) => {
     if (!searchQuery.trim()) {
       setIsSearchMode(false);
       setPage(1);
+      setSearchTotalRecords(0);
       getData();
       return;
     }
 
-    setPage(1);
     setLoader(true);
     setIsSearchMode(true);
+    setPage(newPage);
 
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/upload/pmsearch?q=${searchQuery}&page=1&limit=${limit}`
+        `${
+          process.env.REACT_APP_BASE_URL
+        }/upload/pms/search?q=${encodeURIComponent(
+          searchQuery
+        )}&page=${newPage}&limit=${limit}`
       );
 
-      let searchData = [];
-      let totalPagesCount = 1;
-      let totalSearchRecords = 0;
-
-      if (Array.isArray(response.data)) {
-        searchData = response.data;
-        totalPagesCount = Math.ceil(response.data.length / limit);
-        totalSearchRecords = response.data.length;
-      } else if (
-        response.data.results &&
-        Array.isArray(response.data.results)
-      ) {
-        searchData = response.data.results;
-        totalPagesCount = response.data.totalPages || 1;
-        totalSearchRecords =
-          response.data.totalRecords || response.data.results.length;
-      } else if (response.data.pms && Array.isArray(response.data.pms)) {
-        searchData = response.data.pms;
-        totalPagesCount = response.data.totalPages || 1;
-        totalSearchRecords =
-          response.data.totalRecords || response.data.pms.length;
-      } else if (response.data.message === "No results found") {
-        searchData = [];
-        totalPagesCount = 1;
-        totalSearchRecords = 0;
-      } else if (response.data._id) {
-        searchData = [response.data];
-        totalPagesCount = 1;
-        totalSearchRecords = 1;
+      if (response.data.success) {
+        setData(response.data.pms || []);
+        setTotalPages(response.data.totalPages || 1);
+        setSearchTotalRecords(response.data.totalPms || 0);
+      } else {
+        setData([]);
+        setTotalPages(1);
+        setSearchTotalRecords(0);
       }
-
-      setData(searchData);
-      setTotalPages(totalPagesCount);
-      setSearchTotalRecords(totalSearchRecords); // ✅ now only uses totalRecords
     } catch (error) {
-      console.error("Error searching records:", error);
+      console.error("Search error:", error);
       setData([]);
       setTotalPages(1);
       setSearchTotalRecords(0);
@@ -501,7 +481,7 @@ function PreventiveMaintenance() {
     if (isFilterMode) {
       handleFilterPagination(page);
     } else if (isSearchMode && searchQuery.trim()) {
-      handleSearchWithPagination();
+      handleSearch(page); // Use same function with page parameter
     } else if (!isSearchMode && !isFilterMode) {
       getData();
     }
@@ -591,6 +571,7 @@ function PreventiveMaintenance() {
     setIsSearchMode(false);
     setPage(1);
     setSearchTotalRecords(0);
+    getData();
   };
 
   // Helper function to get current total records
@@ -623,7 +604,7 @@ function PreventiveMaintenance() {
                       value={searchQuery}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          handleSearch();
+                          handleSearch(1); // Start from page 1
                         }
                       }}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -633,7 +614,7 @@ function PreventiveMaintenance() {
                 </div>
 
                 <button
-                  onClick={handleSearch}
+                  onClick={() => handleSearch(1)}
                   type="button"
                   className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 whitespace-nowrap"
                 >

@@ -824,7 +824,7 @@ ${usersList}
                   <div className="grid md:grid-cols-2 md:gap-6 w-full">
                     <div className="relative  w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900 ">
-                        Name
+                        City Name
                       </label>
                       <input
                         type="text"

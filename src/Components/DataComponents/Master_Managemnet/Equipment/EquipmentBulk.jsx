@@ -495,87 +495,79 @@ export default function EquipmentBulkUploadPage() {
   };
   const downloadErrorsAsExcel = () => {
     try {
-      // Prepare data for download
-      const errorData = allErrors.map((error, index) => ({
-        "Sr No": index + 1,
-        Category: error.category || "",
-        Source: error.source || "",
-        Message: error.message || "",
-        "Serial Number": error.serialNumber || "",
-        "Equipment ID": error.equipmentId || "",
-        "Line Number": error.lineNumber || "",
-        Field: error.field || "",
-        "PM Type": error.pmType || "",
-      }));
-
-      const warningData = allWarnings.map((warning, index) => ({
-        "Sr No": index + 1,
-        Category: warning.category || "",
-        Source: warning.source || "",
-        Message: warning.message || "",
-        "Serial Number": warning.serialNumber || "",
-        "Equipment ID": warning.equipmentId || "",
-        "Line Number": warning.lineNumber || "",
-        Field: warning.field || "",
-      }));
-
-      // Create CSV content
-      const createCSV = (data, title) => {
-        if (!data.length) return "";
-
-        const headers = Object.keys(data[0]);
-        const csvContent = [
-          headers.join(","),
-          ...data.map((row) =>
-            headers
-              .map(
-                (header) =>
-                  `"${row[header]?.toString()?.replace(/"/g, '""') || ""}"`
-              )
-              .join(",")
-          ),
-        ].join("\n");
-
-        return csvContent;
+      // Create clean, empty templates without junk data
+      const createCleanCSV = (headers, title) => {
+        // Just return headers without any data rows to create empty template
+        return headers.join(",");
       };
 
-      const errorCSV = createCSV(errorData, "Errors");
-      const warningCSV = createCSV(warningData, "Warnings");
+      // Define clean headers for errors template
+      const errorHeaders = [
+        "Sr No",
+        "Category",
+        "Source",
+        "Message",
+        "Serial Number",
+        "Equipment ID",
+        "Line Number",
+        "Field",
+        "PM Type",
+      ];
 
-      // Combine both in one file with separate sections
+      // Define clean headers for warnings template
+      const warningHeaders = [
+        "Sr No",
+        "Category",
+        "Source",
+        "Message",
+        "Serial Number",
+        "Equipment ID",
+        "Line Number",
+        "Field",
+      ];
+
+      // Create clean CSV content without junk data
+      const errorCSV = createCleanCSV(errorHeaders, "Errors");
+      const warningCSV = createCleanCSV(warningHeaders, "Warnings");
+
+      // Combine both sections cleanly
       const combinedContent = [
-        "ERRORS SECTION",
+        "# ERRORS TEMPLATE",
         errorCSV,
         "",
-        "WARNINGS SECTION",
+        "# WARNINGS TEMPLATE",
         warningCSV,
       ].join("\n");
 
-      // Download file
+      // Download the clean template file
       const blob = new Blob([combinedContent], {
         type: "text/csv;charset=utf-8;",
       });
+
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
       link.setAttribute(
         "download",
-        `equipment-upload-errors-${new Date().toISOString().split("T")[0]}.csv`
+        `equipment-upload-template-${
+          new Date().toISOString().split("T")[0]
+        }.csv`
       );
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      addLiveUpdate(`📁 Errors data downloaded successfully`, "success");
+      addLiveUpdate(`📁 Clean template downloaded successfully`, "success");
     } catch (error) {
-      console.error("Error downloading data:", error);
+      console.error("Error downloading template:", error);
       addLiveUpdate(
-        `❌ Failed to download errors data: ${error.message}`,
+        `❌ Failed to download template: ${error.message}`,
         "error"
       );
     }
   };
+
   const startProgressPolling = (jobId) => {
     if (progressIntervalRef.current) {
       clearInterval(progressIntervalRef.current);
