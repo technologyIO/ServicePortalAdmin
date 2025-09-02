@@ -42,6 +42,10 @@ function PreventiveMaintenance() {
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
+    dueFrom: "",
+    dueTo: "",
+    doneFrom: "",
+    doneTo: "",
     pmStatus: "",
     region: "",
   });
@@ -220,6 +224,10 @@ function PreventiveMaintenance() {
 
       if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
       if (filters.dateTo) params.append("dateTo", filters.dateTo);
+      if (filters.dueFrom) params.append("dueFrom", filters.dueFrom);
+      if (filters.dueTo) params.append("dueTo", filters.dueTo);
+      if (filters.doneFrom) params.append("doneFrom", filters.doneFrom);
+      if (filters.doneTo) params.append("doneTo", filters.doneTo);
       if (filters.pmStatus) params.append("pmStatus", filters.pmStatus);
       if (filters.region) params.append("region", filters.region);
 
@@ -728,7 +736,7 @@ function PreventiveMaintenance() {
                   {/* Date From */}
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      📅 From Date
+                      📅 Creation Start Date
                     </label>
                     <input
                       type="date"
@@ -743,13 +751,73 @@ function PreventiveMaintenance() {
                   {/* Date To */}
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      📅 To Date
+                      📅 Creation End Date
                     </label>
                     <input
                       type="date"
                       value={filters.dateTo}
                       onChange={(e) =>
                         handleFilterChange("dateTo", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Date From */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 PM Due Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.dueFrom}
+                      onChange={(e) =>
+                        handleFilterChange("dueFrom", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Date To */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 PM Due End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.dueTo}
+                      onChange={(e) =>
+                        handleFilterChange("dueTo", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Date From */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 PM Done Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.doneFrom}
+                      onChange={(e) =>
+                        handleFilterChange("doneFrom", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Date To */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      📅 PM Done Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.doneTo}
+                      onChange={(e) =>
+                        handleFilterChange("doneTo", e.target.value)
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                     />
