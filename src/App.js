@@ -89,6 +89,7 @@ import CloseCMCNCMCDetailPage from './Components/DataComponents/Admin/QuoteAppro
 import CloseOnCall from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCall';
 import CloseOnCallDetailPage from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCallDetailPage';
 import EquipmentBulk from './Components/DataComponents/Master_Managemnet/Equipment/EquipmentBulk';
+import AdminAccess from './Components/DataComponents/Role/Admin/AdminAccess';
 
 
 const PrivateRoute = ({ children }) => {
@@ -218,6 +219,11 @@ const AppContent = () => {
             <Route path="/pm-doc-master" element={<ProtectedRoute
               component={PmDocMaster}
               componentName="Replaced Part Code"
+              requiredPermission="read"
+            />} />
+            <Route path="/admin-access" element={<ProtectedRoute
+              component={AdminAccess}
+              componentName="Admin Access"
               requiredPermission="read"
             />} />
             <Route path="/aerb" element={<ProtectedRoute
