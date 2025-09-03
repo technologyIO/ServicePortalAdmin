@@ -66,12 +66,33 @@ function PreventiveMaintenance() {
   const downloadPMExcel = async () => {
     setIsDownloadingPM(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/pm/export-pm`,
-        {
-          method: "GET",
-        }
-      );
+      const params = new URLSearchParams();
+
+      // Add filter parameters if in filter mode
+      if (isFilterMode) {
+        if (filters.dateFrom) params.append("dateFrom", filters.dateFrom);
+        if (filters.dateTo) params.append("dateTo", filters.dateTo);
+        if (filters.dueFrom) params.append("dueFrom", filters.dueFrom);
+        if (filters.dueTo) params.append("dueTo", filters.dueTo);
+        if (filters.doneFrom) params.append("doneFrom", filters.doneFrom);
+        if (filters.doneTo) params.append("doneTo", filters.doneTo);
+        if (filters.pmStatus) params.append("pmStatus", filters.pmStatus);
+        if (filters.region) params.append("region", filters.region);
+      }
+
+      // Add search query if in search mode
+      if (isSearchMode && searchQuery.trim()) {
+        params.append("searchQuery", searchQuery.trim());
+      }
+
+      const baseUrl = `${process.env.REACT_APP_BASE_URL}/excel/pm/export-pm`;
+      const fullUrl = params.toString()
+        ? `${baseUrl}?${params.toString()}`
+        : baseUrl;
+
+      const response = await fetch(fullUrl, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
@@ -230,6 +251,10 @@ function PreventiveMaintenance() {
       if (filters.doneTo) params.append("doneTo", filters.doneTo);
       if (filters.pmStatus) params.append("pmStatus", filters.pmStatus);
       if (filters.region) params.append("region", filters.region);
+
+      if (isSearchMode && searchQuery.trim()) {
+        params.append("searchQuery", searchQuery.trim());
+      }
 
       const response = await axios.get(
         `${
@@ -905,6 +930,26 @@ function PreventiveMaintenance() {
                 {filters.dateTo && (
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                     To: {filters.dateTo}
+                  </span>
+                )}
+                {filters.dueFrom && (
+                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                    Due From: {filters.dueFrom}
+                  </span>
+                )}
+                {filters.dueTo && (
+                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
+                    Due To: {filters.dueTo}
+                  </span>
+                )}
+                {filters.doneFrom && (
+                  <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+                    Done From: {filters.doneFrom}
+                  </span>
+                )}
+                {filters.doneTo && (
+                  <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+                    Done To: {filters.doneTo}
                   </span>
                 )}
                 {filters.pmStatus && (
