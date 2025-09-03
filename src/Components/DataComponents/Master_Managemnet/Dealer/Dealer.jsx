@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { FormControl, Input } from "@mui/joy";
 import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
+import DealerBulk from "./DealerBulk";
 
 function Dealer() {
   // Modal & UI states
@@ -26,7 +27,7 @@ function Dealer() {
   // Data states
   const [data, setData] = useState([]);
   const [currentData, setCurrentData] = useState({});
-
+  const [isbulkOpen, setIsbulkOpen] = useState(false);
   // Location / dropdown data
   const [state, setState] = useState([]); // all states options [{label, id, ...}]
   const [allCities, setAllCities] = useState([]); // all cities raw
@@ -763,9 +764,9 @@ function Dealer() {
   };
 
   // Bulk upload modals
-  const openBulkModal = () => setIsOpen(true);
-  const closeBulkModal = () => {
-    setIsOpen(false);
+  const openBulkModal = () => setIsbulkOpen(true);
+  const onClose = () => {
+    setIsbulkOpen(false);
     getData();
   };
 
@@ -1416,76 +1417,14 @@ function Dealer() {
               </div>
             </div>
           )}
-
-          {/* Bulk upload modal */}
-          {isOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className="bg-white rounded-lg p-6 w-[80vh] relative">
-                <div className="flex justify-between items-center ">
-                  <h3 className="text-lg font-semibold">Bulk Upload</h3>
-                  <button
-                    onClick={closeBulkModal}
-                    className="p-2 hover:bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      fill="currentColor"
-                      viewBox="0 0 16 16"
-                    >
-                      <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
-                    </svg>
-                  </button>
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Upload your CSV file to bulk import dealers.
-                </p>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 48 48"
-                  >
-                    <path
-                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <div className="mt-4">
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <span className="mt-2 block text-sm font-medium text-gray-900">
-                        Drop files here or click to upload
-                      </span>
-                      <input
-                        id="file-upload"
-                        name="file-upload"
-                        type="file"
-                        className="sr-only"
-                        accept=".csv"
-                      />
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500">CSV files only</p>
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    onClick={closeBulkModal}
-                    className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    Upload
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </>
+      )}
+      {isbulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6  relative">
+            <DealerBulk getData={getData} onClose={onClose} />
+          </div>
+        </div>
       )}
     </>
   );

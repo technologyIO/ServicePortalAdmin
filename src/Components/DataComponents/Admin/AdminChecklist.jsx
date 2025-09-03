@@ -52,7 +52,10 @@ const AdminChecklist = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [loader, setLoader] = useState(true);
   const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+  const closeModal = () => {
+    setIsOpen(false);
+    getAllData();
+  };
   const [selectedRows, setSelectedRows] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isDownloadingChecklist, setIsDownloadingChecklist] = useState(false);
@@ -1194,13 +1197,7 @@ const AdminChecklist = () => {
               {/* Modal Content */}
 
               <div className="bg-white rounded-lg p-6    relative">
-                <button
-                  onClick={closeModal}
-                  className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
-                >
-                  &times;
-                </button>
-                <CheckListBulk />
+                <CheckListBulk onClose={closeModal} />
               </div>
             </div>
           )}

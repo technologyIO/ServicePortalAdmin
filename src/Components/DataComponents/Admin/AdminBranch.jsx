@@ -21,6 +21,7 @@ import moment from "moment";
 import BulkModal from "../BulkUpload.jsx/BulkModal";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../../../LoadingSpinner";
+import BranchBulk from "./Bulk/BranchBulk";
 
 const AdminBranch = () => {
   const [showModal, setShowModal] = useState(false);
@@ -43,7 +44,7 @@ const AdminBranch = () => {
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
   const [isDownloadingBranch, setIsDownloadingBranch] = useState(false);
-
+  const [isbulkOpen, setIsbulkOpen] = useState(false);
   const downloadBranchExcel = async () => {
     setIsDownloadingBranch(true);
     try {
@@ -156,7 +157,11 @@ ${usersList}
     }
   };
 
-  // Loading Spinner Component
+  const openBulkModal = () => setIsbulkOpen(true);
+  const onClose = () => {
+    setIsbulkOpen(false);
+    getAllData();
+  };
 
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -615,6 +620,7 @@ ${citiesList}
 
             <div className="flex flex-wrap justify-end gap-3">
               <button
+                onClick={openBulkModal}
                 type="button"
                 className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
@@ -1042,6 +1048,13 @@ ${citiesList}
             </ModalDialog>
           </Modal>
         </>
+      )}
+      {isbulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6  relative">
+            <BranchBulk getAllData={getAllData} onClose={onClose} />
+          </div>
+        </div>
       )}
     </>
   );

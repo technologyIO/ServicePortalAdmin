@@ -4,7 +4,7 @@ import { Download, Database, X } from "lucide-react";
 import { useState } from "react";
 import * as XLSX from "xlsx";
 
-function ReportedProblemBulk({ onClose }) {
+function BranchBulk({ onClose }) {
   const [file, setFile] = useState(null);
   const [activeTab, setActiveTab] = useState("upload");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,11 +33,6 @@ function ReportedProblemBulk({ onClose }) {
     headerMapping: {},
     errors: [],
     warnings: [],
-    batchProgress: {
-      currentBatch: 0,
-      totalBatches: 0,
-      progressPercentage: 0,
-    }
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
   const [fileValidation, setFileValidation] = useState(null);
@@ -52,14 +47,12 @@ function ReportedProblemBulk({ onClose }) {
           const fileName = file.name.toLowerCase();
 
           if (fileName.endsWith(".csv")) {
-            // Parse CSV headers
             const text = e.target.result;
             const firstLine = text.split("\n")[0];
             headers = firstLine
               .split(",")
               .map((h) => h.trim().replace(/"/g, ""));
           } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-            // Parse Excel headers
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: "array" });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -69,7 +62,6 @@ function ReportedProblemBulk({ onClose }) {
             headers = jsonData[0] || [];
           }
 
-          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
           const normalizedHeaders = headers.map((h) =>
             h
               .toLowerCase()
@@ -77,70 +69,65 @@ function ReportedProblemBulk({ onClose }) {
               .trim()
           );
 
-          // Check for required fields (matching backend FIELD_MAPPINGS) - 5 REQUIRED FIELDS
+          // **FIXED:** Updated required fields to match backend exactly
           const requiredFields = {
-            catalog: [
-              "catalog",
-              "catalogue", 
-              "cat",
-              "catalogname",
-              "category",
-              "catalogtype",
-              "type"
-            ],
-            codegroup: [
-              "codegroup",
-              "codegroup",
-              "groupcode",
-              "codegrp",
-              "grpcode",
-              "problemgroup",
-              "cgrp"
-            ],
-            prodgroup: [
-              "prodgroup",
-              "prodgroup",
-              "productgroup",
-              "prodgrp",
-              "grpprod",
-              "productiongroup",
-              "pgrp"
-            ],
             name: [
               "name",
-              "problemname",
-              "title",
-              "description",
-              "problemtitle",
-              "desc",
-              "problemdesc"
+              "branchname",
+              "branch_name",
+              "office_name",
+              "officename",
+              "location_name",
+              "branch",
+              "office",
             ],
-            shorttextforcode: [
-              "shorttextforcode",
-              "shorttextforcode",
-              "shorttext",
-              "shorttext",
-              "codetext",
-              "abbreviation",
-              "shortdesc",
-              "brieftext",
-              "abbr",
-              "codeabbr",
-              "shortcode"
+            state: [
+              "state",
+              "statename",
+              "state_name",
+              "province",
+              "region_state",
+              "location_state",
+            ],
+            // **FIXED:** Accept any variation but map to backend expected field
+            branchShortCode: [
+              "branchshortcode",
+              "branch_short_code",
+              "branchshortcode",
+              "shortcode",
+              "short_code",
+              "code",
+              "branch_code",
+              "branchcode",
             ],
           };
 
-          // Optional field
           const optionalFields = {
+            district: [
+              "district",
+              "districtname",
+              "district_name",
+              "area",
+              "zone",
+              "locality",
+            ],
+            region: [
+              "region",
+              "regionname",
+              "region_name",
+              "territory",
+              "sector",
+              "division",
+            ],
+            country: ["country", "countryname", "country_name", "nation"],
             status: [
               "status",
-              "recordstatus", 
-              "state",
+              "branch_status",
+              "branchstatus",
+              "record_status",
+              "current_status",
+              "active_status",
               "condition",
-              "activestatus",
-              "enabled",
-              "isactive",
-              "currentstatus"
             ],
           };
 
@@ -166,7 +153,7 @@ function ReportedProblemBulk({ onClose }) {
             }
           }
 
-          // Check optional fields (for better user feedback)
+          // Check optional fields
           for (const [field, variations] of Object.entries(optionalFields)) {
             const foundVariation = variations.find((variation) =>
               normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
@@ -185,23 +172,18 @@ function ReportedProblemBulk({ onClose }) {
             }
           }
 
-          // All 5 fields are required
-          const isValid =
-            foundFields.catalog &&
-            foundFields.codegroup &&
-            foundFields.prodgroup &&
-            foundFields.name &&
-            foundFields.shorttextforcode;
+          // **FIXED:** All 3 required fields must be present
+          const isValid = Object.keys(requiredFields).every(
+            (field) => foundFields[field]
+          );
 
           const missingFields = Object.entries(requiredFields)
             .filter(([field]) => !foundFields[field])
             .map(([field]) => {
               const fieldLabels = {
-                catalog: "Catalog",
-                codegroup: "Code Group",
-                prodgroup: "Prod Group", 
-                name: "Name",
-                shorttextforcode: "Short Text For Code",
+                name: "Branch Name",
+                state: "State",
+                branchShortCode: "Branch Short Code",
               };
               return fieldLabels[field] || field;
             });
@@ -210,6 +192,9 @@ function ReportedProblemBulk({ onClose }) {
             .filter(([field]) => foundFields[field])
             .map(([field]) => {
               const fieldLabels = {
+                district: "District",
+                region: "Region",
+                country: "Country",
                 status: "Status",
               };
               return fieldLabels[field] || field;
@@ -242,7 +227,7 @@ function ReportedProblemBulk({ onClose }) {
             mappedColumns: {},
             missingFields: [],
             optionalFound: [],
-            totalRequired: 5,
+            totalRequired: 3,
             foundRequired: 0,
           });
         }
@@ -257,12 +242,11 @@ function ReportedProblemBulk({ onClose }) {
           mappedColumns: {},
           missingFields: [],
           optionalFound: [],
-          totalRequired: 5,
+          totalRequired: 3,
           foundRequired: 0,
         });
       };
 
-      // Read file based on type
       if (file.name.toLowerCase().endsWith(".csv")) {
         reader.readAsText(file);
       } else {
@@ -273,7 +257,7 @@ function ReportedProblemBulk({ onClose }) {
 
   const addLiveUpdate = (message, type = "info") => {
     const update = {
-      id: Date.now() + Math.random(),
+      id: Date.now(),
       message,
       type,
       timestamp: new Date().toLocaleTimeString(),
@@ -331,8 +315,10 @@ function ReportedProblemBulk({ onClose }) {
     setError("Validating file structure...");
     addLiveUpdate(
       `File selected: ${selectedFile.name} (${(
-        selectedFile.size / 1024
-      ).toFixed(2)} KB)`,
+        selectedFile.size /
+        1024 /
+        1024
+      ).toFixed(2)} MB)`,
       "info"
     );
 
@@ -403,15 +389,11 @@ function ReportedProblemBulk({ onClose }) {
     validateAndSetFile(droppedFile);
   };
 
-  // **COMPLETELY FIXED:** Main upload function with proper error handling
   const handleUpload = async () => {
     if (!file) return;
 
     setIsProcessing(true);
-    setError("");
     setLiveUpdates([]);
-    
-    // Reset processing data
     setProcessingData({
       status: "processing",
       startTime: new Date(),
@@ -434,374 +416,230 @@ function ReportedProblemBulk({ onClose }) {
       headerMapping: {},
       errors: [],
       warnings: [],
-      batchProgress: {
-        currentBatch: 0,
-        totalBatches: 0,
-        progressPercentage: 0,
-      },
     });
 
-    let abortController = null;
-    let timeoutId = null;
+    const formData = new FormData();
+    formData.append("file", file);
 
     try {
-      addLiveUpdate("🚀 Starting Reported Problem data upload...", "info");
+      addLiveUpdate("Starting Branch data upload...", "info");
 
-      // Create FormData
-      const formData = new FormData();
-      formData.append("file", file);
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 600000);
 
-      // Setup abort controller and timeout
-      abortController = new AbortController();
-      
-      // **CRITICAL FIX:** Much longer timeout for large files and better error handling
-      timeoutId = setTimeout(() => {
-        if (abortController && !abortController.signal.aborted) {
-          console.log("Upload timeout reached - aborting request");
-          abortController.abort();
-          addLiveUpdate("⏰ Upload timeout - request taking too long", "warning");
-        }
-      }, 900000); // 15 minutes timeout
-
-      // **MAJOR FIX:** Simplified fetch request without problematic headers
-      console.log("Making fetch request to:", `${process.env.REACT_APP_BASE_URL}/bulk/reported-problem/bulk-upload`);
-      
       const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/bulk/reported-problem/bulk-upload`,
+        `${process.env.REACT_APP_BASE_URL}/bulk/branch/branch-bulk-upload`,
         {
           method: "POST",
           body: formData,
           signal: abortController.signal,
-          // **REMOVED problematic headers that were causing issues**
         }
       );
 
-      // Clear timeout since we got a response
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-        timeoutId = null;
-      }
+      clearTimeout(timeoutId);
 
-      console.log("Response status:", response.status, "OK:", response.ok);
-
-      // **ENHANCED:** Better response validation
       if (!response.ok) {
-        let errorText;
-        try {
-          errorText = await response.text();
-        } catch {
-          errorText = `HTTP ${response.status} ${response.statusText}`;
-        }
-        throw new Error(`Server error (${response.status}): ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // **CRITICAL:** Check for streaming support
-      if (!response.body || !response.body.getReader) {
-        throw new Error("Streaming not supported by browser or server");
-      }
+      addLiveUpdate(
+        "File uploaded successfully. Processing Branch records...",
+        "success"
+      );
 
-      addLiveUpdate("✅ Connection established - starting data processing...", "success");
-
-      // **COMPLETELY REWRITTEN:** Streaming response handler
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
-      let lastUpdateTime = Date.now();
-      let heartbeatCount = 0;
-      let totalLinesProcessed = 0;
-      
-      console.log("Starting to read stream...");
+      let partialLine = "";
+      let retryCount = 0;
+      const maxRetries = 3;
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          
-          if (done) {
-            console.log("Stream reading completed");
-            addLiveUpdate("📡 Stream reading completed", "info");
-            break;
-          }
-
-          // Decode chunk and add to buffer
-          const chunk = decoder.decode(value, { stream: true });
-          buffer += chunk;
-          
-          // Process complete lines
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
-          
-          for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (!trimmedLine) continue;
-            
-            totalLinesProcessed++;
-            
-            // **FIXED:** Better heartbeat detection
-            if (trimmedLine.includes('"heartbeat"') || trimmedLine === '{"heartbeat":true}') {
-              heartbeatCount++;
-              lastUpdateTime = Date.now();
-              console.log(`❤️ Heartbeat ${heartbeatCount}`, new Date().toISOString());
-              continue;
-            }
-
-            // **ENHANCED:** JSON parsing with better error handling
-            try {
-              const data = JSON.parse(trimmedLine);
-              console.log("Parsed data status:", data.status, "Records:", data.processedRecords);
-              
-              // **CRITICAL FIX:** Better state updates
-              setProcessingData((prevData) => {
-                const updatedData = {
-                  ...prevData,
-                  status: data.status || prevData.status,
-                  totalRecords: data.totalRecords || prevData.totalRecords,
-                  processedRecords: data.processedRecords || prevData.processedRecords,
-                  successfulRecords: data.successfulRecords || prevData.successfulRecords,
-                  failedRecords: data.failedRecords || prevData.failedRecords,
-                  headerMapping: data.headerMapping || prevData.headerMapping,
-                  errors: data.errors || prevData.errors,
-                  warnings: data.warnings || prevData.warnings,
-                  duration: data.duration || prevData.duration,
-                  endTime: data.endTime || prevData.endTime,
-                };
-
-                // **FIXED:** Proper results array handling
-                if (data.results && Array.isArray(data.results)) {
-                  if (data.results.length > prevData.results.length) {
-                    updatedData.results = data.results;
-                  } else {
-                    updatedData.results = prevData.results;
-                  }
-                }
-
-                // **FIXED:** Summary updates
-                if (data.summary) {
-                  updatedData.summary = {
-                    ...prevData.summary,
-                    ...data.summary
-                  };
-                }
-
-                // **FIXED:** Batch progress
-                if (data.batchProgress) {
-                  updatedData.batchProgress = {
-                    ...prevData.batchProgress,
-                    ...data.batchProgress
-                  };
-                }
-
-                return updatedData;
-              });
-
-              // **ENHANCED:** Throttled live updates
-              const timeSinceLastUpdate = Date.now() - lastUpdateTime;
-              if (timeSinceLastUpdate > 2000) { // Update every 2 seconds max
-                
-                if (data.batchCompleted && data.batchProgress) {
-                  const progress = Math.round((data.batchProgress.currentBatch / data.batchProgress.totalBatches) * 100);
-                  addLiveUpdate(
-                    `📊 Batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches} completed (${progress}%)`,
-                    "info"
-                  );
-                }
-
-                if (data.processedRecords && data.totalRecords) {
-                  const progress = Math.round((data.processedRecords / data.totalRecords) * 100);
-                  addLiveUpdate(
-                    `⚡ Progress: ${data.processedRecords}/${data.totalRecords} records (${progress}%)`,
-                    "success"
-                  );
-                }
-
-                if (data.summary) {
-                  if (data.summary.created > 0) {
-                    addLiveUpdate(`✨ Created: ${data.summary.created} records`, "success");
-                  }
-                  if (data.summary.updated > 0) {
-                    addLiveUpdate(`🔄 Updated: ${data.summary.updated} records`, "info");
-                  }
-                  if (data.summary.failed > 0) {
-                    addLiveUpdate(`❌ Failed: ${data.summary.failed} records`, "warning");
-                  }
-                }
-
-                lastUpdateTime = Date.now();
-              }
-
-              // **CRITICAL:** Handle completion and failure
-              if (data.status === "completed") {
-                console.log("Processing completed successfully!");
-                addLiveUpdate(
-                  `🎉 Upload completed successfully in ${data.duration || 'unknown time'}!`,
-                  "success"
-                );
-                addLiveUpdate(
-                  `📊 Summary: Created: ${data.summary?.created || 0}, Updated: ${data.summary?.updated || 0}, Failed: ${data.summary?.failed || 0}`,
-                  "success"
-                );
-                setIsProcessing(false);
-                setTimeout(() => setActiveTab("results"), 1500);
-                break; // Exit the loop
-                
-              } else if (data.status === "failed") {
-                console.log("Processing failed:", data.errors);
-                addLiveUpdate("❌ Processing failed on server!", "error");
-                
-                if (data.errors && Array.isArray(data.errors)) {
-                  data.errors.forEach(err => {
-                    addLiveUpdate(`❌ Error: ${err}`, "error");
-                  });
-                }
-                
-                setError(`Processing failed: ${data.errors ? data.errors.join(', ') : 'Unknown server error'}`);
-                setIsProcessing(false);
-                break; // Exit the loop
-              }
-
-            } catch (jsonError) {
-              // Only log JSON parse errors occasionally to avoid spam
-              if (totalLinesProcessed % 50 === 0) {
-                console.warn("JSON parse error on line:", totalLinesProcessed, jsonError.message);
-                addLiveUpdate("⚠️ Some data chunks had parsing issues (this is normal)", "warning");
-              }
-            }
-          }
-
-          // **ADDED:** Connection health monitoring  
-          const timeSinceLastUpdate = Date.now() - lastUpdateTime;
-          if (timeSinceLastUpdate > 60000) { // 60 seconds without updates
-            addLiveUpdate(
-              `⏰ No server response for ${Math.round(timeSinceLastUpdate / 1000)}s - still processing...`,
-              "warning"
-            );
-            lastUpdateTime = Date.now(); // Reset to prevent spam
-          }
-        }
-
-        // **ENHANCED:** Process any remaining data in buffer
-        if (buffer.trim() && !buffer.includes('"heartbeat"')) {
-          try {
-            const finalData = JSON.parse(buffer.trim());
-            console.log("Processing final buffer data:", finalData.status);
-            setProcessingData((prev) => ({ ...prev, ...finalData }));
-          } catch (e) {
-            console.warn("Could not parse final buffer data:", e.message);
-          }
-        }
-
-      } finally {
-        // **CRITICAL:** Always cleanup reader
+      while (retryCount < maxRetries) {
         try {
-          if (reader) {
-            await reader.cancel();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = partialLine + decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
+            partialLine = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+
+              try {
+                const data = JSON.parse(line);
+
+                setProcessingData((prev) => {
+                  const newData = {
+                    ...prev,
+                    ...data,
+                    results: data.results || prev.results,
+                    summary: data.summary
+                      ? { ...prev.summary, ...data.summary }
+                      : prev.summary,
+                    headerMapping: data.headerMapping || prev.headerMapping,
+                    errors: data.errors || prev.errors,
+                    warnings: data.warnings || prev.warnings,
+                  };
+
+                  // Enhanced live updates with detailed tracking
+                  if (data.processedRecords > prev.processedRecords) {
+                    const newlyProcessed =
+                      data.processedRecords - prev.processedRecords;
+                    addLiveUpdate(
+                      `Processed ${newlyProcessed} more Branch records (${data.processedRecords}/${data.totalRecords})`,
+                      "success"
+                    );
+                  }
+
+                  if (data.summary?.created > prev.summary?.created) {
+                    const newCreated =
+                      data.summary.created - prev.summary.created;
+                    addLiveUpdate(
+                      `Created ${newCreated} new Branch records (Total: ${data.summary.created})`,
+                      "info"
+                    );
+                  }
+
+                  if (data.summary?.updated > prev.summary?.updated) {
+                    const newUpdated =
+                      data.summary.updated - prev.summary.updated;
+                    addLiveUpdate(
+                      `Updated ${newUpdated} existing Branch records (Total: ${data.summary.updated})`,
+                      "info"
+                    );
+                  }
+
+                  if (
+                    data.summary?.duplicatesInFile >
+                    prev.summary?.duplicatesInFile
+                  ) {
+                    const newDuplicates =
+                      data.summary.duplicatesInFile -
+                      prev.summary.duplicatesInFile;
+                    addLiveUpdate(
+                      `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
+                      "warning"
+                    );
+                  }
+
+                  if (
+                    data.summary?.existingRecords >
+                    prev.summary?.existingRecords
+                  ) {
+                    const newExisting =
+                      data.summary.existingRecords -
+                      prev.summary.existingRecords;
+                    addLiveUpdate(
+                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
+                      "warning"
+                    );
+                  }
+
+                  if (data.summary?.failed > prev.summary?.failed) {
+                    const newFailed = data.summary.failed - prev.summary.failed;
+                    addLiveUpdate(
+                      `${newFailed} records failed validation (Total: ${data.summary.failed})`,
+                      "error"
+                    );
+                  }
+
+                  if (data.status === "completed") {
+                    addLiveUpdate(
+                      `Branch bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      "success"
+                    );
+                    setIsProcessing(false);
+                    setTimeout(() => setActiveTab("results"), 100);
+                  } else if (data.status === "failed") {
+                    addLiveUpdate("Branch processing failed!", "error");
+                    setIsProcessing(false);
+                  }
+
+                  return newData;
+                });
+              } catch (parseError) {
+                console.error("Error parsing JSON:", parseError, "Line:", line);
+                addLiveUpdate(
+                  `Error processing data chunk: ${parseError.message}`,
+                  "error"
+                );
+              }
+            }
           }
-        } catch (e) {
-          console.warn("Reader cleanup error:", e.message);
+
+          if (partialLine.trim()) {
+            try {
+              const data = JSON.parse(partialLine);
+              setProcessingData((prev) => ({
+                ...prev,
+                ...data,
+              }));
+            } catch (parseError) {
+              console.error("Error parsing final JSON:", parseError);
+            }
+          }
+
+          break;
+        } catch (streamError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw streamError;
+          }
+
+          addLiveUpdate(
+            `Stream error (retry ${retryCount}/${maxRetries}): ${streamError.message}`,
+            "warning"
+          );
+
+          await new Promise((resolve) =>
+            setTimeout(resolve, 2000 * retryCount)
+          );
         }
       }
-
-    } catch (error) {
-      console.error("Upload error:", error);
-
-      // **ENHANCED:** Comprehensive error handling with specific messages
-      let errorMessage = "Upload failed: ";
-      let errorType = "error";
-
-      if (error.name === "AbortError") {
-        errorMessage = "Upload was cancelled or timed out";
-        errorType = "warning";
-        addLiveUpdate("⏰ Upload cancelled due to timeout", "warning");
-        
-      } else if (error.message.includes("Failed to fetch")) {
-        errorMessage = "Network connection failed. Please check your internet connection and server availability.";
-        addLiveUpdate("🔍 Troubleshooting: Check if server URL is correct and accessible", "info");
-        addLiveUpdate(`🌐 Server URL: ${process.env.REACT_APP_BASE_URL}/bulk/reported-problem/bulk-upload`, "info");
-        
-      } else if (error.message.includes("Server error")) {
-        errorMessage = error.message;
-        addLiveUpdate("🔧 Server returned an error - please contact support", "warning");
-        
-      } else if (error.message.includes("Streaming not supported")) {
-        errorMessage = "Your browser or server doesn't support streaming. Try refreshing and uploading again.";
-        addLiveUpdate("🔄 Try refreshing the page and uploading again", "info");
-        
-      } else {
-        errorMessage = `Unexpected error: ${error.message}`;
-        addLiveUpdate("🔧 An unexpected error occurred", "warning");
-      }
-
-      setError(errorMessage);
-      addLiveUpdate(`❌ ${errorMessage}`, errorType);
+    } catch (err) {
+      addLiveUpdate("Upload failed: " + err.message, "error");
       setIsProcessing(false);
+      setError("Upload failed: " + err.message);
 
-      // Update processing data with error state
       setProcessingData((prev) => ({
         ...prev,
         status: "failed",
         endTime: new Date(),
-        duration: prev.startTime ? `${((new Date() - prev.startTime) / 1000).toFixed(2)}s` : '0s',
-        errors: [...(prev.errors || []), errorMessage],
+        duration: `${((new Date() - prev.startTime) / 1000).toFixed(2)}s`,
       }));
-
-    } finally {
-      // **CRITICAL:** Always cleanup resources
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Ensure processing state is cleared if still running
-      if (isProcessing) {
-        console.log("Ensuring processing state is cleared");
-        setTimeout(() => {
-          setIsProcessing(false);
-        }, 1000);
-      }
     }
   };
 
-  // Updated CSV template with status field
+  // Updated CSV template with all Branch fields (empty data)
   const handleDownload = () => {
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
 
-    // Create data with headers and sample data
+    // Create data with headers and empty rows
     const data = [
       [
-        "Catalog",
-        "Code Group", 
-        "Prod Group",
-        "Name",
-        "Short Text For Code",
+        "Branch Name",
+        "State",
+        "District",
+        "Region",
+        "Country",
+        "Branch Short Code",
         "Status",
-      ], // Headers
-      ["MAINT", "ELECTRICAL", "MOTOR", "Motor Bearing Failure", "MTR-BRG-FAIL", "Active"], // Sample row 1
-      ["PROD", "MECHANICAL", "PUMP", "Pump Seal Leakage", "PMP-SEAL-LK", "Active"], // Sample row 2
-      ["", "", "", "", "", ""], // Empty row for user data
+      ], // Headers for Branch
+      ["", "", "", "", "", "", ""], // Empty row 1
+      ["", "", "", "", "", "", ""], // Empty row 2
+      ["", "", "", "", "", "", ""], // Empty row 3
     ];
 
     // Convert to worksheet
     const worksheet = XLSX.utils.aoa_to_sheet(data);
 
-    // Set column widths for better readability
-    worksheet['!cols'] = [
-      { wch: 15 }, // Catalog
-      { wch: 15 }, // Code Group
-      { wch: 15 }, // Prod Group
-      { wch: 25 }, // Name
-      { wch: 20 }, // Short Text For Code
-      { wch: 10 }, // Status
-    ];
-
     // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Reported Problem Template"
-    );
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Branch Template");
 
     // Write and download file
-    XLSX.writeFile(workbook, "reported_problem_template.xlsx");
-    addLiveUpdate("📥 Template downloaded successfully", "success");
+    XLSX.writeFile(workbook, "branch_template.xlsx");
   };
 
   const resetForm = () => {
@@ -810,8 +648,6 @@ function ReportedProblemBulk({ onClose }) {
     setActiveTab("upload");
     setLiveUpdates([]);
     setIsProcessing(false);
-    setFileValidation(null);
-    setResultFilter("All");
     setProcessingData({
       status: "idle",
       startTime: null,
@@ -834,11 +670,6 @@ function ReportedProblemBulk({ onClose }) {
       headerMapping: {},
       errors: [],
       warnings: [],
-      batchProgress: {
-        currentBatch: 0,
-        totalBatches: 0,
-        progressPercentage: 0,
-      }
     });
   };
 
@@ -888,7 +719,7 @@ function ReportedProblemBulk({ onClose }) {
         description:
           Object.keys(processingData.headerMapping).length > 0
             ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
-            : "Detecting Catalog, Code Group, Prod Group, Name, and Short Text columns",
+            : "Detecting Branch Name, State, District, Region, Country, Branch Short Code, and Status columns",
         status:
           Object.keys(processingData.headerMapping).length > 0
             ? "completed"
@@ -898,7 +729,7 @@ function ReportedProblemBulk({ onClose }) {
       },
       {
         id: 3,
-        title: "Processing Reported Problem Records",
+        title: "Processing Branch Records",
         description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
@@ -912,7 +743,7 @@ function ReportedProblemBulk({ onClose }) {
       {
         id: 4,
         title: "Finalizing Process",
-        description: "Completing Reported Problem bulk upload operation",
+        description: "Completing Branch bulk upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -924,23 +755,22 @@ function ReportedProblemBulk({ onClose }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-6 text-black">
+        <div className="relative bg-gradient-to-r from-indigo-50 to-blue-50 p-6 text-black">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Database size={24} />
                 </div>
-                Bulk Reported Problem Upload
+                Bulk Branch Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage Reported Problem data efficiently
+                Import and manage Branch data efficiently
               </p>
             </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
-              disabled={isProcessing}
             >
               <X size={24} />
             </button>
@@ -948,18 +778,17 @@ function ReportedProblemBulk({ onClose }) {
         </div>
 
         {/* Template Download Section */}
-        <div className="flex m-3 justify-between items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+        <div className="flex m-3 justify-between items-center p-4 bg-indigo-50 rounded-xl border border-indigo-200">
           <div>
-            <h3 className="font-semibold text-blue-900">Need a template?</h3>
-            <p className="text-sm text-blue-700">
-              Download our Excel template with Catalog, Code Group, Prod Group,
-              Name, and Short Text For Code columns
+            <h3 className="font-semibold text-indigo-900">Need a template?</h3>
+            <p className="text-sm text-indigo-700">
+              Download our CSV template with Branch Name, State, District,
+              Region, Country, Branch Short Code, and Status columns.
             </p>
           </div>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            disabled={isProcessing}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <Download size={16} />
             Download Template
@@ -974,14 +803,14 @@ function ReportedProblemBulk({ onClose }) {
               <button
                 className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "upload"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("upload")}
               >
                 Upload
                 {isProcessing && (
-                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-blue-600 text-white rounded-full animate-pulse">
+                  <span className="ml-2 inline-flex items-center justify-center w-4 h-4 text-xs bg-indigo-600 text-white rounded-full animate-pulse">
                     !
                   </span>
                 )}
@@ -989,7 +818,7 @@ function ReportedProblemBulk({ onClose }) {
               <button
                 className={`px-6 py-3 font-medium text-sm transition-colors ${
                   activeTab === "results"
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50"
                     : "text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab("results")}
@@ -1043,7 +872,7 @@ function ReportedProblemBulk({ onClose }) {
                   <div
                     className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
                       isDragging
-                        ? "border-blue-500 bg-blue-50 scale-105"
+                        ? "border-indigo-500 bg-indigo-50 scale-105"
                         : file
                         ? "border-green-500 bg-green-50"
                         : "border-gray-300 hover:border-gray-400"
@@ -1083,7 +912,6 @@ function ReportedProblemBulk({ onClose }) {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setFile(null);
-                                  setFileValidation(null);
                                 }}
                               >
                                 <svg
@@ -1105,16 +933,11 @@ function ReportedProblemBulk({ onClose }) {
                             <span className="text-sm text-gray-500 mt-2 block">
                               {(file.size / 1024).toFixed(2)} KB
                             </span>
-                            {fileValidation && fileValidation.isValid && (
-                              <span className="text-sm text-green-600 mt-1 block">
-                                ✅ All required columns found
-                              </span>
-                            )}
                           </div>
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="32"
@@ -1125,7 +948,7 @@ function ReportedProblemBulk({ onClose }) {
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="text-blue-600"
+                              className="text-indigo-600"
                             >
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                               <polyline points="17 8 12 3 7 8"></polyline>
@@ -1141,9 +964,9 @@ function ReportedProblemBulk({ onClose }) {
                           <p className="text-sm text-center text-gray-500">
                             CSV or Excel files only (max 50MB)
                           </p>
-                          <p className="text-xs text-center text-blue-600 mt-2">
-                            Required columns: Catalog, Code Group, Prod Group,
-                            Name, Short Text For Code
+                          <p className="text-xs text-center text-indigo-600 mt-2">
+                            Required columns: Branch Name, State, Branch Short
+                            Code
                           </p>
                         </>
                       )}
@@ -1168,7 +991,6 @@ function ReportedProblemBulk({ onClose }) {
                       <button
                         onClick={resetForm}
                         className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        disabled={isProcessing}
                       >
                         Reset
                       </button>
@@ -1176,12 +998,12 @@ function ReportedProblemBulk({ onClose }) {
                     <button
                       onClick={handleUpload}
                       disabled={
-                        !file || (fileValidation && !fileValidation.isValid) || isProcessing
+                        !file || (fileValidation && !fileValidation.isValid)
                       }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
-                        !file || (fileValidation && !fileValidation.isValid) || isProcessing
-                          ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700"
+                        !file || (fileValidation && !fileValidation.isValid)
+                          ? "bg-indigo-400 cursor-not-allowed"
+                          : "bg-indigo-600 hover:bg-indigo-700"
                       } text-white transition-colors`}
                     >
                       <svg
@@ -1199,11 +1021,9 @@ function ReportedProblemBulk({ onClose }) {
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                       </svg>
-                      {isProcessing 
-                        ? "Processing..."
-                        : fileValidation && fileValidation.isValid
-                        ? "Upload & Process Reported Problem Data ✓"
-                        : "Upload & Process Reported Problem Data"}
+                      {fileValidation && fileValidation.isValid
+                        ? "Upload & Process Branch Data ✓"
+                        : "Upload & Process Branch Data"}
                     </button>
                   </div>
                 </div>
@@ -1216,7 +1036,7 @@ function ReportedProblemBulk({ onClose }) {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></div>
                         Processing Status
                       </h3>
                       <div className="space-y-4">
@@ -1228,7 +1048,7 @@ function ReportedProblemBulk({ onClose }) {
                                   step.status === "completed"
                                     ? "bg-green-500 text-white"
                                     : step.status === "active"
-                                    ? "bg-blue-500 text-white"
+                                    ? "bg-indigo-500 text-white"
                                     : "bg-gray-200 text-gray-500"
                                 }`}
                               >
@@ -1275,7 +1095,7 @@ function ReportedProblemBulk({ onClose }) {
                               <h4
                                 className={`font-medium ${
                                   step.status === "active"
-                                    ? "text-blue-600"
+                                    ? "text-indigo-600"
                                     : "text-gray-800"
                                 }`}
                               >
@@ -1310,7 +1130,7 @@ function ReportedProblemBulk({ onClose }) {
                                   ? "bg-green-50 text-green-700"
                                   : update.type === "warning"
                                   ? "bg-yellow-50 text-yellow-700"
-                                  : "bg-blue-50 text-blue-700"
+                                  : "bg-indigo-50 text-indigo-700"
                               }`}
                             >
                               <div className="flex justify-between items-start">
@@ -1334,7 +1154,7 @@ function ReportedProblemBulk({ onClose }) {
             </div>
           )}
 
-          {/* Results Tab - Enhanced with 5 cards for ReportedProblem */}
+          {/* Results Tab - Enhanced with 5 cards for Branch */}
           {activeTab === "results" && processingData.status === "completed" && (
             <div className="space-y-6 h-[400px] overflow-y-auto px-2">
               {/* Enhanced Summary Cards - 5 cards layout */}
@@ -1543,7 +1363,7 @@ function ReportedProblemBulk({ onClose }) {
                         className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2
           ${
             resultFilter === tab.value
-              ? "border-blue-600 text-blue-600"
+              ? "border-indigo-600 text-indigo-600"
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
                       >
@@ -1561,7 +1381,7 @@ function ReportedProblemBulk({ onClose }) {
                     <div className="divide-y divide-gray-100">
                       {filteredResults.map((item, index) => (
                         <div
-                          key={`${item.row}-${index}`}
+                          key={index}
                           className="p-4 hover:bg-gray-50 transition-colors"
                         >
                           <div className="flex items-start justify-between">
@@ -1571,24 +1391,26 @@ function ReportedProblemBulk({ onClose }) {
                                   Row {item.row}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  {item.catalog} | {item.codegroup}
+                                  {item.name} | {item.branchShortCode}
                                 </span>
                               </div>
                               <div className="text-sm text-gray-600 mb-1">
                                 <div>
-                                  <strong>Prod Group:</strong>{" "}
-                                  {item.prodgroup || "N/A"}
+                                  <strong>State:</strong> {item.state || "N/A"}
                                 </div>
-                                <div>
-                                  <strong>Name:</strong> {item.name || "N/A"}
-                                </div>
-                                <div>
-                                  <strong>Short Text:</strong>{" "}
-                                  {item.shorttextforcode || "N/A"}
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                  <div>
+                                    <strong>District:</strong>{" "}
+                                    {item.district || "N/A"}
+                                  </div>
+                                  <div>
+                                    <strong>Region:</strong>{" "}
+                                    {item.region || "N/A"}
+                                  </div>
                                 </div>
                               </div>
                               {item.action && (
-                                <div className="text-xs text-blue-600">
+                                <div className="text-xs text-indigo-600">
                                   {item.action}
                                 </div>
                               )}
@@ -1635,4 +1457,4 @@ function ReportedProblemBulk({ onClose }) {
   );
 }
 
-export default ReportedProblemBulk;
+export default BranchBulk;
