@@ -10,6 +10,7 @@ import BulkModal from "../BulkUpload.jsx/BulkModal";
 import LoadingSpinner from "../../../LoadingSpinner";
 import toast from "react-hot-toast";
 import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
+import CmcNcmcPriceBulk from "./Bulk/CmcNcmcPriceBulk";
 
 function CmcNcmcPrice() {
   const [showModal, setShowModal] = useState(false);
@@ -29,11 +30,14 @@ function CmcNcmcPrice() {
   const [isSpinning, setisSpinning] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
+
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
-
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => {
+    setIsOpen(false);
+    getData();
+  };
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -379,6 +383,7 @@ function CmcNcmcPrice() {
             {/* Bottom Row: Upload, Filter, Download */}
             <div className="flex flex-wrap justify-end gap-3">
               <button
+                onClick={openModal}
                 type="button"
                 className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
               >
@@ -884,6 +889,19 @@ function CmcNcmcPrice() {
             </ModalDialog>
           </Modal>
         </>
+      )}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6  relative">
+            <button
+              onClick={closeModal}
+              className="absolute top-0 text-3xl right-3 text-gray-400 hover:text-gray-600"
+            >
+              &times;
+            </button>
+            <CmcNcmcPriceBulk getData={getData} onClose={closeModal} />
+          </div>
+        </div>
       )}
     </>
   );
