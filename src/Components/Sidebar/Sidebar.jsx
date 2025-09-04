@@ -354,6 +354,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       ],
     },
   ];
+
   const baseUrl =
     process.env.REACT_APP_API_URL ||
     "https://servicepbackend.insideoutprojects.in";

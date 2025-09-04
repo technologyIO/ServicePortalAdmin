@@ -44,7 +44,7 @@ export async function validateFileStructure(file) {
 
         const requiredFields = {
           materialcode: [
-            "materialcode", "material_code", "partnumber", "part_number", "partno", "productcode",
+            "materialcode", "material_code", "partnumber", "part_number", "partno", "productcode","material",
           ],
           materialdescription: [
             "materialdescription", "material_description", "description", "product_description", "desc",
@@ -56,7 +56,7 @@ export async function validateFileStructure(file) {
             "equipment", "equipmentid", "equipment_id", "eqid", "eq_id",
           ],
           currentcustomer: [
-            "currentcustomer", "current_customer", "customer_code", "customercode", "customer", "custcode",
+            "currentcustomer", "current_customer", "customer_code", "customercode", "customer", "custcode" , "curcustomer",
           ],
           endcustomer: [
             "endcustomer", "end_customer", "final_customer", "end_user", "finalcustomer",
@@ -64,12 +64,12 @@ export async function validateFileStructure(file) {
           custWarrantystartdate: [
             "custwarrantystartdate", "custwarrantystart", "cust_warranty_start_date", "warranty_start", 
             "customer_warranty_start", "customerwarrantystartdate", "customer_warranty_startdate", 
-            "customerwarrantystartdate", "customer warranty start date",
+            "customerwarrantystartdate", "customer warranty start date","cus. wrty start",
           ],
           custWarrantyenddate: [
             "custwarrantyenddate", "custwarrantyend", "cust_warranty_end_date", "warranty_end",
             "customer_warranty_end", "customerwarrantyenddate", "customer_warranty_enddate",
-            "customerwarrantyenddate", "customer warranty end date",
+            "customerwarrantyenddate", "customer warranty end date","Cust. wrty end",
           ],
           dealer: [
             "dealer", "dealer_name", "dealername", "distributor", "partner", "vendor",
