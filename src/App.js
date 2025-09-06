@@ -90,6 +90,8 @@ import CloseOnCall from './Components/DataComponents/OnCall/CloseOnCall.jsx/Clos
 import CloseOnCallDetailPage from './Components/DataComponents/OnCall/CloseOnCall.jsx/CloseOnCallDetailPage';
 import EquipmentBulk from './Components/DataComponents/Master_Managemnet/Equipment/EquipmentBulk';
 import AdminAccess from './Components/DataComponents/Role/Admin/AdminAccess';
+import ProblemType from './Components/DataComponents/Admin/ProblemType';
+import ProblemName from './Components/DataComponents/Admin/ProblemName';
 
 
 const PrivateRoute = ({ children }) => {
@@ -209,6 +211,16 @@ const AppContent = () => {
             <Route path="/warrenty-code" element={<ProtectedRoute
               component={WarrantyCode}
               componentName="Warranty Code"
+              requiredPermission="read"
+            />} />
+            <Route path="/problem-type" element={<ProtectedRoute
+              component={ProblemType}
+              componentName="Problem Type"
+              requiredPermission="read"
+            />} />
+            <Route path="/problem-name" element={<ProtectedRoute
+              component={ProblemName}
+              componentName="Problem Name"
               requiredPermission="read"
             />} />
             <Route path="/replaced-part-code" element={<ProtectedRoute

@@ -252,6 +252,8 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
         { component: "Department", path: "/admin-department" },
         { component: "Role Manage", path: "/role-manage" },
         { component: "Admin Access", path: "/admin-access" },
+        { component: "Problem Type", path: "/problem-type" },
+        { component: "Problem Name", path: "/problem-name" },
         { component: "CheckListType", path: "/checklist-type" },
         { component: "Product Group", path: "/admin-product-group" },
         { component: "CheckPointType", path: "/checkpoint-type" },
