@@ -92,6 +92,7 @@ function HubStockBulk({ onClose, getData }) {
               "code",
               "item_code",
               "product_code",
+              "material",
             ],
             materialdescription: [
               "materialdescription",
@@ -100,6 +101,7 @@ function HubStockBulk({ onClose, getData }) {
               "desc",
               "product_description",
               "item_description",
+              "material description",
             ],
             quantity: [
               "quantity",
@@ -109,6 +111,7 @@ function HubStockBulk({ onClose, getData }) {
               "stock_quantity",
               "available_quantity",
               "amount",
+              "unrestricted",
             ],
             storagelocation: [
               "storagelocation",
@@ -119,6 +122,7 @@ function HubStockBulk({ onClose, getData }) {
               "storagearea",
               "bin",
               "zone",
+              "storage location",
             ],
           };
 

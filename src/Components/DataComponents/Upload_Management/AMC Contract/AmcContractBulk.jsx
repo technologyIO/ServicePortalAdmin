@@ -86,6 +86,7 @@ function AMCContractBulk({ onClose, getData }) {
               "sales_document",
               "document",
               "docno",
+              "sales doc.",
             ],
             serialnumber: [
               "serialnumber",
@@ -93,6 +94,7 @@ function AMCContractBulk({ onClose, getData }) {
               "serialno",
               "serial_no",
               "sno",
+              "serial number",
             ],
             satypeZDRC_ZDRN: [
               "satype",
@@ -101,6 +103,7 @@ function AMCContractBulk({ onClose, getData }) {
               "satype_zdrc_zdrn",
               "type",
               "satypezdrczdrn",
+              "SaTy",
             ],
             materialcode: [
               "materialcode",
@@ -109,6 +112,7 @@ function AMCContractBulk({ onClose, getData }) {
               "part_no",
               "code",
               "item_code",
+              "material",
             ],
             startdate: [
               "startdate",
@@ -117,6 +121,7 @@ function AMCContractBulk({ onClose, getData }) {
               "begindate",
               "fromdate",
               "from_date",
+              "start dt",
             ],
             enddate: [
               "enddate",
@@ -126,6 +131,7 @@ function AMCContractBulk({ onClose, getData }) {
               "todate",
               "to_date",
               "expiry_date",
+              "end date",
             ],
           };
 

@@ -2,109 +2,70 @@
 
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { usePermissions } from "../../PermissionContext"; // <- Import your permissions hook
+import { usePermissions } from "../../PermissionContext";
 import { Delete, LucideDelete, Trash, Trash2 } from "lucide-react";
 import { Approval } from "@mui/icons-material";
 
-// SVG ICONS (unchanged)
+// SVG ICONS (keeping all your existing icons)
 const DashboardIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
   </svg>
 );
+
 const UploadIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
-      clipRule="evenodd"
-    />
+    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
   </svg>
 );
+
 const SettingsIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372-.836 2.942.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-      clipRule="evenodd"
-    />
+    <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372-.836 2.942.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
   </svg>
 );
+
 const BusinessIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
-      clipRule="evenodd"
-    />
+    <path fillRule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
     <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z" />
   </svg>
 );
+
 const ReceiptIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-8.207-.293a1 1 0 011.414-1.414l.707.707a1 1 0 01-1.414 1.414l-.707-.707z"
-      clipRule="evenodd"
-    />
+    <path fillRule="evenodd" d="M5 2a2 2 0 00-2 2v14l3.5-2 3.5 2 3.5-2 3.5 2V4a2 2 0 00-2-2H5zm2.5 3a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6.207.293a1 1 0 00-1.414 1.414l.707.707a1 1 0 001.414-1.414l-.707-.707zM12.5 10a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-8.207-.293a1 1 0 011.414-1.414l.707.707a1 1 0 01-1.414 1.414l-.707-.707z" clipRule="evenodd" />
   </svg>
 );
-const DeleteIcon = () => (
-  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"
-      clipRule="evenodd"
-    />
-    <path
-      fillRule="evenodd"
-      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+
 const ChevronDownIcon = () => (
-  <svg
-    className="w-4 h-4 transition-transform duration-200"
-    fill="currentColor"
-    viewBox="0 0 20 20"
-  >
-    <path
-      fillRule="evenodd"
-      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-      clipRule="evenodd"
-    />
+  <svg className="w-4 h-4 transition-transform duration-200" fill="currentColor" viewBox="0 0 20 20">
+    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
   </svg>
 );
+
 const LogoutIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-      clipRule="evenodd"
-    />
+    <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
   </svg>
 );
+
 const MenuIcon = () => (
   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
     <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
   </svg>
 );
+
 const CloseIcon = () => (
   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
     <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
   </svg>
 );
 
-function Toggler({
-  defaultExpanded = false,
-  renderToggle,
-  children,
-  storageKey,
-}) {
+// Enhanced Toggler Component
+function Toggler({ defaultExpanded = false, renderToggle, children, storageKey }) {
   const storedState = localStorage.getItem(storageKey);
-  const initialState =
-    storedState !== null ? JSON.parse(storedState) : defaultExpanded;
+  const initialState = storedState !== null ? JSON.parse(storedState) : defaultExpanded;
   const [open, setOpen] = useState(initialState);
 
   useEffect(() => {
@@ -112,38 +73,32 @@ function Toggler({
   }, [open, storageKey]);
 
   return (
-    <div>
+    <div className="w-full">
       {renderToggle({ open, setOpen })}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          open ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="pt-2">{children}</div>
+        <div className="pt-2 w-full">{children}</div>
       </div>
     </div>
   );
 }
 
+// Logout Modal Component
 const LogoutModal = ({ open, onClose, onConfirm }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      ></div>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
       <div className="relative bg-white rounded-lg shadow-xl p-6 w-80 mx-4 transform transition-all duration-300 scale-100 border border-gray-200 z-[10000]">
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
             <LogoutIcon />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Confirm Logout
-          </h3>
-          <p className="text-gray-600 mb-6 text-sm">
-            Are you sure you want to log out of your account?
-          </p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Confirm Logout</h3>
+          <p className="text-gray-600 mb-6 text-sm">Are you sure you want to log out of your account?</p>
           <div className="flex gap-3">
             <button
               onClick={onClose}
@@ -164,6 +119,7 @@ const LogoutModal = ({ open, onClose, onConfirm }) => {
   );
 };
 
+// Main Sidebar Component
 export default function EnhancedSidebar({ onSidebarItemClick }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -171,35 +127,30 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Permission system (use your actual permission context)
+  // Permission system
   const { hasPermission, loading, ready } = usePermissions();
-
   const user = JSON.parse(localStorage.getItem("user")) || {};
 
-  // --- Permission Logic FIX ---
   const canAccess = (componentName, action = "read") => {
     if (!ready || loading) return false;
     return hasPermission(componentName, action);
   };
+
   const hasAnyPermissionInSection = (sectionItems) => {
     if (!ready || loading) return false;
     return sectionItems.some((item) => canAccess(item.component));
   };
+
   const hasAnyPermissionInSubsections = (subsections) => {
     if (!ready || loading) return false;
     return subsections.some((subsection) => {
-      if (subsection.items) {
-        return hasAnyPermissionInSection(subsection.items);
-      }
-      if (subsection.subsections) {
-        return hasAnyPermissionInSubsections(subsection.subsections);
-      }
+      if (subsection.items) return hasAnyPermissionInSection(subsection.items);
+      if (subsection.subsections) return hasAnyPermissionInSubsections(subsection.subsections);
       return false;
     });
   };
-  // --------------------------------------
 
-  // All sidebar config unchanged
+  // Sidebar configuration
   const sidebarSections = [
     {
       title: "Master",
@@ -220,10 +171,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
         { component: "Warranty Code", path: "/warrenty-code" },
         { component: "Reported Problem", path: "/reported-problem" },
         { component: "Replaced Part Code", path: "/replaced-part-code" },
-        {
-          component: "Preventive Maintenance",
-          path: "/preventive-maintenance",
-        },
+        { component: "Preventive Maintenance", path: "/preventive-maintenance" },
       ],
     },
     {
@@ -294,16 +242,8 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       icon: <Approval className="size-5" />,
       storageKey: "opportunityapprovalTogglerState",
       items: [
-        {
-          component: "On Call Approval",
-          path: "/on-call-approval",
-          label: "OnCall Approval",
-        },
-        {
-          component: "CMC/NCMC Approval",
-          path: "/cmc-ncm-approval",
-          label: "CMC/NCMC Approval",
-        },
+        { component: "On Call Approval", path: "/on-call-approval", label: "OnCall Approval" },
+        { component: "CMC/NCMC Approval", path: "/cmc-ncm-approval", label: "CMC/NCMC Approval" },
       ],
     },
     {
@@ -316,32 +256,16 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
           title: "OnCall SO Entry",
           storageKey: "onCallSOEntryTogglerState",
           items: [
-            {
-              component: "OnCall SO Entry",
-              path: "/open-oncall-order",
-              label: "Open",
-            },
-            {
-              component: "OnCall SO Entry",
-              path: "/close-oncall-order",
-              label: "Close",
-            },
+            { component: "OnCall SO Entry", path: "/open-oncall-order", label: "Open" },
+            { component: "OnCall SO Entry", path: "/close-oncall-order", label: "Close" },
           ],
         },
         {
           title: "CMC/NCMC SO Entry",
           storageKey: "cmcNcmcSOEntryTogglerState",
           items: [
-            {
-              component: "CMC/NCMC SO Entry",
-              path: "/open-proposal",
-              label: "Open",
-            },
-            {
-              component: "CMC/NCMC SO Entry",
-              path: "/close-proposal",
-              label: "Close",
-            },
+            { component: "CMC/NCMC SO Entry", path: "/open-proposal", label: "Open" },
+            { component: "CMC/NCMC SO Entry", path: "/close-proposal", label: "Close" },
           ],
         },
       ],
@@ -357,9 +281,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     },
   ];
 
-  const baseUrl =
-    process.env.REACT_APP_API_URL ||
-    "https://servicepbackend.insideoutprojects.in";
+  const baseUrl = process.env.REACT_APP_API_URL || "https://servicepbackend.insideoutprojects.in";
   const avatarPath = user?.details?.profileimage;
   const avatarImage = avatarPath
     ? `${baseUrl}${avatarPath}`
@@ -385,12 +307,12 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     setIsMobileOpen(false);
   };
 
-  // Child renderers with permission checks
+  // Render functions
   const renderNestedItems = (items, level = 0) => {
     return items.map((item) => {
       if (!canAccess(item.component)) return null;
       return (
-        <div key={item.path}>
+        <div key={item.path} className="w-full">
           <button
             onClick={() => {
               navigate(item.path);
@@ -414,7 +336,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     if (!section.isNested) {
       if (!hasAnyPermissionInSection(section.items)) return null;
       return (
-        <div key={section.title} className="mb-1">
+        <div key={section.title} className="mb-1 w-full">
           <Toggler
             storageKey={section.storageKey}
             renderToggle={({ open, setOpen }) => (
@@ -440,7 +362,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
               </button>
             )}
           >
-            <div className="space-y-1 mt-1 ml-1">
+            <div className="space-y-1 mt-1 ml-1 w-full">
               {renderNestedItems(section.items)}
             </div>
           </Toggler>
@@ -451,7 +373,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     if (!hasAnyPermissionInSubsections(section.subsections)) return null;
 
     return (
-      <div key={section.title} className="mb-1">
+      <div key={section.title} className="mb-1 w-full">
         <Toggler
           storageKey={section.storageKey}
           renderToggle={({ open, setOpen }) => (
@@ -477,15 +399,11 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
             </button>
           )}
         >
-          <div className="space-y-1 mt-1 ml-3">
+          <div className="space-y-1 mt-1 ml-3 w-full">
             {section.subsections.map((subsection) => {
-              if (
-                subsection.items &&
-                !hasAnyPermissionInSection(subsection.items)
-              )
-                return null;
+              if (subsection.items && !hasAnyPermissionInSection(subsection.items)) return null;
               return (
-                <div key={subsection.title}>
+                <div key={subsection.title} className="w-full">
                   <Toggler
                     storageKey={subsection.storageKey}
                     renderToggle={({ open, setOpen }) => (
@@ -506,7 +424,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
                       </button>
                     )}
                   >
-                    <div className="space-y-1 mt-1 ml-1">
+                    <div className="space-y-1 mt-1 ml-1 w-full">
                       {renderNestedItems(subsection.items, 1)}
                     </div>
                   </Toggler>
@@ -529,7 +447,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Buttons */}
       <button
         onClick={() => setIsMobileOpen(true)}
         className={`fixed top-1 left-2 z-[9999] lg:hidden p-2 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-all duration-200 border-2 border-white ${
@@ -542,9 +460,10 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
 
       <button
         onClick={() => setIsMobileOpen(false)}
-        className="fixed top-1 right-2 z-[9999] lg:hidden p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all duration-200 border-2 border-white"
+        className={`fixed top-1 right-2 z-[9999] lg:hidden p-2 bg-red-600 text-white rounded-lg shadow-lg hover:bg-red-700 transition-all duration-200 border-2 border-white ${
+          isMobileOpen ? "block" : "hidden"
+        }`}
         aria-label="Close menu"
-        style={{ display: isMobileOpen ? "block" : "none" }}
       >
         <CloseIcon />
       </button>
@@ -552,19 +471,23 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm  lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Main Sidebar with PERFECT Scrolling */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 z-[9998] bg-white border-r border-gray-300 shadow-2xl z- flex flex-col transition-transform duration-300 ease-in-out lg:sticky lg:transform-none lg:h-screen lg:z-auto ${
+        className={`fixed top-0 left-0 h-screen w-80 z-[9990] bg-white border-r border-gray-300 shadow-2xl transition-transform duration-300 ease-in-out lg:sticky lg:transform-none lg:h-screen lg:z-auto ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
+        style={{ display: 'flex', flexDirection: 'column' }}
       >
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+        {/* Header - Fixed at Top */}
+        <div 
+          className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50"
+          style={{ flexShrink: 0 }}
+        >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
               <img
@@ -574,21 +497,30 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
               />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Service Portal
-              </h1>
+              <h1 className="text-lg font-bold text-gray-900">Service Portal</h1>
               <p className="text-gray-600 text-xs">Management System</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation Content */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white">
+        {/* Scrollable Navigation Content */}
+        <div 
+          className="p-3 space-y-2 overflow-y-auto overflow-x-hidden"
+          style={{ 
+            flex: 1, 
+            minHeight: 0,
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#CBD5E0 #F7FAFC'
+          }}
+        >
           {sidebarSections.map(renderSection)}
         </div>
 
-        {/* Fixed bottom section */}
-        <div className="p-3 border-t border-gray-200 bg-white flex-shrink-0">
+        {/* Footer User Section - Fixed at Bottom */}
+        <div 
+          className="p-3 border-t border-gray-200 bg-white"
+          style={{ flexShrink: 0 }}
+        >
           <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-3 border border-gray-200 mb-3">
             <div className="flex items-center gap-3 mb-3">
               <div className="relative">
@@ -600,9 +532,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white"></div>
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-gray-900 truncate text-sm">
-                  {userName}
-                </h3>
+                <h3 className="font-medium text-gray-900 truncate text-sm">{userName}</h3>
                 <p className="text-xs text-gray-500">ID: {userId}</p>
               </div>
             </div>
@@ -625,6 +555,32 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
         </div>
       </div>
 
+      {/* Enhanced Custom CSS for Perfect Scrollbar */}
+      <style jsx global>{`
+        /* Webkit browsers scrollbar */
+        div[style*="overflow-y: auto"]::-webkit-scrollbar {
+          width: 6px;
+        }
+        div[style*="overflow-y: auto"]::-webkit-scrollbar-track {
+          background: #f7fafc;
+          border-radius: 3px;
+        }
+        div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 3px;
+        }
+        div[style*="overflow-y: auto"]::-webkit-scrollbar-thumb:hover {
+          background: #a0aec0;
+        }
+        
+        /* Firefox scrollbar */
+        div[style*="overflow-y: auto"] {
+          scrollbar-width: thin;
+          scrollbar-color: #CBD5E0 #F7FAFC;
+        }
+      `}</style>
+
+      {/* Logout Modal */}
       <LogoutModal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -633,6 +589,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     </>
   );
 }
+
 
 {
   /* <List

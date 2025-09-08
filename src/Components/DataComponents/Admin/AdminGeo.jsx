@@ -168,25 +168,27 @@ ${usersList}
       }
     }
   };
-
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((region) => region._id));
+      // Use geoArray or data?.GeoEntries instead of data
+      const geoEntries = data?.GeoEntries || [];
+      setSelectedRows(geoEntries.map((region) => region._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
+
   const handleRowSelect = (regionId) => {
-    if (selectedRows.includes(regionId)) {
-      // Deselect the row
-      setSelectedRows(selectedRows.filter((id) => id !== regionId));
-    } else {
-      // Select the row
-      setSelectedRows([...selectedRows, regionId]);
-    }
+    setSelectedRows((prevSelected) => {
+      if (prevSelected.includes(regionId)) {
+        // Deselect the row
+        return prevSelected.filter((id) => id !== regionId);
+      } else {
+        // Select the row
+        return [...prevSelected, regionId];
+      }
+    });
   };
 
   const handleCloseModal = () => {

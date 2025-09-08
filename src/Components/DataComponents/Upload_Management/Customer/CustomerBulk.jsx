@@ -87,6 +87,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               "customer_id",
               "custcode",
               "code",
+              "customer",
             ],
             customername: [
               "customername",
@@ -94,6 +95,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               "name1",
               "name",
               "customername1",
+              "name 1",
             ],
             hospitalname: [
               "hospitalname",
@@ -101,6 +103,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               "name2",
               "customername2",
               "hospital",
+              "name 2",
             ],
             city: ["city", "cityname", "city_name"],
             postalcode: [
@@ -111,8 +114,14 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               "zipcode",
               "zip",
             ],
-            region: ["region", "regionname", "region_name", "zone"],
-            country: ["country", "countryname", "country_name", "nation"],
+            region: ["region", "regionname", "region_name", "zone", "rg"],
+            country: [
+              "country",
+              "countryname",
+              "country_name",
+              "nation",
+              "cty",
+            ],
             telephone: [
               "telephone",
               "phone",
@@ -120,8 +129,15 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               "phone_number",
               "mobile",
               "contact",
+              "telephone 1",
             ],
-            email: ["email", "emailaddress", "email_address", "emailid"],
+            email: [
+              "email",
+              "emailaddress",
+              "email_address",
+              "emailid",
+              "e-mail address",
+            ],
           };
 
           // Optional fields (the remaining ones)

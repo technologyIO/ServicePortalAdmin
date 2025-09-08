@@ -44,32 +44,32 @@ export async function validateFileStructure(file) {
 
         const requiredFields = {
           materialcode: [
-            "materialcode", "material_code", "partnumber", "part_number", "partno", "productcode","material",
+            "materialcode", "material_code", "partnumber", "part_number", "partno", "productcode", "material",
           ],
           materialdescription: [
             "materialdescription", "material_description", "description", "product_description", "desc",
           ],
           serialnumber: [
-            "serialnumber", "serial_number", "serial", "sn", "serialno",
+            "serialnumber", "serial_number", "serial", "sn", "serialno", "Serial Number",
           ],
           equipmentid: [
             "equipment", "equipmentid", "equipment_id", "eqid", "eq_id",
           ],
           currentcustomer: [
-            "currentcustomer", "current_customer", "customer_code", "customercode", "customer", "custcode" , "curcustomer",
+            "currentcustomer", "current_customer", "customer_code", "customercode", "customer", "custcode", "curcustomer", "curcustomer",
           ],
           endcustomer: [
-            "endcustomer", "end_customer", "final_customer", "end_user", "finalcustomer",
+            "endcustomer", "end_customer", "final_customer", "end_user", "finalcustomer", "End customer",
           ],
           custWarrantystartdate: [
-            "custwarrantystartdate", "custwarrantystart", "cust_warranty_start_date", "warranty_start", 
-            "customer_warranty_start", "customerwarrantystartdate", "customer_warranty_startdate", 
-            "customerwarrantystartdate", "customer warranty start date","cus. wrty start",
+            "custwarrantystartdate", "custwarrantystart", "cust_warranty_start_date", "warranty_start",
+            "customer_warranty_start", "customerwarrantystartdate", "customer_warranty_startdate",
+            "customerwarrantystartdate", "customer warranty start date", "cus. wrty start",
           ],
           custWarrantyenddate: [
             "custwarrantyenddate", "custwarrantyend", "cust_warranty_end_date", "warranty_end",
             "customer_warranty_end", "customerwarrantyenddate", "customer_warranty_enddate",
-            "customerwarrantyenddate", "customer warranty end date","Cust. wrty end",
+            "customerwarrantyenddate", "customer warranty end date", "Cust. wrty end",
           ],
           dealer: [
             "dealer", "dealer_name", "dealername", "distributor", "partner", "vendor",
@@ -115,7 +115,7 @@ export async function validateFileStructure(file) {
           .map(([field]) => {
             const fieldLabels = {
               materialcode: "Material Code",
-              materialdescription: "Material Description", 
+              materialdescription: "Material Description",
               serialnumber: "Serial Number",
               equipmentid: "Equipment ID",
               currentcustomer: "Current Customer",

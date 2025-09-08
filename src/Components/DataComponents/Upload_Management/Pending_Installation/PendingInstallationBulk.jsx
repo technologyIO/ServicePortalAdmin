@@ -79,7 +79,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "invoicenumber",
               "invoicenumber",
               "billno",
-              "billno",
+              "bill.doc.",
             ],
             invoicedate: [
               "invoicedate",
@@ -87,6 +87,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "billdate",
               "billdate",
               "date",
+              "billing date",
             ],
             distchnl: [
               "distchnl",
@@ -94,6 +95,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "distributionchannel",
               "distributionchannel",
               "channel",
+              "dchl",
             ],
             customerid: [
               "customerid",
@@ -102,6 +104,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "custid",
               "customercode",
               "customercode",
+              "sold-to pt",
             ],
             material: [
               "material",
@@ -126,6 +129,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "serialno",
               "serialno",
               "sno",
+              "serial number",
             ],
             salesdist: [
               "salesdist",
@@ -133,11 +137,18 @@ function PendingInstallationBulk({ onClose, getData }) {
               "salesdistrict",
               "salesdistrict",
             ],
-            salesoff: ["salesoff", "salesoff", "salesoffice", "salesoffice"],
+            salesoff: [
+              "salesoff",
+              "salesoff",
+              "salesoffice",
+              "salesoffice",
+              "soff.",
+            ],
             currentcustomerid: [
               "currentcustomerid",
               "currentcustomerid",
               "currentcustid",
+              "customer",
               "currentcustid",
             ],
             mtl_grp4: [
@@ -147,6 +158,7 @@ function PendingInstallationBulk({ onClose, getData }) {
               "materialgroup4",
               "mtlgroup4",
               "mtlgroup4",
+              "mg 4",
             ],
           };
 
@@ -158,11 +170,13 @@ function PendingInstallationBulk({ onClose, getData }) {
               "customername",
               "customername",
               "name1",
+              "name 1",
             ],
             customername2: [
               "customername2",
               "customername2",
               "name2",
+              "name 2",
               "hospitalname",
               "hospitalname",
             ],
@@ -175,19 +189,31 @@ function PendingInstallationBulk({ onClose, getData }) {
               "pincode",
               "zip",
             ],
-            customercountry: ["customercountry", "customercountry", "country"],
-            customerregion: ["customerregion", "customerregion", "region"],
+            customercountry: [
+              "customercountry",
+              "customercountry",
+              "country",
+              "cty",
+            ],
+            customerregion: [
+              "customerregion",
+              "customerregion",
+              "region",
+              "rg",
+            ],
             currentcustomername1: [
               "currentcustomername1",
               "currentcustomername1",
               "currentcustomername",
               "currentcustomername",
+              "name 1",
             ],
             currentcustomername2: [
               "currentcustomername2",
               "currentcustomername2",
               "currenthospitalname",
               "currenthospitalname",
+              "name 2",
             ],
             currentcustomercity: [
               "currentcustomercity",
@@ -213,13 +239,14 @@ function PendingInstallationBulk({ onClose, getData }) {
               "currentcountry",
               "currentcountry",
             ],
-            key: ["key", "keyfield", "keyfield", "id"],
+            key: ["key", "keyfield", "keyfield", "id", "generated code"],
             palnumber: [
               "palnumber",
               "palnumber",
               "pal",
               "palletno",
               "palletno",
+              "pal number",
             ],
             status: [
               "status",

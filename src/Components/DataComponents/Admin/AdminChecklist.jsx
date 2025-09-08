@@ -504,21 +504,24 @@ const AdminChecklist = () => {
                 </button>
 
                 {/* Conditionally show Delete Selected */}
-                {selectedRows?.length > 0 && (
-                  <div className="animate-in slide-in-from-right-2 duration-300">
-                    <button
-                      onClick={handleBulkDelete}
-                      type="button"
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
-                    >
-                      <span className="hidden sm:inline">Delete Selected</span>
-                      <span className="sm:hidden">Delete</span>
-                      <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
-                        ({selectedRows.length})
-                      </span>
-                    </button>
-                  </div>
-                )}
+                {selectedRows?.length > 0 &&
+                  currentUserRole === "Super Admin" && (
+                    <div className="animate-in slide-in-from-right-2 duration-300">
+                      <button
+                        onClick={handleBulkDelete}
+                        type="button"
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-md font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2 whitespace-nowrap"
+                      >
+                        <span className="hidden sm:inline">
+                          Delete Selected
+                        </span>
+                        <span className="sm:hidden">Delete</span>
+                        <span className="ml-1 bg-red-700/30 px-2 py-0.5 rounded-full text-xs">
+                          ({selectedRows.length})
+                        </span>
+                      </button>
+                    </div>
+                  )}
               </div>
             </div>
 
