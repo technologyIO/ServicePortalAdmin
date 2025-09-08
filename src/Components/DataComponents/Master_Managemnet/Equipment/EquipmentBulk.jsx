@@ -493,78 +493,71 @@ export default function EquipmentBulkUploadPage() {
       setIsLoadingMore(false);
     }
   };
+  // Add this useEffect to debug data availability
+  useEffect(() => {
+    console.log("Debug - Error Summary:", errorSummary);
+    console.log("Debug - All Errors:", allErrors);
+    console.log("Debug - All Warnings:", allWarnings);
+    console.log("Debug - Processing Status:", processingData.status);
+  }, [errorSummary, allErrors, allWarnings, processingData.status]);
+
   const downloadErrorsAsExcel = () => {
     try {
-      // Create clean, empty templates without junk data
-      const createCleanCSV = (headers, title) => {
-        // Just return headers without any data rows to create empty template
-        return headers.join(",");
-      };
+      // Only process errors, ignore warnings and failed equipment
+      const errors = allErrors || [];
 
-      // Define clean headers for errors template
-      const errorHeaders = [
+      if (errors.length === 0) {
+        addLiveUpdate("ℹ️ No errors to download", "info");
+        return;
+      }
+
+      // Simple CSV headers for errors only
+      const headers = [
         "Sr No",
         "Category",
         "Source",
         "Message",
         "Serial Number",
-        "Equipment ID",
         "Line Number",
-        "Field",
-        "PM Type",
       ];
 
-      // Define clean headers for warnings template
-      const warningHeaders = [
-        "Sr No",
-        "Category",
-        "Source",
-        "Message",
-        "Serial Number",
-        "Equipment ID",
-        "Line Number",
-        "Field",
-      ];
+      // Create CSV rows
+      const csvRows = [headers.join(",")];
 
-      // Create clean CSV content without junk data
-      const errorCSV = createCleanCSV(errorHeaders, "Errors");
-      const warningCSV = createCleanCSV(warningHeaders, "Warnings");
-
-      // Combine both sections cleanly
-      const combinedContent = [
-        "# ERRORS TEMPLATE",
-        errorCSV,
-        "",
-        "# WARNINGS TEMPLATE",
-        warningCSV,
-      ].join("\n");
-
-      // Download the clean template file
-      const blob = new Blob([combinedContent], {
-        type: "text/csv;charset=utf-8;",
+      errors.forEach((error, index) => {
+        const row = [
+          index + 1,
+          error.category || "",
+          error.source || "",
+          `"${(error.message || "").replace(/"/g, '""')}"`,
+          error.serialNumber || "",
+          error.lineNumber || "",
+        ];
+        csvRows.push(row.join(","));
       });
 
+      // Create and download file
+      const csvContent = csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
+
       link.setAttribute("href", url);
       link.setAttribute(
         "download",
-        `equipment-upload-template-${
-          new Date().toISOString().split("T")[0]
-        }.csv`
+        `errors-${new Date().toISOString().split("T")[0]}.csv`
       );
       link.style.visibility = "hidden";
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
-      addLiveUpdate(`📁 Clean template downloaded successfully`, "success");
+      addLiveUpdate(`📁 Downloaded ${errors.length} errors`, "success");
     } catch (error) {
-      console.error("Error downloading template:", error);
-      addLiveUpdate(
-        `❌ Failed to download template: ${error.message}`,
-        "error"
-      );
+      console.error("Download failed:", error);
+      addLiveUpdate(`❌ Download failed: ${error.message}`, "error");
     }
   };
 
@@ -1554,10 +1547,13 @@ export default function EquipmentBulkUploadPage() {
                       <button
                         onClick={downloadErrorsAsExcel}
                         disabled={
-                          allErrors.length === 0 && allWarnings.length === 0
+                          (allErrors?.length || 0) === 0 &&
+                          (allWarnings?.length || 0) === 0 &&
+                          processingData.status === "completed"
                         }
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                          allErrors.length === 0 && allWarnings.length === 0
+                          (allErrors?.length || 0) === 0 &&
+                          (allWarnings?.length || 0) === 0
                             ? "bg-gray-300 cursor-not-allowed text-gray-500"
                             : "bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
                         }`}
