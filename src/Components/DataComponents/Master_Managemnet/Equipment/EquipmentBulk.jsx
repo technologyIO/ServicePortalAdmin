@@ -32,6 +32,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 
 // Import separate components and utilities
 import { validateFileStructure } from "./BulkUpload/EquipmentBulkUploadValidation";
@@ -146,6 +147,15 @@ export default function EquipmentBulkUploadPage() {
   const [allErrors, setAllErrors] = useState([]);
   const [allWarnings, setAllWarnings] = useState([]);
   const [errorSummary, setErrorSummary] = useState({});
+  const [selectedFormat, setSelectedFormat] = useState("csv");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const formatOptions = [
+    { value: "csv", label: "CSV", extension: ".csv" },
+    { value: "xlsx", label: "Excel (XLSX)", extension: ".xlsx" },
+    { value: "json", label: "JSON", extension: ".json" },
+    { value: "txt", label: "Text File", extension: ".txt" },
+  ];
 
   useEffect(() => {
     const fetchErrors = async () => {
@@ -501,52 +511,59 @@ export default function EquipmentBulkUploadPage() {
     console.log("Debug - Processing Status:", processingData.status);
   }, [errorSummary, allErrors, allWarnings, processingData.status]);
 
-  const downloadErrorsAsExcel = () => {
+  const downloadErrorsInFormat = (format) => {
     try {
-      // Only process errors, ignore warnings and failed equipment
       const errors = allErrors || [];
+      const warnings = allWarnings || [];
+      const allData = [...errors, ...warnings];
 
-      if (errors.length === 0) {
-        addLiveUpdate("ℹ️ No errors to download", "info");
+      if (allData.length === 0) {
+        addLiveUpdate("ℹ️ No errors or warnings to download", "info");
         return;
       }
 
-      // Simple CSV headers for errors only
-      const headers = [
-        "Sr No",
-        "Category",
-        "Source",
-        "Message",
-        "Serial Number",
-        "Line Number",
-      ];
+      let content, mimeType, filename;
+      const timestamp = new Date().toISOString().split("T")[0];
 
-      // Create CSV rows
-      const csvRows = [headers.join(",")];
+      switch (format) {
+        case "csv":
+          content = generateCSV(allData);
+          mimeType = "text/csv;charset=utf-8;";
+          filename = `errors-warnings-${timestamp}.csv`;
+          break;
 
-      errors.forEach((error, index) => {
-        const row = [
-          index + 1,
-          error.category || "",
-          error.source || "",
-          `"${(error.message || "").replace(/"/g, '""')}"`,
-          error.serialNumber || "",
-          error.lineNumber || "",
-        ];
-        csvRows.push(row.join(","));
-      });
+        case "xlsx":
+          // For XLSX, you'll need a library like xlsx or exceljs
+          content = generateExcel(allData);
+          mimeType =
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+          filename = `errors-warnings-${timestamp}.xlsx`;
+          break;
 
-      // Create and download file
-      const csvContent = csvRows.join("\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        case "json":
+          content = JSON.stringify(allData, null, 2);
+          mimeType = "application/json;charset=utf-8;";
+          filename = `errors-warnings-${timestamp}.json`;
+          break;
+
+        case "txt":
+          content = generateTextFile(allData);
+          mimeType = "text/plain;charset=utf-8;";
+          filename = `errors-warnings-${timestamp}.txt`;
+          break;
+
+        default:
+          content = generateCSV(allData);
+          mimeType = "text/csv;charset=utf-8;";
+          filename = `errors-warnings-${timestamp}.csv`;
+      }
+
+      const blob = new Blob([content], { type: mimeType });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
 
       link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `errors-${new Date().toISOString().split("T")[0]}.csv`
-      );
+      link.setAttribute("download", filename);
       link.style.visibility = "hidden";
 
       document.body.appendChild(link);
@@ -554,12 +571,84 @@ export default function EquipmentBulkUploadPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      addLiveUpdate(`📁 Downloaded ${errors.length} errors`, "success");
+      addLiveUpdate(
+        `📁 Downloaded ${allData.length} items as ${format.toUpperCase()}`,
+        "success"
+      );
     } catch (error) {
       console.error("Download failed:", error);
       addLiveUpdate(`❌ Download failed: ${error.message}`, "error");
     }
   };
+
+  const generateCSV = (data) => {
+    const headers = [
+      "Sr No",
+      "Type",
+      "Category",
+      "Source",
+      "Message",
+      "Serial Number",
+      "Line Number",
+    ];
+
+    const csvRows = [headers.join(",")];
+
+    data.forEach((item, index) => {
+      const row = [
+        index + 1,
+        item.type || (allErrors.includes(item) ? "Error" : "Warning"),
+        item.category || "",
+        item.source || "",
+        `"${(item.message || "").replace(/"/g, '""')}"`,
+        item.serialNumber || "",
+        item.lineNumber || "",
+      ];
+      csvRows.push(row.join(","));
+    });
+
+    return csvRows.join("\n");
+  };
+
+  const generateTextFile = (data) => {
+    let content = "ERRORS & WARNINGS REPORT\n";
+    content += "=".repeat(30) + "\n\n";
+
+    data.forEach((item, index) => {
+      const type =
+        item.type || (allErrors.includes(item) ? "ERROR" : "WARNING");
+      content += `${index + 1}. [${type}] ${item.message}\n`;
+      if (item.serialNumber) content += `   Serial: ${item.serialNumber}\n`;
+      if (item.lineNumber) content += `   Line: ${item.lineNumber}\n`;
+      content += "\n";
+    });
+
+    return content;
+  };
+
+  const generateExcel = (data) => {
+    // You'll need to install: npm install xlsx
+    // import * as XLSX from 'xlsx';
+
+    const ws = XLSX.utils.json_to_sheet(
+      data.map((item, index) => ({
+        "Sr No": index + 1,
+        Type: item.type || (allErrors.includes(item) ? "Error" : "Warning"),
+        Category: item.category || "",
+        Source: item.source || "",
+        Message: item.message || "",
+        "Serial Number": item.serialNumber || "",
+        "Line Number": item.lineNumber || "",
+      }))
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Errors & Warnings");
+    return XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  };
+
+  const isDisabled =
+    (allErrors?.length || 0) === 0 && (allWarnings?.length || 0) === 0;
 
   const startProgressPolling = (jobId) => {
     if (progressIntervalRef.current) {
@@ -1543,24 +1632,77 @@ export default function EquipmentBulkUploadPage() {
                     </div>
 
                     {/* Download Button */}
-                    <div className="flex justify-end mb-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      {/* Format Selector */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          disabled={isDisabled}
+                          className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium transition-all ${
+                            isDisabled
+                              ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                              : "bg-white border-gray-300 text-gray-700 hover:border-gray-400 hover:bg-gray-50"
+                          }`}
+                        >
+                          {
+                            formatOptions.find(
+                              (opt) => opt.value === selectedFormat
+                            )?.label
+                          }
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${
+                              isDropdownOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {isDropdownOpen && !isDisabled && (
+                          <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-md z-10">
+                            {formatOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                onClick={() => {
+                                  setSelectedFormat(option.value);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors ${
+                                  selectedFormat === option.value
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Download Button */}
                       <button
-                        onClick={downloadErrorsAsExcel}
-                        disabled={
-                          (allErrors?.length || 0) === 0 &&
-                          (allWarnings?.length || 0) === 0 &&
-                          processingData.status === "completed"
-                        }
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                          (allErrors?.length || 0) === 0 &&
-                          (allWarnings?.length || 0) === 0
-                            ? "bg-gray-300 cursor-not-allowed text-gray-500"
-                            : "bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl"
+                        onClick={() => downloadErrorsInFormat(selectedFormat)}
+                        disabled={isDisabled}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all ${
+                          isDisabled
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
                         }`}
                       >
                         <Download size={16} />
-                        Download Errors & Warnings (CSV)
+                        Download (
+                        {(allErrors?.length || 0) +
+                          (allWarnings?.length || 0)}{" "}
+                        items)
                       </button>
+
+                      {/* Click outside to close dropdown */}
+                      {isDropdownOpen && (
+                        <div
+                          className="fixed inset-0 z-5"
+                          onClick={() => setIsDropdownOpen(false)}
+                        />
+                      )}
                     </div>
 
                     {/* Sub-tabs for Errors */}

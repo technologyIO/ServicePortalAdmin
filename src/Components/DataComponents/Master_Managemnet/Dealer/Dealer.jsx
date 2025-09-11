@@ -5,7 +5,15 @@ import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import { FormControl, Input } from "@mui/joy";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import DealerBulk from "./DealerBulk";
 
 function Dealer() {
@@ -24,13 +32,32 @@ function Dealer() {
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
   const [isSpinning, setIsSpinning] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    status: "",
+    startDate: "",
+    endDate: "",
+    state: "",
+    city: "",
+    personResponsible: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableStates, setAvailableStates] = useState([]);
+  const [availableCities, setAvailableCities] = useState([]);
+  const [availablePersons, setAvailablePersons] = useState([]);
+
   // Data states
   const [data, setData] = useState([]);
   const [currentData, setCurrentData] = useState({});
   const [isbulkOpen, setIsbulkOpen] = useState(false);
+
   // Location / dropdown data
-  const [state, setState] = useState([]); // all states options [{label, id, ...}]
-  const [allCities, setAllCities] = useState([]); // all cities raw
+  const [state, setState] = useState([]);
+  const [allCities, setAllCities] = useState([]);
 
   // Filtered data and selections
   const [filteredCities, setFilteredCities] = useState([]);
@@ -50,6 +77,85 @@ function Dealer() {
 
   const limit = 10;
   const [isDownloadingDealer, setIsDownloadingDealer] = useState(false);
+
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/excel/dealers/filter-options`
+      );
+      const options = response.data;
+      setAvailableStates(options.states || []);
+      setAvailableCities(options.cities || []);
+      setAvailablePersons(options.persons || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/excel/dealers/filter?${filterParams}`
+      );
+      setData(response.data.dealers || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalDealers(response.data.totalDealers || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      status: "",
+      startDate: "",
+      endDate: "",
+      state: "",
+      city: "",
+      personResponsible: "",
+    });
+    setIsFilterMode(false);
+    getData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some((value) => value !== "");
+  };
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -65,7 +171,7 @@ function Dealer() {
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
         );
-        getData(); // Refresh the data
+        getData();
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -76,32 +182,51 @@ function Dealer() {
   const downloadDealerExcel = async () => {
     setIsDownloadingDealer(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/dealers/export-dealers`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/dealers/export-dealers`;
+      const params = new URLSearchParams();
+
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery) {
+        params.append("search", searchQuery);
+      }
+
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `dealers_data_${
           new Date().toISOString().split("T")[0]
         }.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
         console.error("Download failed");
-        alert("Failed to download Dealer Excel file");
+        toast.error("Failed to download Dealer Excel file");
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error("Error downloading file");
     } finally {
       setIsDownloadingDealer(false);
     }
@@ -120,31 +245,26 @@ function Dealer() {
   }) => {
     const [searchTerm, setSearchTerm] = useState("");
 
-    // Filtering options as per search term
     const filteredOptions = searchable
       ? options.filter((option) =>
           option.label.toLowerCase().includes(searchTerm.toLowerCase())
         )
       : options;
 
-    // Are all currently shown filtered items selected
     const allFilteredSelected =
       filteredOptions.length &&
       filteredOptions.every((option) =>
         selectedItems.some((sel) => sel.id === option.id)
       );
 
-    // Select or Deselect All
     const handleSelectAll = () => {
       if (allFilteredSelected) {
-        // Deselect all filtered
         onSelectionChange(
           selectedItems.filter(
             (item) => !filteredOptions.some((opt) => opt.id === item.id)
           )
         );
       } else {
-        // Select all filtered, add any not already in selection
         const newSelected = [
           ...selectedItems,
           ...filteredOptions.filter(
@@ -176,7 +296,6 @@ function Dealer() {
 
     return (
       <div className="relative dropdown-container">
-        {/* Dropdown Input */}
         <div
           className={`w-full p-2.5 border border-gray-300 rounded cursor-pointer bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             disabled ? "bg-gray-100 cursor-not-allowed" : ""
@@ -232,7 +351,6 @@ function Dealer() {
           </div>
         </div>
 
-        {/* Dropdown menu */}
         {isOpen && !disabled && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
             {searchable && (
@@ -372,7 +490,6 @@ function Dealer() {
             users = [];
           }
         }
-        // Filter out users missing required fields
         users = users.filter(
           (user) =>
             user &&
@@ -460,7 +577,6 @@ function Dealer() {
     );
     setFilteredCities(filteredCityList);
 
-    // Clear selected cities that are no longer valid
     setSelectedCities((prevSelectedCities) => {
       const validCities = prevSelectedCities.filter((city) =>
         filteredCityList.some((c) => c.name === city.label)
@@ -476,8 +592,9 @@ function Dealer() {
   const getData = (pageNum = page) => {
     setLoader(true);
     setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
-    setSearchQuery(""); // Reset search query
+    setSearchQuery("");
 
     axios
       .get(
@@ -501,7 +618,17 @@ function Dealer() {
     if (!searchQuery) {
       getData();
     }
-  }, [searchQuery, page]);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (isSearchMode) {
+      handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
+    } else {
+      getData(page);
+    }
+  }, [page]);
 
   // Dealer search
   const handleSearch = async (pageNum = 1) => {
@@ -512,11 +639,12 @@ function Dealer() {
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
       const res = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchdealer?q=${searchQuery}&page=${pageNum}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/excel/dealers/searchdealer?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
       setData(res.data.dealers || []);
@@ -532,11 +660,6 @@ function Dealer() {
     }
   };
 
-  useEffect(() => {
-    if (!searchQuery) {
-      getData();
-    }
-  }, [searchQuery]);
   // Select all/deselect all rows toggle
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
@@ -546,7 +669,7 @@ function Dealer() {
       setSelectedRows([]);
     }
   };
-  // Add this function inside your Dealer component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select dealers to delete");
@@ -611,7 +734,6 @@ function Dealer() {
   // Open edit modal with populated form
   const openEditModal = (dealer) => {
     setCurrentData(dealer || {});
-    // Pre-fill selected states array [{label,id}] for Autocomplete
     const selectedStateArr = dealer.state
       ? Array.isArray(dealer.state)
         ? dealer.state
@@ -622,19 +744,16 @@ function Dealer() {
     );
     setSelectedStates(selectedStateObjects);
 
-    // Pre-fill selected cities array [{label,id}]
     const selectedCityArr = dealer.city
       ? Array.isArray(dealer.city)
         ? dealer.city
         : [dealer.city]
       : [];
-    // Map to city objects matching labels
     const selectedCityObjects = allCities
       .filter((city) => selectedCityArr.includes(city.name))
       .map((city) => ({ label: city.name, id: city._id }));
     setSelectedCities(selectedCityObjects);
 
-    // Persons responsible (array or empty)
     setSelectedPersons(
       Array.isArray(dealer.personresponsible) ? dealer.personresponsible : []
     );
@@ -704,13 +823,12 @@ function Dealer() {
       .post(`${process.env.REACT_APP_BASE_URL}/collections/dealer`, currentData)
       .then(() => {
         getData();
-        getData();
         handleCloseModal();
-        toast.success("Dealer created successfully!"); // Success toast
+        toast.success("Dealer created successfully!");
       })
       .catch((error) => {
         console.error(error);
-        toast.error("Failed to create dealer. Please try again."); // Error toast
+        toast.error("Failed to create dealer. Please try again.");
       });
   };
 
@@ -724,11 +842,11 @@ function Dealer() {
       .then(() => {
         getData();
         handleCloseModal();
-        toast.success("Dealer updated successfully!"); // Success toast
+        toast.success("Dealer updated successfully!");
       })
       .catch((error) => {
         console.error(error);
-        toast.error("Failed to update dealer. Please try again."); // Error toast
+        toast.error("Failed to update dealer. Please try again.");
       });
   };
 
@@ -736,31 +854,19 @@ function Dealer() {
   const handlePreviousPage = () => {
     if (page > 1) {
       const newPage = page - 1;
-      if (isSearchMode) {
-        handleSearch(newPage);
-      } else {
-        getData(newPage);
-      }
+      setPage(newPage);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
       const newPage = page + 1;
-      if (isSearchMode) {
-        handleSearch(newPage);
-      } else {
-        getData(newPage);
-      }
+      setPage(newPage);
     }
   };
 
   const handlePageClick = (pageNum) => {
-    if (isSearchMode) {
-      handleSearch(pageNum);
-    } else {
-      getData(pageNum);
-    }
+    setPage(pageNum);
   };
 
   // Bulk upload modals
@@ -831,7 +937,7 @@ function Dealer() {
                       onChange={(e) => {
                         setSearchQuery(e.target.value);
                         if (!e.target.value) {
-                          getData(); // Refresh when cleared
+                          getData();
                         }
                       }}
                       onKeyDown={(e) => {
@@ -899,63 +1005,197 @@ function Dealer() {
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openBulkModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter((v) => v).length}
+                    </span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-
-              <button
-                onClick={downloadDealerExcel}
-                disabled={isDownloadingDealer}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingDealer
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingDealer ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openBulkModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadDealerExcel}
+                  disabled={isDownloadingDealer}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingDealer
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingDealer ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) =>
+                        handleFilterChange("startDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) =>
+                        handleFilterChange("endDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* State Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <select
+                      value={filters.state}
+                      onChange={(e) =>
+                        handleFilterChange("state", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All States</option>
+                      {availableStates.map((state, index) => (
+                        <option key={index} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* City Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <select
+                      value={filters.city}
+                      onChange={(e) =>
+                        handleFilterChange("city", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Cities</option>
+                      {availableCities.map((city, index) => (
+                        <option key={index} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Person Responsible Filter */}
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Delete Selected Button */}
-          {/* {selectedRows?.length > 0 && (
-            <div className="flex justify-center mt-4">
-              <button
-                type="button"
-                className="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-md text-sm px-5 py-2.5 text-center"
-                // Add bulk delete logic here if needed
-              >
-                Delete Selected ({selectedRows.length})
-              </button>
-            </div>
-          )} */}
-          {/* Add this div before the table */}
+          {/* Status Display */}
           <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode ? (
@@ -963,6 +1203,12 @@ function Dealer() {
                   Search Results:{" "}
                   <span className="font-semibold">{totalDealers}</span> dealers
                   found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalDealers}</span> dealers
+                  found
                 </span>
               ) : (
                 <span>
@@ -1106,21 +1352,17 @@ function Dealer() {
                             </svg>
                           </button>
                         )}
-                        <td className=" align-middle whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="sr-only peer "
-                                checked={item?.status === "Active"}
-                                onChange={() =>
-                                  handleToggleStatus(item?._id, item?.status)
-                                }
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            </label>
-                          </div>
-                        </td>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={item?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(item?._id, item?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -1375,14 +1617,6 @@ function Dealer() {
                         setIsOpen={setPersonDropdownOpen}
                         searchable={true}
                       />
-                      {/* Search input for user filtering */}
-                      {/* <input
-                        type="text"
-                        placeholder="Search by name or ID..."
-                        value={personSearchQuery}
-                        onChange={(e) => setPersonSearchQuery(e.target.value)}
-                        className="w-full mt-2 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                      /> */}
                     </div>
                     {/* Address */}
                     <div className="md:col-span-2">
@@ -1424,7 +1658,7 @@ function Dealer() {
       )}
       {isbulkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6  relative">
+          <div className="bg-white rounded-lg p-6 relative">
             <DealerBulk getData={getData} onClose={onClose} />
           </div>
         </div>

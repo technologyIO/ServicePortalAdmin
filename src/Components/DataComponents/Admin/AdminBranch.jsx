@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
-
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import {
   Autocomplete,
   Modal,
@@ -41,43 +45,166 @@ const AdminBranch = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
   const [isSpinning, setIsSpinning] = useState(false);
-  const openModal = () => setIsOpen(true);
-  const closeModal = () => setIsOpen(false);
   const [isDownloadingBranch, setIsDownloadingBranch] = useState(false);
   const [isbulkOpen, setIsbulkOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    status: "",
+    startDate: "",
+    endDate: "",
+    state: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableStates, setAvailableStates] = useState([]);
+
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => setIsOpen(false);
+
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/branch/filter-options`
+      );
+      const options = response.data;
+      setAvailableStates(options.states || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/branch/filter?${filterParams}`
+      );
+      setData(response.data.branches || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalBranches(response.data.totalBranches || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      status: "",
+      startDate: "",
+      endDate: "",
+      state: "",
+    });
+    setIsFilterMode(false);
+    getAllData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some((value) => value !== "");
+  };
+
   const downloadBranchExcel = async () => {
     setIsDownloadingBranch(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/branches/export-branches`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/branches/export-branches`;
+      const params = new URLSearchParams();
+
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery) {
+        params.append("search", searchQuery);
+      }
+
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `branches_data_${
           new Date().toISOString().split("T")[0]
         }.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
-        console.error("Download failed");
-        alert("Failed to download Branch Excel file");
+        let errorMessage = "Failed to download Branch Excel file";
+        try {
+          // Backend se JSON message aa raha ho to parse karo
+          const errorData = await response.json();
+          if (errorData?.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // Agar JSON nahi hai to plain text check karo
+          const errorText = await response.text();
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        }
+        console.error("Download failed:", errorMessage);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error(error.message || "Error downloading file");
     } finally {
       setIsDownloadingBranch(false);
     }
   };
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -93,18 +220,15 @@ const AdminBranch = () => {
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
         );
-        getAllData(); // Refresh the data
+        getAllData();
       }
     } catch (error) {
       console.error("Error updating status:", error);
 
-      // Handle different error scenarios
       if (error.response && error.response.status === 400) {
         const errorData = error.response.data;
 
-        // Check if it's a user link error (for deactivation)
         if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
-          // Show detailed error with linked users
           const usersList = errorData.linkedUsers
             .map((user) => `• ${user.name} (${user.employeeid})`)
             .join("\n");
@@ -130,7 +254,6 @@ ${usersList}
             },
           });
         } else {
-          // Other 400 errors (validation, etc.)
           Swal.fire({
             title: "Cannot Update Status",
             text: errorData.message || "Failed to update branch status",
@@ -139,7 +262,6 @@ ${usersList}
           });
         }
       } else if (error.response && error.response.status === 404) {
-        // Branch not found
         Swal.fire({
           title: "Branch Not Found",
           text: "The branch you're trying to update doesn't exist.",
@@ -147,7 +269,6 @@ ${usersList}
           confirmButtonText: "OK",
         });
       } else {
-        // Generic error - use toast for other errors
         toast.error(
           error.response?.data?.message ||
             error.message ||
@@ -166,20 +287,17 @@ ${usersList}
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(data?.map((branch) => branch._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
-  const handleRowSelect = (countryId) => {
-    if (selectedRows.includes(countryId)) {
-      // Deselect the row
-      setSelectedRows(selectedRows.filter((id) => id !== countryId));
+
+  const handleRowSelect = (branchId) => {
+    if (selectedRows.includes(branchId)) {
+      setSelectedRows(selectedRows.filter((id) => id !== branchId));
     } else {
-      // Select the row
-      setSelectedRows([...selectedRows, countryId]);
+      setSelectedRows([...selectedRows, branchId]);
     }
   };
 
@@ -191,14 +309,12 @@ ${usersList}
 
   const [state, setState] = useState([]);
 
-  // Get All State
   useEffect(() => {
     const getRegions = async () => {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allstate`
         );
-
         setState(res.data);
       } catch (err) {
         console.error(err);
@@ -208,8 +324,8 @@ ${usersList}
     getRegions();
   }, []);
 
-  const handleOpenModal = (country) => {
-    setCurrentData(country);
+  const handleOpenModal = (branch) => {
+    setCurrentData(branch);
     setEditModal(true);
     setShowModal(true);
   };
@@ -222,7 +338,7 @@ ${usersList}
       };
     });
   };
-  // Add this function inside your AdminBranch component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select branches to delete");
@@ -285,14 +401,12 @@ ${usersList}
               "Branch has been deleted successfully.",
               "success"
             );
-            getAllData(); // Refresh the data
+            getAllData();
           })
           .catch((error) => {
             console.log(error);
 
-            // Handle different error scenarios
             if (error.response && error.response.status === 400) {
-              // Branch is linked with users and/or cities
               const errorData = error.response.data;
 
               if (
@@ -304,7 +418,6 @@ ${usersList}
                   <p style="margin-bottom: 15px;">${errorData.message}</p>
               `;
 
-                // Show linked users if any
                 if (errorData.linkedUsers && errorData.linkedUsers.length > 0) {
                   const usersList = errorData.linkedUsers
                     .map((user) => `• ${user.name} (${user.employeeid})`)
@@ -320,7 +433,6 @@ ${usersList}
                 `;
                 }
 
-                // Show linked cities if any
                 if (
                   errorData.linkedCities &&
                   errorData.linkedCities.length > 0
@@ -361,7 +473,6 @@ ${citiesList}
                   },
                 });
               } else {
-                // Fallback error message
                 Swal.fire({
                   title: "Cannot Delete Branch",
                   text:
@@ -372,7 +483,6 @@ ${citiesList}
                 });
               }
             } else if (error.response && error.response.status === 404) {
-              // Branch not found
               Swal.fire({
                 title: "Branch Not Found",
                 text: "The branch you're trying to delete doesn't exist.",
@@ -380,7 +490,6 @@ ${citiesList}
                 confirmButtonText: "OK",
               });
             } else {
-              // Generic error
               Swal.fire({
                 title: "Error",
                 text:
@@ -404,11 +513,12 @@ ${citiesList}
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
       const response = await axios.get(
-        `${process.env.REACT_APP_BASE_URL}/collections/searchbranch?q=${searchQuery}&page=${pageNum}&limit=${limit}`
+        `${process.env.REACT_APP_BASE_URL}/excel/branches/searchbranch?q=${searchQuery}&page=${pageNum}&limit=${limit}`
       );
 
       setData(response.data.branches || []);
@@ -427,6 +537,7 @@ ${citiesList}
   const getAllData = (pageNum = page) => {
     setLoader(true);
     setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
     setSearchQuery("");
 
@@ -456,7 +567,13 @@ ${citiesList}
   }, [searchQuery]);
 
   useEffect(() => {
-    getAllData();
+    if (isSearchMode) {
+      handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
+    } else {
+      getAllData(page);
+    }
   }, [page]);
 
   const handleSubmit = (id) => {
@@ -465,7 +582,6 @@ ${citiesList}
     } else {
       handleAddData();
     }
-    // Don't call handleCloseModal() here - it's now handled in success callbacks
   };
 
   const handleAddData = () => {
@@ -494,7 +610,7 @@ ${citiesList}
       )
       .then((res) => {
         getAllData();
-        handleCloseModal(); // Add this line
+        handleCloseModal();
         toast.success("Branch updated successfully");
       })
       .catch((error) => {
@@ -510,38 +626,26 @@ ${citiesList}
   const handlePreviousPage = () => {
     if (page > 1) {
       const newPage = page - 1;
-      if (isSearchMode) {
-        handleSearch(newPage);
-      } else {
-        getAllData(newPage);
-      }
+      setPage(newPage);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
       const newPage = page + 1;
-      if (isSearchMode) {
-        handleSearch(newPage);
-      } else {
-        getAllData(newPage);
-      }
+      setPage(newPage);
     }
   };
 
   const handlePageClick = (pageNum) => {
-    if (isSearchMode) {
-      handleSearch(pageNum);
-    } else {
-      getAllData(pageNum);
-    }
+    setPage(pageNum);
   };
 
   return (
     <>
       {loader ? (
         <div className="flex items-center justify-center h-[60vh]">
-          <span class="CustomLoader"></span>
+          <span className="CustomLoader"></span>
         </div>
       ) : (
         <>
@@ -621,58 +725,188 @@ ${citiesList}
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openBulkModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter((v) => v).length}
+                    </span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-
-              <button
-                onClick={downloadBranchExcel}
-                disabled={isDownloadingBranch}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingBranch
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingBranch ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openBulkModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadBranchExcel}
+                  disabled={isDownloadingBranch}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingBranch
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingBranch ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      {/* <option value="Pending">Pending</option> */}
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) =>
+                        handleFilterChange("startDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) =>
+                        handleFilterChange("endDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* State Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      State
+                    </label>
+                    <select
+                      value={filters.state}
+                      onChange={(e) =>
+                        handleFilterChange("state", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All States</option>
+                      {availableStates.map((state, index) => (
+                        <option key={index} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Add this div before the table */}
-          <div className="flex justify-between items-center ">
+          {/* Status Display */}
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode ? (
                 <span>
                   Search Results:{" "}
                   <span className="font-semibold">{totalBranches}</span>{" "}
                   branches found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalBranches}</span>{" "}
+                  branches found
                 </span>
               ) : (
                 <span>
@@ -685,9 +919,9 @@ ${citiesList}
           </div>
 
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700 ">
-                <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <table className="w-full border min-w-max caption-bottom text-sm">
+              <thead className="[&_tr]:border-b bg-blue-700">
+                <tr className="border-b transition-colors text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
                       <input
@@ -708,7 +942,6 @@ ${citiesList}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     State
                   </th>
-
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Branch Short Code
                   </th>
@@ -726,7 +959,7 @@ ${citiesList}
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
+              <tbody className="[&_tr:last-child]:border-0">
                 {data?.map((i, index) => (
                   <tr
                     key={i._id}
@@ -756,11 +989,10 @@ ${citiesList}
                     <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
                       {i?.name}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.state}
                     </td>
-
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.branchShortCode}
                     </td>
                     <td>
@@ -769,8 +1001,8 @@ ${citiesList}
                           i?.status === "Active"
                             ? "bg-green-100 text-green-800 border-green-400"
                             : i?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-orange-100 text-orange-800 border-orange-400"
                         }`}
                       >
                         {i?.status}
@@ -782,9 +1014,8 @@ ${citiesList}
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(i?.modifiedAt).format("MMM D, YYYY")}
                     </td>
-
                     <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
+                      <div className="flex gap-4">
                         <button
                           onClick={() => {
                             handleOpenModal(i);
@@ -801,7 +1032,7 @@ ${citiesList}
                           >
                             <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
                             <path
-                              fill-rule="evenodd"
+                              fillRule="evenodd"
                               d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
                             />
                           </svg>
@@ -823,21 +1054,17 @@ ${citiesList}
                             </svg>
                           </button>
                         )}
-                        <td className=" align-middle whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="sr-only peer "
-                                checked={i?.status === "Active"}
-                                onChange={() =>
-                                  handleToggleStatus(i?._id, i?.status)
-                                }
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            </label>
-                          </div>
-                        </td>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={i?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(i?._id, i?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -845,6 +1072,7 @@ ${citiesList}
               </tbody>
             </table>
           </div>
+
           <div
             className="Pagination-laptopUp"
             style={{
@@ -865,7 +1093,6 @@ ${citiesList}
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
                   return (
                     p === 1 ||
                     p === totalPages ||
@@ -874,7 +1101,6 @@ ${citiesList}
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
@@ -899,9 +1125,7 @@ ${citiesList}
 
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
-              <div className="bg-gray-200 rounded-lg p-6 w-[80vh]  relative">
+              <div className="bg-gray-200 rounded-lg p-6 w-[80vh] relative">
                 <button
                   onClick={closeModal}
                   className="absolute top-3 text-3xl right-3 text-gray-400 hover:text-gray-600"
@@ -912,27 +1136,28 @@ ${citiesList}
               </div>
             </div>
           )}
+
           <Modal
             open={showModal}
             onClose={handleCloseModal}
             className=""
             size="lg"
           >
-            <ModalDialog size="lg" className="p-2 ">
-              <div className="flex items-start justify-between p-2  px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
+            <ModalDialog size="lg" className="p-2">
+              <div className="flex items-start justify-between p-2 px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-2xl font-semibold">
                   {editModal ? "Update Branch" : "Create Branch"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
-                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                  className="border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
                     height="18"
                     fill="currentColor"
-                    className="bi bi-x-lg font-semibold "
+                    className="bi bi-x-lg font-semibold"
                     viewBox="0 0 16 16"
                   >
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
@@ -947,9 +1172,9 @@ ${citiesList}
                 }}
                 className=""
               >
-                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
-                  <div class="relative z-0 w-full mb-5 group">
-                    <label class="block mb-2 text-sm font-medium text-gray-900">
+                <div className="w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
+                  <div className="relative z-0 w-full mb-5 group">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
                       Branch Name{" "}
                       <span className="text-red-500 text-lg ml-1">*</span>
                     </label>
@@ -960,13 +1185,13 @@ ${citiesList}
                       name="name"
                       id="name"
                       value={currentData?.name}
-                      class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       placeholder=" "
                     />
                   </div>
-                  <div class="grid md:grid-cols-2 md:gap-6">
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                  <div className="grid md:grid-cols-2 md:gap-6">
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Branch Short Code{" "}
                         <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
@@ -978,26 +1203,26 @@ ${citiesList}
                         name="name"
                         id="name"
                         value={currentData?.branchShortCode}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                         placeholder=" "
                         required
                       />
                     </div>
                     <div className="">
                       <div>
-                        <label class="block mb-2 text-sm font-medium text-gray-900">
+                        <label className="block mb-2 text-sm font-medium text-gray-900">
                           Select State{" "}
                           <span className="text-red-500 text-lg ml-1">*</span>
                         </label>
                         <Autocomplete
                           className="h-10 w-full"
                           required
-                          options={state} // Data from API
-                          getOptionLabel={(option) => option.name} // Display the country name
+                          options={state}
+                          getOptionLabel={(option) => option.name}
                           value={
                             state.find((s) => s.name === currentData?.state) ||
                             null
-                          } // Add this line
+                          }
                           renderInput={(params) => (
                             <TextField {...params} name="state" label="State" />
                           )}
@@ -1011,7 +1236,7 @@ ${citiesList}
                   </div>
 
                   <div>
-                    <label class="block mb-2 text-sm font-medium text-gray-900">
+                    <label className="block mb-2 text-sm font-medium text-gray-900">
                       Select Status
                     </label>
 
@@ -1031,18 +1256,18 @@ ${citiesList}
                 <div className="flex items-center justify-end mt-3 rounded-b">
                   <button
                     onClick={(e) => {
-                      e.preventDefault(); // Add this to prevent form submission
+                      e.preventDefault();
                       handleCloseModal();
                     }}
                     type="button"
-                    class="focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                    className="focus:outline-none border h-8 shadow text-black flex items-center hover:bg-gray-200 font-medium rounded-[4px] text-sm px-5 py-2.5 me-2 mb-2"
                   >
                     Close
                   </button>
 
                   <button
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4 flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
                     {editModal ? "Update Branch" : "Create Branch"}
                   </button>
@@ -1054,7 +1279,7 @@ ${citiesList}
       )}
       {isbulkOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6  relative">
+          <div className="bg-white rounded-lg p-6 relative">
             <BranchBulk getAllData={getAllData} onClose={onClose} />
           </div>
         </div>

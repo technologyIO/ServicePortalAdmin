@@ -2,8 +2,7 @@ import React, { useEffect, useState } from "react";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
-
+import { Download, Filter, Plus, RefreshCw, Upload, X, ChevronDown } from "lucide-react";
 import {
   Autocomplete,
   Modal,
@@ -23,7 +22,6 @@ function FormatMaster() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [data, setData] = useState([]);
-  // Removed BranchData, state, cityList, country, dealerList because they're not needed
   const [currentData, setCurrentData] = useState({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -38,6 +36,109 @@ function FormatMaster() {
   const currentUserRole = user?.details?.role?.roleName;
   const [isSpinning, setisSpinning] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingFormatMaster, setIsDownloadingFormatMaster] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    productGroup: '',
+    chlNo: '',
+    revNo: '',
+    type: '',
+    status: '',
+    createdStartDate: '',
+    createdEndDate: '',
+    modifiedStartDate: '',
+    modifiedEndDate: ''
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableProductGroups, setAvailableProductGroups] = useState([]);
+  const [availableTypes, setAvailableTypes] = useState([]);
+  const [availableChlNos, setAvailableChlNos] = useState([]);
+
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/master/format/filter-options`
+      );
+      const options = response.data;
+      setAvailableProductGroups(options.productGroups || []);
+      setAvailableTypes(options.types || []);
+      setAvailableChlNos(options.chlNos || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+    
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append('page', pageNum);
+    filterParams.append('limit', limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/master/format/filter?${filterParams}`
+      );
+      setData(response.data.data || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalFormatMasters(response.data.totalFormatMasters || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      productGroup: '',
+      chlNo: '',
+      revNo: '',
+      type: '',
+      status: '',
+      createdStartDate: '',
+      createdEndDate: '',
+      modifiedStartDate: '',
+      modifiedEndDate: ''
+    });
+    setIsFilterMode(false);
+    getData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some(value => value !== '');
+  };
+
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -46,6 +147,7 @@ function FormatMaster() {
       setSelectedRows([]);
     }
   };
+
   const handleRowSelect = (id) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter((itemId) => itemId !== id));
@@ -56,8 +158,7 @@ function FormatMaster() {
 
   const openModal = () => setIsOpen(true);
   const closeModal = () => setIsOpen(false);
-  const [isDownloadingFormatMaster, setIsDownloadingFormatMaster] =
-    useState(false);
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -80,7 +181,7 @@ function FormatMaster() {
       toast.error("Failed to update status");
     }
   };
-  // Add this function inside your FormatMaster component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select format masters to delete");
@@ -128,39 +229,61 @@ function FormatMaster() {
   const downloadFormatMasterExcel = async () => {
     setIsDownloadingFormatMaster(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/formatmaster/export-formatmaster`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/formatmaster/export-formatmaster`;
+      const params = new URLSearchParams();
+      
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+        console.log('Adding search parameter:', searchQuery.trim());
+      }
+      
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+        console.log('Adding filter parameters:', filters);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      console.log('Download URL:', url);
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
-        a.download = `format_master_data_${
-          new Date().toISOString().split("T")[0]
-        }.xlsx`;
+        a.href = downloadUrl;
+        a.download = `format_master_data_${new Date().toISOString().split("T")[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
-        console.error("Download failed");
-        alert("Failed to download Format Master Excel file");
+        const errorText = await response.text();
+        console.error("Download failed:", errorText);
+        toast.error("Failed to download Format Master Excel file");
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error("Error downloading file");
     } finally {
       setIsDownloadingFormatMaster(false);
     }
   };
-  // Updated Create button handler to open modal for new record creation
+
   const handleCreateModal = () => {
-    setCurrentData({}); // clear form data
+    setCurrentData({});
     setEditModal(false);
     setShowModal(true);
   };
@@ -217,6 +340,7 @@ function FormatMaster() {
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
@@ -239,7 +363,10 @@ function FormatMaster() {
 
   const getData = (pageNum = page) => {
     setLoader(true);
+    setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
+    setSearchQuery("");
 
     axios
       .get(
@@ -269,10 +396,12 @@ function FormatMaster() {
   useEffect(() => {
     if (isSearchMode && searchQuery) {
       handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
     } else if (!isSearchMode) {
       getData(page);
     }
-  }, [page]); // Only trigger on page changes
+  }, [page]);
 
   const handleSubmit = (id) => {
     if (editModal && id) {
@@ -318,13 +447,13 @@ function FormatMaster() {
 
   const handlePreviousPage = () => {
     if (page > 1) {
-      setPage(page - 1); // Let useEffect handle the data loading
+      setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
-      setPage(page + 1); // Let useEffect handle the data loading
+      setPage(page + 1);
     }
   };
 
@@ -337,7 +466,6 @@ function FormatMaster() {
       ) : (
         <>
           <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
-            {/* Row 1: Search Bar and Primary Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
               <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
                 <div className="relative flex-1">
@@ -383,7 +511,6 @@ function FormatMaster() {
               </div>
 
               <div className="flex gap-3">
-                {/* Refresh */}
                 <button
                   type="button"
                   onClick={() => {
@@ -399,7 +526,6 @@ function FormatMaster() {
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
 
-                {/* Create New */}
                 <button
                   onClick={handleCreateModal}
                   type="button"
@@ -409,7 +535,6 @@ function FormatMaster() {
                   Create New
                 </button>
 
-                {/* Conditionally show Delete Selected */}
                 {selectedRows?.length > 0 &&
                   currentUserRole === "Super Admin" && (
                     <div className="animate-in slide-in-from-right-2 duration-300">
@@ -431,67 +556,256 @@ function FormatMaster() {
               </div>
             </div>
 
-            {/* Row 2: Secondary Action Buttons */}
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-              <button
-                onClick={downloadFormatMasterExcel}
-                disabled={isDownloadingFormatMaster}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingFormatMaster
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingFormatMaster ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter(v => v).length}
+                    </span>
+                  )}
+                </button>
+                
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadFormatMasterExcel}
+                  disabled={isDownloadingFormatMaster}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingFormatMaster
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingFormatMaster ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Product Group Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Group
+                    </label>
+                    <select
+                      value={filters.productGroup}
+                      onChange={(e) => handleFilterChange('productGroup', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Product Groups</option>
+                      {availableProductGroups.map((group, index) => (
+                        <option key={index} value={group}>
+                          {group}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* CHL No Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      CHL No
+                    </label>
+                    <select
+                      value={filters.chlNo}
+                      onChange={(e) => handleFilterChange('chlNo', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All CHL Numbers</option>
+                      {availableChlNos.map((chlNo, index) => (
+                        <option key={index} value={chlNo}>
+                          {chlNo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Rev No Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rev No
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.revNo}
+                      onChange={(e) => handleFilterChange('revNo', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter Rev No"
+                    />
+                  </div>
+
+                  {/* Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Type
+                    </label>
+                    <select
+                      value={filters.type}
+                      onChange={(e) => handleFilterChange('type', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Types</option>
+                      {availableTypes.map((type, index) => (
+                        <option key={index} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Created Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdStartDate}
+                      onChange={(e) => handleFilterChange('createdStartDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdEndDate}
+                      onChange={(e) => handleFilterChange('createdEndDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Modified Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Modified Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.modifiedStartDate}
+                      onChange={(e) => handleFilterChange('modifiedStartDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Modified End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.modifiedEndDate}
+                      onChange={(e) => handleFilterChange('modifiedEndDate', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-end ">
-            {/* {selectedRows?.length > 0 && (
-              <button
-                type="button"
-                className="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-[4px] text-sm px-5 py-2.5 mb-2"
-              >
-                Delete Selected
-              </button>
-            )} */}
-          </div>
-          {/* Add this div before the table */}
-          <div className="flex justify-between items-center ">
+          {/* Status Display */}
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
                   Search Results:{" "}
                   <span className="font-semibold">{totalFormatMasters}</span>{" "}
                   format masters found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalFormatMasters}</span>{" "}
+                  format masters found
                 </span>
               ) : (
                 <span>
@@ -505,7 +819,7 @@ function FormatMaster() {
 
           <div className="relative w-full overflow-x-auto border">
             <table className="w-full border min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700">
+              <thead className="[&_tr]:border-b bg-blue-700">
                 <tr className="border-b text-white">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
@@ -617,21 +931,17 @@ function FormatMaster() {
                             </svg>
                           </button>
                         )}
-                        <td className="align-middle whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="sr-only peer "
-                                checked={item?.status === "Active"}
-                                onChange={() =>
-                                  handleToggleStatus(item?._id, item?.status)
-                                }
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            </label>
-                          </div>
-                        </td>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={item?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(item?._id, item?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -639,6 +949,7 @@ function FormatMaster() {
               </tbody>
             </table>
           </div>
+
           {totalPages > 1 && (
             <div className="Pagination-laptopUp flex justify-between p-4">
               <button
@@ -682,7 +993,7 @@ function FormatMaster() {
               </button>
             </div>
           )}
-          {/* Modal for Create / Edit Record */}
+
           <Modal
             open={showModal}
             onClose={handleCloseModal}
@@ -806,6 +1117,7 @@ function FormatMaster() {
               </form>
             </ModalDialog>
           </Modal>
+
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-gray-200 rounded-lg p-6 w-[80vh] relative">

@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
-
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import SearchIcon from "@mui/icons-material/Search";
-
 import {
   Box,
   DialogActions,
@@ -51,68 +55,195 @@ const AdminChecklist = () => {
   const limit = 10;
   const [isOpen, setIsOpen] = useState(false);
   const [loader, setLoader] = useState(true);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isDownloadingChecklist, setIsDownloadingChecklist] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    status: "",
+    startDate: "",
+    endDate: "",
+    checklistType: "",
+    checkpointType: "",
+    productGroup: "",
+    resultType: "",
+    startVoltageMin: "",
+    startVoltageMax: "",
+    endVoltageMin: "",
+    endVoltageMax: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableChecklistTypes, setAvailableChecklistTypes] = useState([]);
+  const [availableCheckpointTypes, setAvailableCheckpointTypes] = useState([]);
+  const [availableProductGroups, setAvailableProductGroups] = useState([]);
+  const [availableResultTypes, setAvailableResultTypes] = useState([]);
+
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/checklist/filter-options`
+      );
+      const options = response.data;
+      setAvailableChecklistTypes(options.checklistTypes || []);
+      setAvailableCheckpointTypes(options.checkpointTypes || []);
+      setAvailableProductGroups(options.productGroups || []);
+      setAvailableResultTypes(options.resultTypes || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/checklist/filter?${filterParams}`
+      );
+      setData(response.data.checklists || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalChecklists(response.data.totalChecklists || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      status: "",
+      startDate: "",
+      endDate: "",
+      checklistType: "",
+      checkpointType: "",
+      productGroup: "",
+      resultType: "",
+      startVoltageMin: "",
+      startVoltageMax: "",
+      endVoltageMin: "",
+      endVoltageMax: "",
+    });
+    setIsFilterMode(false);
+    getAllData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some((value) => value !== "");
+  };
+
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
     getAllData();
   };
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isDownloadingChecklist, setIsDownloadingChecklist] = useState(false);
 
   const downloadChecklistExcel = async () => {
     setIsDownloadingChecklist(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/checklists/export-checklists`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/checklists/export-checklists`;
+      const params = new URLSearchParams();
+
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+        console.log("Adding search parameter:", searchQuery.trim()); // Debug log
+      }
+
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+        console.log("Adding filter parameters:", filters); // Debug log
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      console.log("Download URL:", url); // Debug log
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `checklists_data_${
           new Date().toISOString().split("T")[0]
         }.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
-        console.error("Download failed");
-        alert("Failed to download CheckList Excel file");
+        const errorText = await response.text();
+        console.error("Download failed:", errorText);
+        toast.error("Failed to download CheckList Excel file");
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error("Error downloading file");
     } finally {
       setIsDownloadingChecklist(false);
     }
   };
 
-  // Loading Spinner Component
-
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(data?.map((checklist) => checklist._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
-  const handleRowSelect = (countryId) => {
-    if (selectedRows.includes(countryId)) {
-      // Deselect the row
-      setSelectedRows(selectedRows.filter((id) => id !== countryId));
+
+  const handleRowSelect = (checklistId) => {
+    if (selectedRows.includes(checklistId)) {
+      setSelectedRows(selectedRows.filter((id) => id !== checklistId));
     } else {
-      // Select the row
-      setSelectedRows([...selectedRows, countryId]);
+      setSelectedRows([...selectedRows, checklistId]);
     }
   };
 
@@ -128,11 +259,10 @@ const AdminChecklist = () => {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allchecklisttype`
         );
-        console.log("API Response:", res.data); // Logs the response to verify structure
-        setCheckListtype(res.data || []); // Directly use res.data as it's already the array
+        setCheckListtype(res.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
-        setCheckListtype([]); // Set an empty array in case of an error
+        setCheckListtype([]);
       }
     };
 
@@ -140,20 +270,15 @@ const AdminChecklist = () => {
   }, []);
 
   useEffect(() => {
-    console.log("CheckListtype state updated:", CheckListtype); // Log updated state
-  }, [CheckListtype]);
-
-  useEffect(() => {
     const fetchallcheckpointtype = async () => {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allcheckpointtype`
         );
-        console.log("API Response:", res.data); // Logs the response to verify structure
-        setcheckpointtype(res.data || []); // Directly use res.data as it's already the array
+        setcheckpointtype(res.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
-        setcheckpointtype([]); // Set an empty array in case of an error
+        setcheckpointtype([]);
       }
     };
 
@@ -161,35 +286,25 @@ const AdminChecklist = () => {
   }, []);
 
   useEffect(() => {
-    console.log("CheckListtype state updated:", checkpointtype); // Log updated state
-  }, [checkpointtype]);
-
-  useEffect(() => {
     const fetchallproductgroup = async () => {
       try {
         const res = await axios.get(
           `${process.env.REACT_APP_BASE_URL}/collections/allproductgroup`
         );
-        console.log("API Response:", res.data); // Logs the response to verify structure
-        setproductgroup(res.data || []); // Directly use res.data as it's already the array
+        setproductgroup(res.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
-        setproductgroup([]); // Set an empty array in case of an error
+        setproductgroup([]);
       }
     };
 
     fetchallproductgroup();
   }, []);
 
-  useEffect(() => {
-    console.log("CheckListtype state updated:", productgroup); // Log updated state
-  }, [productgroup]);
-
-  // Open Modal and fetch checklist data
-  const handleOpenModal = (country) => {
-    setCurrentData(country || {}); // Use empty object for create
-    setShowModal(true); // Show modal
-    setEditModal(!!country); // Set to true if country exists, false otherwise
+  const handleOpenModal = (checklist) => {
+    setCurrentData(checklist || {});
+    setShowModal(true);
+    setEditModal(!!checklist);
   };
 
   const handleFormData = (name, value) => {
@@ -200,7 +315,7 @@ const AdminChecklist = () => {
       };
     });
   };
-  // Add this function inside your AdminChecklist component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select checklists to delete");
@@ -263,7 +378,7 @@ const AdminChecklist = () => {
             `${process.env.REACT_APP_BASE_URL}/collections/checklist/${id}`
           )
           .then((res) => {
-            Swal.fire("Deleted!", "Countrys has been deleted.", "success");
+            Swal.fire("Deleted!", "Checklist has been deleted.", "success");
           })
           .then((res) => {
             getAllData();
@@ -277,12 +392,12 @@ const AdminChecklist = () => {
 
   const handleSearch = async (pageNum = 1) => {
     if (!searchQuery) {
-      // Don't clear search, just return
       return;
     }
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
@@ -305,7 +420,10 @@ const AdminChecklist = () => {
 
   const getAllData = (pageNum = page) => {
     setLoader(true);
+    setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
+    setSearchQuery("");
 
     axios
       .get(
@@ -325,6 +443,7 @@ const AdminChecklist = () => {
         setTotalChecklists(0);
       });
   };
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -340,7 +459,7 @@ const AdminChecklist = () => {
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
         );
-        getAllData(); // Refresh the data
+        getAllData();
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -351,13 +470,14 @@ const AdminChecklist = () => {
   useEffect(() => {
     if (isSearchMode && searchQuery) {
       handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
     } else if (!isSearchMode) {
       getAllData(page);
     }
   }, [page]);
-  // Add this useEffect to automatically refresh when search is cleared
+
   useEffect(() => {
-    // Only trigger when search was active and now becomes empty
     if (searchQuery === "" && isSearchMode) {
       setIsSearchMode(false);
       setPage(1);
@@ -381,7 +501,6 @@ const AdminChecklist = () => {
       )
       .then((res) => {
         getAllData();
-        console.log("Response data:", res.data); // Log response data
         toast.dismiss();
         toast.success(res.data?.message || "Checklist created successfully!");
       })
@@ -410,15 +529,16 @@ const AdminChecklist = () => {
         toast.error("Failed to update checklist. Please try again.");
       });
   };
+
   const handlePreviousPage = () => {
     if (page > 1) {
-      setPage(page - 1); // Let useEffect handle the data loading
+      setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
-      setPage(page + 1); // Let useEffect handle the data loading
+      setPage(page + 1);
     }
   };
 
@@ -426,13 +546,12 @@ const AdminChecklist = () => {
     <>
       {loader ? (
         <div className="flex items-center justify-center h-[60vh]">
-          <span class="CustomLoader"></span>
+          <span className="CustomLoader"></span>
         </div>
       ) : (
         <>
           <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
-              {/* Search and actions row */}
               <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
                 <div className="relative flex-1">
                   <FormControl sx={{ flex: 1 }} size="sm">
@@ -475,9 +594,7 @@ const AdminChecklist = () => {
                 </button>
               </div>
 
-              {/* Main actions row */}
               <div className="flex gap-3">
-                {/* Refresh always visible */}
                 <button
                   type="button"
                   onClick={() => {
@@ -493,7 +610,6 @@ const AdminChecklist = () => {
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
 
-                {/* Create New button */}
                 <button
                   onClick={() => handleOpenModal()}
                   type="button"
@@ -503,7 +619,6 @@ const AdminChecklist = () => {
                   Create New
                 </button>
 
-                {/* Conditionally show Delete Selected */}
                 {selectedRows?.length > 0 &&
                   currentUserRole === "Super Admin" && (
                     <div className="animate-in slide-in-from-right-2 duration-300">
@@ -525,59 +640,282 @@ const AdminChecklist = () => {
               </div>
             </div>
 
-            {/* Secondary actions row */}
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter((v) => v).length}
+                    </span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-
-              <button
-                onClick={downloadChecklistExcel}
-                disabled={isDownloadingChecklist}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingChecklist
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingChecklist ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadChecklistExcel}
+                  disabled={isDownloadingChecklist}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingChecklist
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingChecklist ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      {/* <option value="Pending">Pending</option> */}
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Checklist Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Checklist Type
+                    </label>
+                    <select
+                      value={filters.checklistType}
+                      onChange={(e) =>
+                        handleFilterChange("checklistType", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Checklist Types</option>
+                      {availableChecklistTypes.map((type, index) => (
+                        <option key={index} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Checkpoint Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Checkpoint Type
+                    </label>
+                    <select
+                      value={filters.checkpointType}
+                      onChange={(e) =>
+                        handleFilterChange("checkpointType", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Checkpoint Types</option>
+                      {availableCheckpointTypes.map((type, index) => (
+                        <option key={index} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Product Group Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Group
+                    </label>
+                    <select
+                      value={filters.productGroup}
+                      onChange={(e) =>
+                        handleFilterChange("productGroup", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Product Groups</option>
+                      {availableProductGroups.map((group, index) => (
+                        <option key={index} value={group}>
+                          {group}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Result Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Result Type
+                    </label>
+                    <select
+                      value={filters.resultType}
+                      onChange={(e) =>
+                        handleFilterChange("resultType", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Result Types</option>
+                      {availableResultTypes.map((type, index) => (
+                        <option key={index} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Created Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.startDate}
+                      onChange={(e) =>
+                        handleFilterChange("startDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.endDate}
+                      onChange={(e) =>
+                        handleFilterChange("endDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Start Voltage Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Voltage Min
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.startVoltageMin}
+                      onChange={(e) =>
+                        handleFilterChange("startVoltageMin", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Min voltage"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Voltage Max
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.startVoltageMax}
+                      onChange={(e) =>
+                        handleFilterChange("startVoltageMax", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Max voltage"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Add this div before the table */}
-          <div className="flex justify-between items-center ">
+          {/* Status Display */}
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode ? (
                 <span>
                   Search Results:{" "}
                   <span className="font-semibold">{totalChecklists}</span>{" "}
                   checklists found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalChecklists}</span>{" "}
+                  checklists found
                 </span>
               ) : (
                 <span>
@@ -589,10 +927,11 @@ const AdminChecklist = () => {
             </div>
           </div>
 
+          {/* Rest of your existing table and modal code remains the same */}
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700 ">
-                <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <table className="w-full border min-w-max caption-bottom text-sm">
+              <thead className="[&_tr]:border-b bg-blue-700">
+                <tr className="border-b transition-colors text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
                       <input
@@ -619,9 +958,6 @@ const AdminChecklist = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     ProdGroup
                   </th>
-                  {/* <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                    Result
-                  </th> */}
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Status
                   </th>
@@ -640,13 +976,12 @@ const AdminChecklist = () => {
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     End Voltage
                   </th>
-
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                     Action
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
+              <tbody className="[&_tr:last-child]:border-0">
                 {data?.map((i, index) => (
                   <tr
                     key={i._id}
@@ -676,51 +1011,45 @@ const AdminChecklist = () => {
                     <td className="p-4 font-bold text-md capitalize align-middle whitespace-nowrap">
                       {i?.checklisttype}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.checkpointtype}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.checkpoint}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.prodGroup}
                     </td>
-                    {/* <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
-                      {i?.result}
-                    </td> */}
-
                     <td className="p-4 align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
                           i?.status === "Active"
                             ? "bg-green-100 text-green-800 border-green-400"
                             : i?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-orange-100 text-orange-800 border-orange-400"
                         }`}
                       >
                         {i?.status}
                       </span>
                     </td>
-
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(i?.createdAt).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(i?.modifiedAt).format("MMM D, YYYY")}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.resulttype}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.startVoltage}
                     </td>
-                    <td className="p-4  text-md capitalize align-middle whitespace-nowrap">
+                    <td className="p-4 text-md capitalize align-middle whitespace-nowrap">
                       {i?.endVoltage}
                     </td>
-
                     <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
+                      <div className="flex gap-4">
                         <button
                           onClick={() => {
                             handleOpenModal(i);
@@ -737,7 +1066,7 @@ const AdminChecklist = () => {
                           >
                             <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
                             <path
-                              fill-rule="evenodd"
+                              fillRule="evenodd"
                               d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
                             />
                           </svg>
@@ -759,21 +1088,17 @@ const AdminChecklist = () => {
                             </svg>
                           </button>
                         )}
-                        <td className="align-middle whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="sr-only peer "
-                                checked={i?.status === "Active"}
-                                onChange={() =>
-                                  handleToggleStatus(i?._id, i?.status)
-                                }
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            </label>
-                          </div>
-                        </td>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={i?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(i?._id, i?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -781,6 +1106,7 @@ const AdminChecklist = () => {
               </tbody>
             </table>
           </div>
+
           <div
             className="Pagination-laptopUp"
             style={{
@@ -801,7 +1127,6 @@ const AdminChecklist = () => {
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
                   return (
                     p === 1 ||
                     p === totalPages ||
@@ -810,7 +1135,6 @@ const AdminChecklist = () => {
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
@@ -833,27 +1157,28 @@ const AdminChecklist = () => {
             </button>
           </div>
 
+          {/* Your existing modal code remains the same */}
           <Modal
             open={showModal}
             onClose={handleCloseModal}
             className=""
             size="lg"
           >
-            <ModalDialog size="lg" className="p-2 ">
-              <div className="flex items-start justify-between p-2  px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
+            <ModalDialog size="lg" className="p-2">
+              <div className="flex items-start justify-between p-2 px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-xl font-semibold">
                   {editModal ? "Update Checklist" : "Create Checklist"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
-                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                  className="border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
                     height="18"
                     fill="currentColor"
-                    className="bi bi-x-lg font-semibold "
+                    className="bi bi-x-lg font-semibold"
                     viewBox="0 0 16 16"
                   >
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
@@ -868,10 +1193,10 @@ const AdminChecklist = () => {
                 }}
                 className=""
               >
-                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto gap-6">
-                  <div class="grid md:grid-cols-2 md:gap-6">
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                <div className="w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto gap-6">
+                  <div className="grid md:grid-cols-2 md:gap-6">
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Checklist Type{" "}
                         <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
@@ -891,8 +1216,8 @@ const AdminChecklist = () => {
                         ))}
                       </Select>
                     </div>
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Checkpoint Type{" "}
                         <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
@@ -912,8 +1237,8 @@ const AdminChecklist = () => {
                         ))}
                       </Select>
                     </div>
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Checkpoint{" "}
                         <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
@@ -989,8 +1314,8 @@ const AdminChecklist = () => {
                         </Option>
                       </Select>
                     </div>
-                    <div class="relative z-0 w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                    <div className="relative z-0 w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         ProdGroup{" "}
                         <span className="text-red-500 text-lg ml-1">*</span>
                       </label>
@@ -1011,10 +1336,9 @@ const AdminChecklist = () => {
                       </Select>
                     </div>
                     <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Status{" "}
                       </label>
-
                       <Select
                         variant="soft"
                         className="rounded-[4px] py-2 border"
@@ -1023,7 +1347,7 @@ const AdminChecklist = () => {
                       >
                         <Option value="">Select Status</Option>
                         <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
+                        {/* <Option value="Pending">Pending</Option> */}
                         <Option value="Inactive">Inactive</Option>
                       </Select>
                     </div>
@@ -1048,9 +1372,8 @@ const AdminChecklist = () => {
                         <Option value="OK/NOT OK">OK/NOT OK</Option>
                       </Select>
                     </div>
-
                     {currentData?.resulttype === "Numeric Entry" && (
-                      <div className="grid grid-cols-1   gap-6">
+                      <div className="grid grid-cols-1 gap-6">
                         <div className="relative z-0 w-full mb-5 group">
                           <label className="block mb-2 text-sm font-medium text-gray-900">
                             Start Voltage
@@ -1087,99 +1410,12 @@ const AdminChecklist = () => {
                       )}
                     </div>
                   </div>
-                  {/* <div className="relative z-0 w-full mb-5 group">
-                    <label className="block mb-2 text-sm font-medium text-gray-900">
-                      Result
-                    </label>
-                    {currentData?.resulttype === "Numeric Entry" && (
-                      <input
-                        onChange={(e) =>
-                          handleFormData("result", e.target.value)
-                        }
-                        type="number"
-                        value={currentData?.result}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5     "
-                        placeholder="Enter numeric value"
-                      />
-                    )}
-                    {currentData?.resulttype === "OK/NOT OK" && (
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="result"
-                            value="OK"
-                            checked={currentData?.result === "OK"}
-                            onChange={(e) =>
-                              handleFormData("result", e.target.value)
-                            }
-                            className="mr-2"
-                          />
-                          OK
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="result"
-                            value="Not OK"
-                            checked={currentData?.result === "Not OK"}
-                            onChange={(e) =>
-                              handleFormData("result", e.target.value)
-                            }
-                            className="mr-2"
-                          />
-                          Not OK
-                        </label>
-                      </div>
-                    )}
-                    {currentData?.resulttype === "Yes / No" && (
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="result"
-                            value="Yes"
-                            checked={currentData?.result === "Yes"}
-                            onChange={(e) =>
-                              handleFormData("result", e.target.value)
-                            }
-                            className="mr-2"
-                          />
-                          Yes
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name="result"
-                            value="No"
-                            checked={currentData?.result === "No"}
-                            onChange={(e) =>
-                              handleFormData("result", e.target.value)
-                            }
-                            className="mr-2"
-                          />
-                          No
-                        </label>
-                      </div>
-                    )}
-                    {currentData?.resulttype === "Remarks" && (
-                      <textarea
-                        onChange={(e) =>
-                          handleFormData("result", e.target.value)
-                        }
-                        value={currentData?.result}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5     "
-                        placeholder="Enter remarks"
-                        rows={3}
-                      />
-                    )}
-                  </div> */}
                 </div>
                 <div className="flex items-center justify-end mt-3 rounded-b">
                   <button
                     onClick={() => handleCloseModal()}
                     type="button"
-                    class="focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                    className="focus:outline-none border h-8 shadow text-black flex items-center hover:bg-gray-200 font-medium rounded-[4px] text-sm px-5 py-2.5 me-2 mb-2"
                   >
                     Close
                   </button>
@@ -1187,7 +1423,7 @@ const AdminChecklist = () => {
                   <button
                     onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4 flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
                     {editModal ? "Update Checklist" : "Create Checklist"}
                   </button>
@@ -1197,9 +1433,7 @@ const AdminChecklist = () => {
           </Modal>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
-              <div className="bg-white rounded-lg p-6    relative">
+              <div className="bg-white rounded-lg p-6 relative">
                 <CheckListBulk onClose={closeModal} />
               </div>
             </div>
