@@ -964,40 +964,9 @@ function Customer() {
 
             {/* Filter Panel */}
             {showFilters && (
-              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {/* Customer Name Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Customer Name
-                    </label>
-                    <input
-                      type="text"
-                      value={filters.customername}
-                      onChange={(e) =>
-                        handleFilterChange("customername", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="Enter customer name"
-                    />
-                  </div>
-
-                  {/* Hospital Name Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Hospital Name
-                    </label>
-                    <input
-                      type="text"
-                      value={filters.hospitalname}
-                      onChange={(e) =>
-                        handleFilterChange("hospitalname", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="Enter hospital name"
-                    />
-                  </div>
-
                   {/* City Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1018,7 +987,6 @@ function Customer() {
                       ))}
                     </select>
                   </div>
-
                   {/* Region Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1039,7 +1007,6 @@ function Customer() {
                       ))}
                     </select>
                   </div>
-
                   {/* Country Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1060,23 +1027,6 @@ function Customer() {
                       ))}
                     </select>
                   </div>
-
-                  {/* Postal Code Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Postal Code
-                    </label>
-                    <input
-                      type="text"
-                      value={filters.postalcode}
-                      onChange={(e) =>
-                        handleFilterChange("postalcode", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="Enter postal code"
-                    />
-                  </div>
-
                   {/* Status Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1091,11 +1041,9 @@ function Customer() {
                     >
                       <option value="">All Status</option>
                       <option value="Active">Active</option>
-                      <option value="Pending">Pending</option>
                       <option value="Inactive">Inactive</option>
                     </select>
                   </div>
-
                   {/* Customer Type Filter */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1113,39 +1061,6 @@ function Customer() {
                       <option value="Private">Private</option>
                     </select>
                   </div>
-
-                  {/* Email Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="text"
-                      value={filters.email}
-                      onChange={(e) =>
-                        handleFilterChange("email", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="Enter email"
-                    />
-                  </div>
-
-                  {/* Telephone Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Telephone
-                    </label>
-                    <input
-                      type="text"
-                      value={filters.telephone}
-                      onChange={(e) =>
-                        handleFilterChange("telephone", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      placeholder="Enter telephone"
-                    />
-                  </div>
-
                   {/* Created Date Range */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1160,7 +1075,6 @@ function Customer() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Created End Date
@@ -1170,35 +1084,6 @@ function Customer() {
                       value={filters.createdEndDate}
                       onChange={(e) =>
                         handleFilterChange("createdEndDate", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    />
-                  </div>
-
-                  {/* Modified Date Range */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Modified Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.modifiedStartDate}
-                      onChange={(e) =>
-                        handleFilterChange("modifiedStartDate", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Modified End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.modifiedEndDate}
-                      onChange={(e) =>
-                        handleFilterChange("modifiedEndDate", e.target.value)
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />

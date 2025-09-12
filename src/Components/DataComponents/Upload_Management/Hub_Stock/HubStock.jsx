@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
-
 import FormControl from "@mui/joy/FormControl";
-
 import Input from "@mui/joy/Input";
-
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
-
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -15,6 +19,7 @@ import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import HubStockBulk from "./HubStockBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
+
 function HubStock() {
   const [showModal, setShowModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
@@ -30,54 +35,184 @@ function HubStock() {
   const [isSpinning, setisSpinning] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [cityList, setCityList] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingHubStock, setIsDownloadingHubStock] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    materialcode: "",
+    materialdescription: "",
+    quantity: "",
+    quantityMin: "",
+    quantityMax: "",
+    storagelocation: "",
+    status: "",
+    createdStartDate: "",
+    createdEndDate: "",
+    modifiedStartDate: "",
+    modifiedEndDate: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableMaterialCodes, setAvailableMaterialCodes] = useState([]);
+  const [availableStorageLocations, setAvailableStorageLocations] = useState(
+    []
+  );
+
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.details?.role?.roleName;
+
   const openModal = () => setIsOpen(true);
   const closeModal = () => {
     setIsOpen(false);
-
     if (typeof getData === "function") {
       getData();
     }
   };
-  const [cityList, setCityList] = useState([]);
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [isDownloadingHubStock, setIsDownloadingHubStock] = useState(false);
-  const user = JSON.parse(localStorage.getItem("user"));
-  const currentUserRole = user?.details?.role?.roleName;
 
-  console.log("UserRoleName", currentUserRole);
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/hubstocks/filter-options`
+      );
+      const options = response.data;
+      setAvailableMaterialCodes(options.materialCodes || []);
+      setAvailableStorageLocations(options.storageLocations || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/hubstocks/filter?${filterParams}`
+      );
+      setData(response.data.hubStocks || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalHubStocks(response.data.totalHubStocks || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      materialcode: "",
+      materialdescription: "",
+      quantity: "",
+      quantityMin: "",
+      quantityMax: "",
+      storagelocation: "",
+      status: "",
+      createdStartDate: "",
+      createdEndDate: "",
+      modifiedStartDate: "",
+      modifiedEndDate: "",
+    });
+    setIsFilterMode(false);
+    getData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some((value) => value !== "");
+  };
+
   const downloadHubStockExcel = async () => {
     setIsDownloadingHubStock(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/hubstock/export-hubstock`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/hubstock/export-hubstock`;
+      const params = new URLSearchParams();
+
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+        console.log("Adding search parameter:", searchQuery.trim());
+      }
+
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+        console.log("Adding filter parameters:", filters);
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      console.log("Download URL:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `hub_stock_data_${
           new Date().toISOString().split("T")[0]
         }.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
-        console.error("Download failed");
-        alert("Failed to download Hub Stock Excel file");
+        const errorText = await response.text();
+        console.error("Download failed:", errorText);
+        toast.error("Failed to download Hub Stock Excel file");
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error("Error downloading file");
     } finally {
       setIsDownloadingHubStock(false);
     }
   };
+
   const getCities = () => {
     axios
       .get(`${process.env.REACT_APP_BASE_URL}/collections/city`)
@@ -94,13 +229,12 @@ function HubStock() {
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      // Select all rows
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(data?.map((stock) => stock._id));
     } else {
-      // Deselect all rows
       setSelectedRows([]);
     }
   };
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -123,7 +257,7 @@ function HubStock() {
       toast.error("Failed to update status");
     }
   };
-  // Add this function inside your HubStock component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select hub stocks to delete");
@@ -155,7 +289,6 @@ function HubStock() {
             });
             setSelectedRows([]);
             setSelectAll(false);
-            // Refresh data based on current mode
             if (isSearchMode && searchQuery.trim()) {
               handleSearch(page);
             } else {
@@ -175,13 +308,11 @@ function HubStock() {
     });
   };
 
-  const handleRowSelect = (countryId) => {
-    if (selectedRows.includes(countryId)) {
-      // Deselect the row
-      setSelectedRows(selectedRows.filter((id) => id !== countryId));
+  const handleRowSelect = (stockId) => {
+    if (selectedRows.includes(stockId)) {
+      setSelectedRows(selectedRows.filter((id) => id !== stockId));
     } else {
-      // Select the row
-      setSelectedRows([...selectedRows, countryId]);
+      setSelectedRows([...selectedRows, stockId]);
     }
   };
 
@@ -191,8 +322,8 @@ function HubStock() {
     setCurrentData({});
   };
 
-  const handleOpenModal = (country) => {
-    setCurrentData(country);
+  const handleOpenModal = (stock) => {
+    setCurrentData(stock);
     setEditModal(true);
     setShowModal(true);
   };
@@ -222,7 +353,7 @@ function HubStock() {
             `${process.env.REACT_APP_BASE_URL}/collections/hubstocks/${id}`
           )
           .then((res) => {
-            Swal.fire("Deleted!", "Countrys has been deleted.", "success");
+            Swal.fire("Deleted!", "Hub stock has been deleted.", "success");
           })
           .then((res) => {
             getData();
@@ -233,6 +364,7 @@ function HubStock() {
       }
     });
   };
+
   const handleSearch = async (pageNum = 1) => {
     if (!searchQuery.trim()) {
       return;
@@ -240,6 +372,7 @@ function HubStock() {
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
@@ -262,7 +395,10 @@ function HubStock() {
 
   const getData = (pageNum = page) => {
     setLoader(true);
+    setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
+    setSearchQuery("");
 
     axios
       .get(
@@ -286,14 +422,18 @@ function HubStock() {
   useEffect(() => {
     getData();
   }, []);
+
   useEffect(() => {
     if (!searchQuery) {
       getData();
     }
   }, [searchQuery]);
+
   useEffect(() => {
     if (isSearchMode && searchQuery) {
       handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
     } else if (!isSearchMode) {
       getData(page);
     }
@@ -349,13 +489,13 @@ function HubStock() {
 
   const handlePreviousPage = () => {
     if (page > 1) {
-      setPage(page - 1); // Let useEffect handle the data loading
+      setPage(page - 1);
     }
   };
 
   const handleNextPage = () => {
     if (page < totalPages) {
-      setPage(page + 1); // Let useEffect handle the data loading
+      setPage(page + 1);
     }
   };
 
@@ -363,12 +503,11 @@ function HubStock() {
     <>
       {loader ? (
         <div className="flex items-center justify-center h-[60vh]">
-          <span class="CustomLoader"></span>
+          <span className="CustomLoader"></span>
         </div>
       ) : (
         <>
           <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 shadow-sm">
-            {/* Top Row: Search and Main Actions */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-4">
               <div className="flex flex-col sm:flex-row gap-4 flex-1 lg:max-w-2xl">
                 <div className="relative flex-1">
@@ -411,8 +550,8 @@ function HubStock() {
                   Search
                 </button>
               </div>
+
               <div className="flex gap-3">
-                {/* Refresh Button Always Visible */}
                 <button
                   type="button"
                   onClick={() => {
@@ -428,7 +567,6 @@ function HubStock() {
                   <span className="hidden sm:inline">Refresh</span>
                 </button>
 
-                {/* Create New Button */}
                 <button
                   onClick={handleCloseModal}
                   type="button"
@@ -438,7 +576,6 @@ function HubStock() {
                   Create New
                 </button>
 
-                {/* Conditionally show Delete Selected */}
                 {selectedRows?.length > 0 &&
                   currentUserRole === "Super Admin" && (
                     <div className="animate-in slide-in-from-right-2 duration-300">
@@ -460,67 +597,256 @@ function HubStock() {
               </div>
             </div>
 
-            {/* Bottom Row: Upload, Filter, Download */}
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-              <button
-                onClick={downloadHubStockExcel}
-                disabled={isDownloadingHubStock}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingHubStock
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingHubStock ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter((v) => v).length}
+                    </span>
+                  )}
+                </button>
+
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadHubStockExcel}
+                  disabled={isDownloadingHubStock}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingHubStock
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingHubStock ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Material Code Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Material Code
+                    </label>
+                    <select
+                      value={filters.materialcode}
+                      onChange={(e) =>
+                        handleFilterChange("materialcode", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Material Codes</option>
+                      {availableMaterialCodes.map((code, index) => (
+                        <option key={index} value={code}>
+                          {code}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Exact Quantity Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Exact Quantity
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.quantity}
+                      onChange={(e) =>
+                        handleFilterChange("quantity", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter exact quantity"
+                    />
+                  </div>
+
+                  {/* Quantity Range - Min */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity Min
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.quantityMin}
+                      onChange={(e) =>
+                        handleFilterChange("quantityMin", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Min quantity"
+                    />
+                  </div>
+
+                  {/* Quantity Range - Max */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity Max
+                    </label>
+                    <input
+                      type="number"
+                      value={filters.quantityMax}
+                      onChange={(e) =>
+                        handleFilterChange("quantityMax", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Max quantity"
+                    />
+                  </div>
+
+                  {/* Storage Location Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Storage Location
+                    </label>
+                    <select
+                      value={filters.storagelocation}
+                      onChange={(e) =>
+                        handleFilterChange("storagelocation", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Storage Locations</option>
+                      {availableStorageLocations.map((location, index) => (
+                        <option key={index} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Created Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdStartDate}
+                      onChange={(e) =>
+                        handleFilterChange("createdStartDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdEndDate}
+                      onChange={(e) =>
+                        handleFilterChange("createdEndDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* {selectedRows?.length > 0 && (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                class="text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 :focus:ring-red-800 font-medium rounded-[4px] text-sm px-5 py-2.5 text-center me-2 mb-2"
-              >
-                Delete Selected
-              </button>
-            </div>
-          )} */}
-          {/* Add this div before the table */}
-          <div className="flex justify-between items-center ">
+          {/* Status Display */}
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
                   Search Results:{" "}
                   <span className="font-semibold">{totalHubStocks}</span> hub
                   stocks found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalHubStocks}</span> hub
+                  stocks found
                 </span>
               ) : (
                 <span>
@@ -533,9 +859,9 @@ function HubStock() {
           </div>
 
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&amp;_tr]:border-b bg-blue-700 ">
-                <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <table className="w-full border min-w-max caption-bottom text-sm">
+              <thead className="[&_tr]:border-b bg-blue-700">
+                <tr className="border-b transition-colors text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
                       <input
@@ -576,7 +902,7 @@ function HubStock() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&amp;_tr:last-child]:border-0  ">
+              <tbody className="[&_tr:last-child]:border-0">
                 {data?.map((item, index) => (
                   <tr
                     key={item?._id}
@@ -615,30 +941,27 @@ function HubStock() {
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       {item?.storagelocation}
                     </td>
-
                     <td className="p-4 font- text-md capitalize align-middle whitespace-nowrap">
                       <span
                         className={`text-xs font-medium px-2.5 py-0.5 rounded border ${
                           item?.status === "Active"
                             ? "bg-green-100 text-green-800 border-green-400"
                             : item?.status === "Inactive"
-                            ? "bg-red-100 text-red-800  border-red-400"
-                            : "bg-orange-100 text-orange-800  border-orange-400"
+                            ? "bg-red-100 text-red-800 border-red-400"
+                            : "bg-orange-100 text-orange-800 border-orange-400"
                         }`}
                       >
                         {item?.status}
                       </span>
                     </td>
-
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.createdAt).format("MMM D, YYYY")}
                     </td>
                     <td className="p-4 align-middle whitespace-nowrap">
                       {moment(item?.modifiedAt).format("MMM D, YYYY")}
                     </td>
-
                     <td className="p-4 align-middle whitespace-nowrap">
-                      <div className="flex gap-4 ">
+                      <div className="flex gap-4">
                         <button
                           onClick={() => {
                             handleOpenModal(item);
@@ -655,7 +978,7 @@ function HubStock() {
                           >
                             <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z" />
                             <path
-                              fill-rule="evenodd"
+                              fillRule="evenodd"
                               d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
                             />
                           </svg>
@@ -678,22 +1001,17 @@ function HubStock() {
                             </svg>
                           </button>
                         )}
-
-                        <td className="align-middle whitespace-nowrap">
-                          <div className="flex gap-2 items-center justify-center">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                              <input
-                                type="checkbox"
-                                className="sr-only peer "
-                                checked={item?.status === "Active"}
-                                onChange={() =>
-                                  handleToggleStatus(item?._id, item?.status)
-                                }
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                            </label>
-                          </div>
-                        </td>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={item?.status === "Active"}
+                            onChange={() =>
+                              handleToggleStatus(item?._id, item?.status)
+                            }
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
                       </div>
                     </td>
                   </tr>
@@ -701,6 +1019,7 @@ function HubStock() {
               </tbody>
             </table>
           </div>
+
           <div
             className="Pagination-laptopUp"
             style={{
@@ -721,7 +1040,6 @@ function HubStock() {
             <div style={{ display: "flex", gap: "8px" }}>
               {Array.from({ length: totalPages }, (_, index) => index + 1)
                 .filter((p) => {
-                  // Show the first page, last page, and pages around the current page
                   return (
                     p === 1 ||
                     p === totalPages ||
@@ -730,13 +1048,12 @@ function HubStock() {
                 })
                 .map((p, i, array) => (
                   <React.Fragment key={p}>
-                    {/* Add ellipsis for skipped ranges */}
                     {i > 0 && p !== array[i - 1] + 1 && <span>...</span>}
                     <button
                       className={`border px-3 rounded ${
                         p === page ? "bg-blue-700 text-white" : ""
                       }`}
-                      onClick={() => setPage(p)} // Change this line
+                      onClick={() => setPage(p)}
                       disabled={p === page}
                     >
                       {p}
@@ -752,36 +1069,36 @@ function HubStock() {
               Next
             </button>
           </div>
+
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              {/* Modal Content */}
-
-              <div className="bg-white rounded-lg p-6   relative">
+              <div className="bg-white rounded-lg p-6 relative">
                 <HubStockBulk onClose={closeModal} />
               </div>
             </div>
           )}
+
           <Modal
             open={showModal}
             onClose={handleCloseModal}
             className="z-[1] thin-scroll"
             size="lg"
           >
-            <ModalDialog size="lg" className="p-2  thin-scroll">
+            <ModalDialog size="lg" className="p-2 thin-scroll">
               <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
                 <h3 className="text-2xl font-semibold">
                   {editModal ? "Update Hub Stock" : "Create Hub Stock"}
                 </h3>
                 <div
                   onClick={() => handleCloseModal()}
-                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                  className="border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="18"
                     height="18"
                     fill="currentColor"
-                    className="bi bi-x-lg font-semibold "
+                    className="bi bi-x-lg font-semibold"
                     viewBox="0 0 16 16"
                   >
                     <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
@@ -796,10 +1113,10 @@ function HubStock() {
                 }}
                 className="thin-scroll"
               >
-                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
-                  <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                <div className="w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
+                  <div className="grid md:grid-cols-2 md:gap-6 w-full">
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Material Code
                       </label>
                       <input
@@ -810,11 +1127,11 @@ function HubStock() {
                         }
                         id="name"
                         value={currentData?.materialcode}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Material Description
                       </label>
                       <input
@@ -824,11 +1141,11 @@ function HubStock() {
                         }
                         id="name"
                         value={currentData?.materialdescription}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
                         Quantity
                       </label>
                       <input
@@ -838,12 +1155,12 @@ function HubStock() {
                         }
                         id="name"
                         value={currentData?.quantity}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        StorageLocation{" "}
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        StorageLocation
                       </label>
                       <input
                         type="text"
@@ -852,34 +1169,16 @@ function HubStock() {
                         }
                         id="name"
                         value={currentData?.storagelocation}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
-
-                    {/* <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Status
-                      </label>
-
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        defaultValue={currentData?.status || ""}
-                        onChange={(e, value) => handleFormData("status", value)}
-                      >
-                        <Option value="">Select Status</Option>
-                        <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
-                        <Option value="Inactive">Inactive</Option>
-                      </Select>
-                    </div> */}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
                   <button
                     onClick={() => handleCloseModal()}
                     type="button"
-                    class=" focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                    className="focus:outline-none border h-8 shadow text-black flex items-center hover:bg-gray-200 font-medium rounded-[4px] text-sm px-5 py-2.5 me-2 mb-2"
                   >
                     Close
                   </button>
@@ -887,7 +1186,7 @@ function HubStock() {
                   <button
                     onClick={() => handleSubmit(currentData?._id)}
                     type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4 flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
                   >
                     {editModal ? "Update Hub Stock" : "Create Hub Stock"}
                   </button>
