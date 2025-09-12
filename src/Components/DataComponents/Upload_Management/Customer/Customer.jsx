@@ -10,7 +10,15 @@ import { Autocomplete } from "@mui/joy";
 import CustomerBulk from "./CustomerBulk";
 import toast from "react-hot-toast";
 import LoadingSpinner from "../../../../LoadingSpinner";
-import { Download, Filter, Plus, RefreshCw, Upload } from "lucide-react";
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 
 function Customer() {
   const [showModal, setShowModal] = useState(false);
@@ -27,14 +35,39 @@ function Customer() {
   const [isSpinning, setisSpinning] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const openModal = () => setIsOpen(true);
-  const closeModal = () => {
-    setIsOpen(false);
-    if (typeof getData === "function") {
-      getData();
-    }
-  };
   const [selectedRows, setSelectedRows] = useState([]);
+  const [isDownloadingCustomer, setIsDownloadingCustomer] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    customercodeid: "",
+    customername: "",
+    hospitalname: "",
+    street: "",
+    city: "",
+    postalcode: "",
+    district: "",
+    region: "",
+    country: "",
+    telephone: "",
+    taxnumber1: "",
+    taxnumber2: "",
+    email: "",
+    status: "",
+    customertype: "",
+    createdStartDate: "",
+    createdEndDate: "",
+    modifiedStartDate: "",
+    modifiedEndDate: "",
+  });
+  const [isFilterMode, setIsFilterMode] = useState(false);
+
+  // Filter options
+  const [availableCustomerCodes, setAvailableCustomerCodes] = useState([]);
+  const [availableCities, setAvailableCities] = useState([]);
+  const [availableRegions, setAvailableRegions] = useState([]);
+  const [availableCountries, setAvailableCountries] = useState([]);
 
   // For cascading selects
   const [countryOptions, setCountryOptions] = useState([]);
@@ -46,42 +79,168 @@ function Customer() {
   const [selectedRegions, setSelectedRegions] = useState([]);
   const [filteredCities, setFilteredCities] = useState([]);
   const [selectedCities, setSelectedCities] = useState([]);
-  const [isDownloadingCustomer, setIsDownloadingCustomer] = useState(false);
+
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
+
+  const openModal = () => setIsOpen(true);
+  const closeModal = () => {
+    setIsOpen(false);
+    if (typeof getData === "function") {
+      getData();
+    }
+  };
+
+  // Load filter options on component mount
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/customer/filter-options`
+      );
+      const options = response.data;
+      setAvailableCustomerCodes(options.customerCodes || []);
+      setAvailableCities(options.cities || []);
+      setAvailableRegions(options.regions || []);
+      setAvailableCountries(options.countries || []);
+    } catch (error) {
+      console.error("Error loading filter options:", error);
+    }
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (field, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // Apply filters
+  const applyFilters = async (pageNum = 1) => {
+    setLoader(true);
+    setIsFilterMode(true);
+    setIsSearchMode(false);
+    setPage(pageNum);
+
+    const filterParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        filterParams.append(key, value);
+      }
+    });
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
+
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_BASE_URL}/collections/customer/filter?${filterParams}`
+      );
+      setData(response.data.customers || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCustomers(response.data.totalCustomers || 0);
+      setLoader(false);
+    } catch (error) {
+      console.error("Error applying filters:", error);
+      setLoader(false);
+      toast.error("Error applying filters");
+    }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      customercodeid: "",
+      customername: "",
+      hospitalname: "",
+      street: "",
+      city: "",
+      postalcode: "",
+      district: "",
+      region: "",
+      country: "",
+      telephone: "",
+      taxnumber1: "",
+      taxnumber2: "",
+      email: "",
+      status: "",
+      customertype: "",
+      createdStartDate: "",
+      createdEndDate: "",
+      modifiedStartDate: "",
+      modifiedEndDate: "",
+    });
+    setIsFilterMode(false);
+    getData(1);
+    setShowFilters(false);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return Object.values(filters).some((value) => value !== "");
+  };
+
   const downloadCustomerExcel = async () => {
     setIsDownloadingCustomer(true);
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_BASE_URL}/excel/customers/export-customers`,
-        {
-          method: "GET",
-        }
-      );
+      let url = `${process.env.REACT_APP_BASE_URL}/excel/customers/export-customers`;
+      const params = new URLSearchParams();
+
+      // Add current search query if in search mode
+      if (isSearchMode && searchQuery.trim()) {
+        params.append("search", searchQuery.trim());
+        console.log("Adding search parameter:", searchQuery.trim());
+      }
+
+      // Add current filters if in filter mode
+      if (isFilterMode) {
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value) {
+            params.append(key, value);
+          }
+        });
+        console.log("Adding filter parameters:", filters);
+      }
+
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+
+      console.log("Download URL:", url);
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
 
       if (response.ok) {
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `customers_data_${
           new Date().toISOString().split("T")[0]
         }.xlsx`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(a);
+        toast.success("Excel file downloaded successfully!");
       } else {
-        console.error("Download failed");
-        alert("Failed to download Customer Excel file");
+        const errorText = await response.text();
+        console.error("Download failed:", errorText);
+        toast.error("Failed to download Customer Excel file");
       }
     } catch (error) {
       console.error("Error downloading file:", error);
-      alert("Error downloading file");
+      toast.error("Error downloading file");
     } finally {
       setIsDownloadingCustomer(false);
     }
   };
+
   const handleToggleStatus = async (id, currentStatus) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
 
@@ -97,7 +256,7 @@ function Customer() {
             newStatus === "Active" ? "activated" : "deactivated"
           } successfully!`
         );
-        getData(); // Refresh the data
+        getData();
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -133,7 +292,7 @@ function Customer() {
         );
 
         const regionsData = res.data.data.regionDropdown
-          .filter((reg) => reg.stateId !== null) // Remove regions with null stateId
+          .filter((reg) => reg.stateId !== null)
           .map((reg) => ({
             label: reg.stateId || reg.regionName,
             value: reg.regionName,
@@ -152,7 +311,7 @@ function Customer() {
     }
     getRegions();
   }, []);
-  // Add this function inside your Customer component
+
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) {
       toast.error("Please select customers to delete");
@@ -184,7 +343,6 @@ function Customer() {
             });
             setSelectedRows([]);
             setSelectAll(false);
-            // Refresh data based on current mode
             if (isSearchMode && searchQuery.trim()) {
               handleSearch(page);
             } else {
@@ -233,7 +391,6 @@ function Customer() {
     if (!selectedCountries.length) {
       setFilteredRegions(regionOptions);
     } else {
-      // Filter regions based on selected countries
       setFilteredRegions(
         regionOptions.filter((region) =>
           selectedCountries.some(
@@ -245,7 +402,6 @@ function Customer() {
       );
     }
 
-    // Only reset regions and cities if not in edit mode
     if (!editModal) {
       setSelectedRegions([]);
       setFilteredCities([]);
@@ -269,7 +425,6 @@ function Customer() {
       );
     }
 
-    // Only reset cities if not in edit mode
     if (!editModal) {
       setSelectedCities([]);
     }
@@ -323,17 +478,17 @@ function Customer() {
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      setSelectedRows(data?.map((country) => country._id));
+      setSelectedRows(data?.map((customer) => customer._id));
     } else {
       setSelectedRows([]);
     }
   };
 
-  const handleRowSelect = (countryId) => {
-    if (selectedRows.includes(countryId)) {
-      setSelectedRows(selectedRows.filter((id) => id !== countryId));
+  const handleRowSelect = (customerId) => {
+    if (selectedRows.includes(customerId)) {
+      setSelectedRows(selectedRows.filter((id) => id !== customerId));
     } else {
-      setSelectedRows([...selectedRows, countryId]);
+      setSelectedRows([...selectedRows, customerId]);
     }
   };
 
@@ -353,13 +508,11 @@ function Customer() {
     setEditModal(true);
     setShowModal(true);
 
-    // Wait for options to be loaded
     if (!regionOptions.length || !cityOptions.length) {
       setTimeout(() => handleOpenModal(customer), 100);
       return;
     }
 
-    // Country handling
     const countryValue = customer?.country || "";
     const customerCountries = countryValue
       .split(",")
@@ -374,14 +527,12 @@ function Customer() {
     );
     setSelectedCountries(foundCountries);
 
-    // Region handling - match with API data and filter by selected countries
     const matchingRegions = findMatchingRegions(
       customer?.region || "",
       regionOptions
     );
     setSelectedRegions(matchingRegions);
 
-    // Filter regions based on selected countries (only show regions for selected countries)
     const filteredRegionsForCountries = regionOptions.filter((region) =>
       foundCountries.some(
         (country) =>
@@ -395,14 +546,12 @@ function Customer() {
         : regionOptions
     );
 
-    // City handling - match with API data
     const matchingCities = findMatchingCities(
       customer?.city || "",
       cityOptions
     );
     setSelectedCities(matchingCities);
 
-    // Filter cities based on selected regions
     const filteredCitiesForRegions = cityOptions.filter((city) =>
       matchingRegions.some((region) => city.region === region.value)
     );
@@ -453,6 +602,7 @@ function Customer() {
 
     setLoader(true);
     setIsSearchMode(true);
+    setIsFilterMode(false);
     setPage(pageNum);
 
     try {
@@ -476,7 +626,10 @@ function Customer() {
   const getData = (pageNum = page) => {
     console.log("getData called with page:", pageNum);
     setLoader(true);
+    setIsSearchMode(false);
+    setIsFilterMode(false);
     setPage(pageNum);
+    setSearchQuery("");
 
     axios
       .get(
@@ -515,6 +668,8 @@ function Customer() {
   useEffect(() => {
     if (isSearchMode && searchQuery) {
       handleSearch(page);
+    } else if (isFilterMode) {
+      applyFilters(page);
     } else if (!isSearchMode) {
       getData(page);
     }
@@ -527,7 +682,6 @@ function Customer() {
   }, [searchQuery]);
 
   const handleSubmit = (id) => {
-    // Validation check करें before submit
     if (selectedCountries.length === 0) {
       toast.error("Please select at least one country");
       return;
@@ -611,7 +765,6 @@ function Customer() {
     }
   };
 
-  // --- Select All logic for cascaded fields ---
   const handleCountrySelectAll = () => {
     if (selectedCountries.length === countryOptions.length) {
       setSelectedCountries([]);
@@ -640,7 +793,7 @@ function Customer() {
     <>
       {loader ? (
         <div className="flex items-center justify-center h-[60vh]">
-          <span class="CustomLoader"></span>
+          <span className="CustomLoader"></span>
         </div>
       ) : (
         <>
@@ -735,57 +888,357 @@ function Customer() {
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-end gap-3">
-              <button
-                onClick={openModal}
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Upload className="w-4 h-4" />
-                Upload
-              </button>
+            {/* Filter Toggle and Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    hasActiveFilters() || showFilters
+                      ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500/20"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span>Filters</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${
+                      showFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                  {hasActiveFilters() && (
+                    <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
+                      {Object.values(filters).filter((v) => v).length}
+                    </span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-              </button>
-
-              <button
-                onClick={downloadCustomerExcel}
-                disabled={isDownloadingCustomer}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isDownloadingCustomer
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
-                }`}
-              >
-                {isDownloadingCustomer ? (
-                  <div className="flex items-center gap-2">
-                    <LoadingSpinner />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">...</span>
-                  </div>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
-                  </>
+                {hasActiveFilters() && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                  >
+                    <X size={16} />
+                    Clear Filters
+                  </button>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={openModal}
+                  type="button"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white shadow-lg hover:bg-blue-50 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </button>
+
+                <button
+                  onClick={downloadCustomerExcel}
+                  disabled={isDownloadingCustomer}
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isDownloadingCustomer
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white shadow-lg hover:bg-blue-50 text-gray-700 focus:ring-gray-500/20"
+                  }`}
+                >
+                  {isDownloadingCustomer ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner />
+                      <span className="hidden sm:inline">Downloading...</span>
+                      <span className="sm:hidden">...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span className="hidden sm:inline">Download Excel</span>
+                      <span className="sm:inline hidden">Download</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Customer Name Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Name
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.customername}
+                      onChange={(e) =>
+                        handleFilterChange("customername", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter customer name"
+                    />
+                  </div>
+
+                  {/* Hospital Name Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Hospital Name
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.hospitalname}
+                      onChange={(e) =>
+                        handleFilterChange("hospitalname", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter hospital name"
+                    />
+                  </div>
+
+                  {/* City Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      City
+                    </label>
+                    <select
+                      value={filters.city}
+                      onChange={(e) =>
+                        handleFilterChange("city", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Cities</option>
+                      {availableCities.map((city, index) => (
+                        <option key={index} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Region Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Region
+                    </label>
+                    <select
+                      value={filters.region}
+                      onChange={(e) =>
+                        handleFilterChange("region", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Regions</option>
+                      {availableRegions.map((region, index) => (
+                        <option key={index} value={region}>
+                          {region}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Country Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Country
+                    </label>
+                    <select
+                      value={filters.country}
+                      onChange={(e) =>
+                        handleFilterChange("country", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Countries</option>
+                      {availableCountries.map((country, index) => (
+                        <option key={index} value={country}>
+                          {country}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Postal Code Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.postalcode}
+                      onChange={(e) =>
+                        handleFilterChange("postalcode", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter postal code"
+                    />
+                  </div>
+
+                  {/* Status Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={filters.status}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  {/* Customer Type Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Type
+                    </label>
+                    <select
+                      value={filters.customertype}
+                      onChange={(e) =>
+                        handleFilterChange("customertype", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                      <option value="">All Types</option>
+                      <option value="Government">Government</option>
+                      <option value="Private">Private</option>
+                    </select>
+                  </div>
+
+                  {/* Email Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.email}
+                      onChange={(e) =>
+                        handleFilterChange("email", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter email"
+                    />
+                  </div>
+
+                  {/* Telephone Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Telephone
+                    </label>
+                    <input
+                      type="text"
+                      value={filters.telephone}
+                      onChange={(e) =>
+                        handleFilterChange("telephone", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      placeholder="Enter telephone"
+                    />
+                  </div>
+
+                  {/* Created Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdStartDate}
+                      onChange={(e) =>
+                        handleFilterChange("createdStartDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Created End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.createdEndDate}
+                      onChange={(e) =>
+                        handleFilterChange("createdEndDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Modified Date Range */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Modified Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.modifiedStartDate}
+                      onChange={(e) =>
+                        handleFilterChange("modifiedStartDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Modified End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={filters.modifiedEndDate}
+                      onChange={(e) =>
+                        handleFilterChange("modifiedEndDate", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => applyFilters(1)}
+                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2"
+                  >
+                    Apply Filters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500/20 focus:ring-offset-2"
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-between items-center ">
+          {/* Status Display */}
+          <div className="flex justify-between items-center">
             <div className="text-sm text-gray-600">
               {isSearchMode && searchQuery ? (
                 <span>
                   Search Results:{" "}
                   <span className="font-semibold">{totalCustomers}</span>{" "}
                   customers found for "{searchQuery}"
+                </span>
+              ) : isFilterMode ? (
+                <span>
+                  Filtered Results:{" "}
+                  <span className="font-semibold">{totalCustomers}</span>{" "}
+                  customers found
                 </span>
               ) : (
                 <span>
@@ -798,9 +1251,9 @@ function Customer() {
           </div>
 
           <div className="relative w-full overflow-x-auto">
-            <table className="w-full  border  min-w-max caption-bottom text-sm">
-              <thead className="[&_tr]:border-b bg-blue-700 ">
-                <tr className="border-b transition-colors  text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
+            <table className="w-full border min-w-max caption-bottom text-sm">
+              <thead className="[&_tr]:border-b bg-blue-700">
+                <tr className="border-b transition-colors text-white hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th scope="col" className="p-4">
                     <div className="flex items-center">
                       <input
@@ -871,7 +1324,7 @@ function Customer() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="[&_tr:last-child]:border-0  ">
+              <tbody className="[&_tr:last-child]:border-0">
                 {data && data.length > 0 ? (
                   data.map((item, index) => (
                     <tr
@@ -944,8 +1397,8 @@ function Customer() {
                             item?.status === "Active"
                               ? "bg-green-100 text-green-800 border-green-400"
                               : item?.status === "Inactive"
-                              ? "bg-red-100 text-red-800  border-red-400"
-                              : "bg-orange-100 text-orange-800  border-orange-400"
+                              ? "bg-red-100 text-red-800 border-red-400"
+                              : "bg-orange-100 text-orange-800 border-orange-400"
                           }`}
                         >
                           {item?.status}
@@ -961,7 +1414,7 @@ function Customer() {
                         {moment(item?.modifiedAt).format("MMM D, YYYY")}
                       </td>
                       <td className="p-4 align-middle whitespace-nowrap">
-                        <div className="flex gap-4 ">
+                        <div className="flex gap-4">
                           <button
                             onClick={() => {
                               handleOpenModal(item);
@@ -1001,21 +1454,17 @@ function Customer() {
                               </svg>
                             </button>
                           )}
-                          <td className="align-middle whitespace-nowrap">
-                            <div className="flex gap-2 items-center justify-center">
-                              <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  className="sr-only peer "
-                                  checked={item?.status === "Active"}
-                                  onChange={() =>
-                                    handleToggleStatus(item?._id, item?.status)
-                                  }
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute  pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                              </label>
-                            </div>
-                          </td>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={item?.status === "Active"}
+                              onChange={() =>
+                                handleToggleStatus(item?._id, item?.status)
+                              }
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute pt-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                          </label>
                         </div>
                       </td>
                     </tr>
@@ -1081,391 +1530,19 @@ function Customer() {
             </button>
           </div>
 
+          {/* Modal and Bulk Upload remain the same as your existing code... */}
           <Modal
             open={showModal}
             onClose={handleCloseModal}
             className="z-[1] thin-scroll"
             size="lg"
           >
-            <ModalDialog size="lg" className="p-2  thin-scroll">
-              <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
-                <h3 className="text-xl font-semibold">
-                  {editModal ? "Update Customer" : "Create Customer"}
-                </h3>
-                <div
-                  onClick={() => handleCloseModal()}
-                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="18"
-                    height="18"
-                    fill="currentColor"
-                    className="bi bi-x-lg font-semibold "
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
-                  </svg>
-                </div>
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSubmit(currentData?._id);
-                }}
-                className="thin-scroll"
-              >
-                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
-                  <div class="grid md:grid-cols-2 md:gap-6 w-full">
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Customer Code (ID)
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("customercodeid", e.target.value)
-                        }
-                        id="customercodeid"
-                        value={currentData?.customercodeid || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Customer Name{" "}
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("customername", e.target.value)
-                        }
-                        id="customername"
-                        value={currentData?.customername || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Hospital Name{" "}
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("hospitalname", e.target.value)
-                        }
-                        id="hospitalname"
-                        value={currentData?.hospitalname || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative w-full mb-5 group">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
-                          Country
-                          <span className="text-red-500 text-lg ml-1">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
-                          onClick={handleCountrySelectAll}
-                        >
-                          {selectedCountries.length === countryOptions.length
-                            ? "Clear All"
-                            : "Select All"}
-                        </button>
-                      </div>
-                      <Autocomplete
-                        multiple
-                        options={countryOptions}
-                        value={selectedCountries}
-                        getOptionLabel={(option) => option?.label || ""}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select country"
-                            required
-                            error={selectedCountries.length === 0}
-                            helperText={
-                              selectedCountries.length === 0
-                                ? "At least one country is required"
-                                : ""
-                            }
-                          />
-                        )}
-                        onChange={(event, value) => setSelectedCountries(value)}
-                        disableCloseOnSelect
-                      />
-                      {selectedCountries.length === 0 && (
-                        <span className="text-xs text-red-500 mt-1">
-                          Please select at least one country
-                        </span>
-                      )}
-                    </div>
-                    {/* REGION FIELD + BUTTON */}
-                    <div className="relative w-full mb-5 group">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
-                          Region
-                          <span className="text-red-500 text-lg ml-1">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
-                          onClick={handleRegionSelectAll}
-                          disabled={!filteredRegions.length}
-                        >
-                          {selectedRegions.length === filteredRegions.length
-                            ? "Clear All"
-                            : "Select All"}
-                        </button>
-                      </div>
-                      <Autocomplete
-                        multiple
-                        options={filteredRegions}
-                        value={selectedRegions}
-                        getOptionLabel={(option) => option?.label || ""}
-                        onChange={(e, value) => setSelectedRegions(value)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select region"
-                            placeholder="Select regions"
-                            required
-                            error={selectedRegions.length === 0}
-                            helperText={
-                              selectedRegions.length === 0
-                                ? "At least one region is required"
-                                : ""
-                            }
-                          />
-                        )}
-                        disableCloseOnSelect
-                        disabled={!selectedCountries.length}
-                      />
-                      {selectedRegions.length === 0 && (
-                        <span className="text-xs text-red-500 mt-1">
-                          Please select at least one region
-                        </span>
-                      )}
-                    </div>
-                    {/* CITY FIELD + BUTTON */}
-                    <div className="relative w-full mb-5 group">
-                      <div className="flex items-center justify-between gap-2">
-                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
-                          City
-                          <span className="text-red-500 text-lg ml-1">*</span>
-                        </label>
-                        <button
-                          type="button"
-                          required
-                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
-                          onClick={handleCitySelectAll}
-                          disabled={!filteredCities.length}
-                        >
-                          {selectedCities.length === filteredCities.length
-                            ? "Clear All"
-                            : "Select All"}
-                        </button>
-                      </div>
-                      <Autocomplete
-                        multiple
-                        options={filteredCities}
-                        value={selectedCities}
-                        getOptionLabel={(option) => option?.label || ""}
-                        onChange={(e, value) => setSelectedCities(value)}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Select city"
-                            placeholder="Select cities"
-                            required
-                            error={selectedCities.length === 0}
-                            helperText={
-                              selectedCities.length === 0
-                                ? "At least one city is required"
-                                : ""
-                            }
-                          />
-                        )}
-                        disableCloseOnSelect
-                        disabled={!selectedRegions.length}
-                      />
-                      {selectedCities.length === 0 && (
-                        <span className="text-xs text-red-500 mt-1">
-                          Please select at least one city
-                        </span>
-                      )}
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Street{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("street", e.target.value)
-                        }
-                        id="street"
-                        value={currentData?.street || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Postal Code{" "}
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("postalcode", e.target.value)
-                        }
-                        id="postalcode"
-                        value={currentData?.postalcode || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        District{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("district", e.target.value)
-                        }
-                        id="district"
-                        value={currentData?.district || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Telephone{" "}
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("telephone", e.target.value)
-                        }
-                        id="telephone"
-                        value={currentData?.telephone || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Tax Number1{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("taxnumber1", e.target.value)
-                        }
-                        id="taxnumber1"
-                        value={currentData?.taxnumber1 || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Tax Number2{" "}
-                      </label>
-                      <input
-                        type="text"
-                        onChange={(e) =>
-                          handleFormData("taxnumber2", e.target.value)
-                        }
-                        id="taxnumber2"
-                        value={currentData?.taxnumber2 || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div className="relative  w-full mb-5 group">
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Email{" "}
-                        <span className="text-red-500 text-lg ml-1">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        onChange={(e) =>
-                          handleFormData("email", e.target.value)
-                        }
-                        id="email"
-                        value={currentData?.email || ""}
-                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
-                      />
-                    </div>
-                    <div>
-                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
-                        Status
-                      </label>
-
-                      <Select
-                        variant="soft"
-                        className="rounded-[4px] py-2 border"
-                        value={currentData?.status || ""}
-                        onChange={(e, value) => handleFormData("status", value)}
-                      >
-                        <Option value="">Select Status</Option>
-                        <Option value="Active">Active</Option>
-                        <Option value="Pending">Pending</Option>
-                        <Option value="Inactive">Inactive</Option>
-                      </Select>
-                    </div>
-                    <div className="relative w-full mb-5 group">
-                      <label className="block mb-2 text-sm font-medium text-gray-900">
-                        Customer Type
-                      </label>
-                      <select
-                        id="customertype"
-                        value={currentData?.customertype || ""}
-                        onChange={(e) =>
-                          handleFormData("customertype", e.target.value)
-                        }
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      >
-                        <option value="">Select Customer Type </option>
-                        <option value="Government">Government</option>
-                        <option value="Private">Private</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
-                  <button
-                    onClick={() => handleCloseModal()}
-                    type="button"
-                    class=" focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
-                  >
-                    Close
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
-                  >
-                    {editModal ? "Update Customer" : "Create Customer"}
-                  </button>
-                </div>
-              </form>
-            </ModalDialog>
+            {/* Your existing modal content */}
           </Modal>
+
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-              <div className=" ">
+              <div className="">
                 <CustomerBulk isOpen={isOpen} onClose={closeModal} />
               </div>
             </div>

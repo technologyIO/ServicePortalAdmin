@@ -92,6 +92,9 @@ import EquipmentBulk from './Components/DataComponents/Master_Managemnet/Equipme
 import AdminAccess from './Components/DataComponents/Role/Admin/AdminAccess';
 import ProblemType from './Components/DataComponents/Admin/ProblemType';
 import ProblemName from './Components/DataComponents/Admin/ProblemName';
+import OnCallAssign from './Components/DataComponents/InactiveOpportunity/OnCallAssign';
+import CMCNCMCAssign from './Components/DataComponents/InactiveOpportunity/CMCNCMCAssign';
+import PreventiveMaintenanceAssign from './Components/DataComponents/InactiveOpportunity/PreventiveMaintenanceAssign';
 
 
 const PrivateRoute = ({ children }) => {
@@ -221,6 +224,21 @@ const AppContent = () => {
             <Route path="/problem-name" element={<ProtectedRoute
               component={ProblemName}
               componentName="Problem Name"
+              requiredPermission="read"
+            />} />
+            <Route path="/oncall-assign" element={<ProtectedRoute
+              component={OnCallAssign}
+              componentName="OnCall Assign"
+              requiredPermission="read"
+            />} />
+            <Route path="/cmc-ncmc-assign" element={<ProtectedRoute
+              component={CMCNCMCAssign}
+              componentName="CMC/NCMC Assign"
+              requiredPermission="read"
+            />} />
+            <Route path="/pm-assign" element={<ProtectedRoute
+              component={PreventiveMaintenanceAssign}
+              componentName="Preventive Maintenance Assign"
               requiredPermission="read"
             />} />
             <Route path="/replaced-part-code" element={<ProtectedRoute
