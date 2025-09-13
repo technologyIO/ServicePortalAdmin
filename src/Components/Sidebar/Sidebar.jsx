@@ -295,7 +295,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       items: [
         { component: "OnCall Assign", path: "/oncall-assign" },
         { component: "CMC/NCMC Assign", path: "/cmc-ncmc-assign" },
-        { component: "Preventive Maintenance Assign", path: "/pm-assign" },
+        // { component: "Preventive Maintenance Assign", path: "/pm-assign" },
       ],
     },
     {
@@ -563,7 +563,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm  lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}

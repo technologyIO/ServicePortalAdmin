@@ -866,6 +866,9 @@ const UserData = () => {
                   <th className="px-4 text-left font-medium">Skills</th>
                   <th className="px-4 text-left font-medium">Status</th>
                   <th className="px-4 text-left font-medium">Device ID</th>
+                  <th className="px-4 text-left font-medium">
+                    Login Expiry Date
+                  </th>
                   <th className="px-4 text-left font-medium">Action</th>
                 </tr>
               </thead>
@@ -947,6 +950,11 @@ const UserData = () => {
                             No Mobile App Access
                           </span>
                         )}
+                      </td>
+                      <td className="p-4">
+                        {item?.loginexpirydate
+                          ? moment(item.loginexpirydate).format("DD MMMM YYYY")
+                          : "-"}
                       </td>
                       <td className="p-4">
                         <div className="flex gap-4">
