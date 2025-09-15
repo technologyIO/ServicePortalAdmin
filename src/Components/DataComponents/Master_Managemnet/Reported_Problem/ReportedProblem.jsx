@@ -2,7 +2,15 @@ import React, { useEffect, useState } from "react";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
 import SearchIcon from "@mui/icons-material/Search";
-import { Download, Filter, Plus, RefreshCw, Upload, X, ChevronDown } from "lucide-react";
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import { Modal, ModalDialog, Option, Select } from "@mui/joy";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -30,21 +38,22 @@ function ReportedProblem() {
   const [isSpinning, setisSpinning] = useState(false);
   const [cityList, setCityList] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
-  const [isDownloadingReportedProblem, setIsDownloadingReportedProblem] = useState(false);
+  const [isDownloadingReportedProblem, setIsDownloadingReportedProblem] =
+    useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
-    catalog: '',
-    codegroup: '',
-    prodgroup: '',
-    name: '',
-    shorttextforcode: '',
-    status: '',
-    createdStartDate: '',
-    createdEndDate: '',
-    modifiedStartDate: '',
-    modifiedEndDate: ''
+    catalog: "",
+    codegroup: "",
+    prodgroup: "",
+    name: "",
+    shorttextforcode: "",
+    status: "",
+    createdStartDate: "",
+    createdEndDate: "",
+    modifiedStartDate: "",
+    modifiedEndDate: "",
   });
   const [isFilterMode, setIsFilterMode] = useState(false);
 
@@ -80,9 +89,9 @@ function ReportedProblem() {
 
   // Handle filter changes
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -92,15 +101,15 @@ function ReportedProblem() {
     setIsFilterMode(true);
     setIsSearchMode(false);
     setPage(pageNum);
-    
+
     const filterParams = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value) {
         filterParams.append(key, value);
       }
     });
-    filterParams.append('page', pageNum);
-    filterParams.append('limit', limit);
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
 
     try {
       const response = await axios.get(
@@ -120,16 +129,16 @@ function ReportedProblem() {
   // Clear filters
   const clearFilters = () => {
     setFilters({
-      catalog: '',
-      codegroup: '',
-      prodgroup: '',
-      name: '',
-      shorttextforcode: '',
-      status: '',
-      createdStartDate: '',
-      createdEndDate: '',
-      modifiedStartDate: '',
-      modifiedEndDate: ''
+      catalog: "",
+      codegroup: "",
+      prodgroup: "",
+      name: "",
+      shorttextforcode: "",
+      status: "",
+      createdStartDate: "",
+      createdEndDate: "",
+      modifiedStartDate: "",
+      modifiedEndDate: "",
     });
     setIsFilterMode(false);
     getData(1);
@@ -138,7 +147,7 @@ function ReportedProblem() {
 
   // Check if any filter is active
   const hasActiveFilters = () => {
-    return Object.values(filters).some(value => value !== '');
+    return Object.values(filters).some((value) => value !== "");
   };
 
   const downloadReportedProblemExcel = async () => {
@@ -146,13 +155,13 @@ function ReportedProblem() {
     try {
       let url = `${process.env.REACT_APP_BASE_URL}/excel/reportedproblems/export-reportedproblems`;
       const params = new URLSearchParams();
-      
+
       // Add current search query if in search mode
       if (isSearchMode && searchQuery.trim()) {
-        params.append('search', searchQuery.trim());
-        console.log('Adding search parameter:', searchQuery.trim());
+        params.append("search", searchQuery.trim());
+        console.log("Adding search parameter:", searchQuery.trim());
       }
-      
+
       // Add current filters if in filter mode
       if (isFilterMode) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -160,14 +169,14 @@ function ReportedProblem() {
             params.append(key, value);
           }
         });
-        console.log('Adding filter parameters:', filters);
+        console.log("Adding filter parameters:", filters);
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-      
-      console.log('Download URL:', url);
+
+      console.log("Download URL:", url);
 
       const response = await fetch(url, {
         method: "GET",
@@ -178,7 +187,9 @@ function ReportedProblem() {
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `reported_problems_data_${new Date().toISOString().split("T")[0]}.xlsx`;
+        a.download = `reported_problems_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(downloadUrl);
@@ -334,7 +345,11 @@ function ReportedProblem() {
             `${process.env.REACT_APP_BASE_URL}/collections/reportedproblem/${id}`
           )
           .then((res) => {
-            Swal.fire("Deleted!", "Reported problem has been deleted.", "success");
+            Swal.fire(
+              "Deleted!",
+              "Reported problem has been deleted.",
+              "success"
+            );
           })
           .then((res) => {
             getData();
@@ -600,11 +615,11 @@ function ReportedProblem() {
                   />
                   {hasActiveFilters() && (
                     <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
-                      {Object.values(filters).filter(v => v).length}
+                      {Object.values(filters).filter((v) => v).length}
                     </span>
                   )}
                 </button>
-                
+
                 {hasActiveFilters() && (
                   <button
                     type="button"
@@ -664,7 +679,9 @@ function ReportedProblem() {
                     </label>
                     <select
                       value={filters.catalog}
-                      onChange={(e) => handleFilterChange('catalog', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("catalog", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Catalogs</option>
@@ -683,7 +700,9 @@ function ReportedProblem() {
                     </label>
                     <select
                       value={filters.codegroup}
-                      onChange={(e) => handleFilterChange('codegroup', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("codegroup", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Code Groups</option>
@@ -702,7 +721,9 @@ function ReportedProblem() {
                     </label>
                     <select
                       value={filters.prodgroup}
-                      onChange={(e) => handleFilterChange('prodgroup', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("prodgroup", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Product Groups</option>
@@ -722,7 +743,9 @@ function ReportedProblem() {
                     <input
                       type="text"
                       value={filters.name}
-                      onChange={(e) => handleFilterChange('name', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("name", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Enter name"
                     />
@@ -736,7 +759,9 @@ function ReportedProblem() {
                     <input
                       type="text"
                       value={filters.shorttextforcode}
-                      onChange={(e) => handleFilterChange('shorttextforcode', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("shorttextforcode", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Enter short text"
                     />
@@ -749,7 +774,9 @@ function ReportedProblem() {
                     </label>
                     <select
                       value={filters.status}
-                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Status</option>
@@ -767,7 +794,9 @@ function ReportedProblem() {
                     <input
                       type="date"
                       value={filters.createdStartDate}
-                      onChange={(e) => handleFilterChange('createdStartDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("createdStartDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -779,7 +808,9 @@ function ReportedProblem() {
                     <input
                       type="date"
                       value={filters.createdEndDate}
-                      onChange={(e) => handleFilterChange('createdEndDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("createdEndDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -792,7 +823,9 @@ function ReportedProblem() {
                     <input
                       type="date"
                       value={filters.modifiedStartDate}
-                      onChange={(e) => handleFilterChange('modifiedStartDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("modifiedStartDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -804,7 +837,9 @@ function ReportedProblem() {
                     <input
                       type="date"
                       value={filters.modifiedEndDate}
-                      onChange={(e) => handleFilterChange('modifiedEndDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("modifiedEndDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>

@@ -10,7 +10,15 @@ import BulkModal from "../../BulkUpload.jsx/BulkModal";
 import SpareMasterBulk from "./SpareMasterBulk";
 import LoadingSpinner from "../../../../LoadingSpinner";
 import toast from "react-hot-toast";
-import { Download, Filter, Plus, RefreshCw, Upload, X, ChevronDown } from "lucide-react";
+import {
+  Download,
+  Filter,
+  Plus,
+  RefreshCw,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 
 function Spare() {
   const [showModal, setShowModal] = useState(false);
@@ -31,24 +39,25 @@ function Spare() {
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
   const [isSpinning, setisSpinning] = useState(false);
-  const [isDownloadingSpareMaster, setIsDownloadingSpareMaster] = useState(false);
+  const [isDownloadingSpareMaster, setIsDownloadingSpareMaster] =
+    useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
-    status: '',
-    subGroup: '',
-    type: '',
-    rateMin: '',
-    rateMax: '',
-    dpMin: '',
-    dpMax: '',
-    chargesMin: '',
-    chargesMax: '',
-    createdStartDate: '',
-    createdEndDate: '',
-    modifiedStartDate: '',
-    modifiedEndDate: ''
+    status: "",
+    subGroup: "",
+    type: "",
+    rateMin: "",
+    rateMax: "",
+    dpMin: "",
+    dpMax: "",
+    chargesMin: "",
+    chargesMax: "",
+    createdStartDate: "",
+    createdEndDate: "",
+    modifiedStartDate: "",
+    modifiedEndDate: "",
   });
   const [isFilterMode, setIsFilterMode] = useState(false);
 
@@ -76,9 +85,9 @@ function Spare() {
 
   // Handle filter changes
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -88,15 +97,15 @@ function Spare() {
     setIsFilterMode(true);
     setIsSearchMode(false);
     setPage(pageNum);
-    
+
     const filterParams = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value) {
         filterParams.append(key, value);
       }
     });
-    filterParams.append('page', pageNum);
-    filterParams.append('limit', limit);
+    filterParams.append("page", pageNum);
+    filterParams.append("limit", limit);
 
     try {
       const response = await axios.get(
@@ -116,19 +125,19 @@ function Spare() {
   // Clear filters
   const clearFilters = () => {
     setFilters({
-      status: '',
-      subGroup: '',
-      type: '',
-      rateMin: '',
-      rateMax: '',
-      dpMin: '',
-      dpMax: '',
-      chargesMin: '',
-      chargesMax: '',
-      createdStartDate: '',
-      createdEndDate: '',
-      modifiedStartDate: '',
-      modifiedEndDate: ''
+      status: "",
+      subGroup: "",
+      type: "",
+      rateMin: "",
+      rateMax: "",
+      dpMin: "",
+      dpMax: "",
+      chargesMin: "",
+      chargesMax: "",
+      createdStartDate: "",
+      createdEndDate: "",
+      modifiedStartDate: "",
+      modifiedEndDate: "",
     });
     setIsFilterMode(false);
     getData(1);
@@ -137,7 +146,7 @@ function Spare() {
 
   // Check if any filter is active
   const hasActiveFilters = () => {
-    return Object.values(filters).some(value => value !== '');
+    return Object.values(filters).some((value) => value !== "");
   };
 
   const downloadSpareMasterExcel = async () => {
@@ -145,13 +154,13 @@ function Spare() {
     try {
       let url = `${process.env.REACT_APP_BASE_URL}/excel/sparemaster/export-sparemaster`;
       const params = new URLSearchParams();
-      
+
       // Add current search query if in search mode
       if (isSearchMode && searchQuery.trim()) {
-        params.append('search', searchQuery.trim());
-        console.log('Adding search parameter:', searchQuery.trim());
+        params.append("search", searchQuery.trim());
+        console.log("Adding search parameter:", searchQuery.trim());
       }
-      
+
       // Add current filters if in filter mode
       if (isFilterMode) {
         Object.entries(filters).forEach(([key, value]) => {
@@ -159,14 +168,14 @@ function Spare() {
             params.append(key, value);
           }
         });
-        console.log('Adding filter parameters:', filters);
+        console.log("Adding filter parameters:", filters);
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-      
-      console.log('Download URL:', url);
+
+      console.log("Download URL:", url);
 
       const response = await fetch(url, {
         method: "GET",
@@ -177,7 +186,9 @@ function Spare() {
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = downloadUrl;
-        a.download = `spare_master_data_${new Date().toISOString().split("T")[0]}.xlsx`;
+        a.download = `spare_master_data_${
+          new Date().toISOString().split("T")[0]
+        }.xlsx`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(downloadUrl);
@@ -599,11 +610,11 @@ function Spare() {
                   />
                   {hasActiveFilters() && (
                     <span className="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-xs">
-                      {Object.values(filters).filter(v => v).length}
+                      {Object.values(filters).filter((v) => v).length}
                     </span>
                   )}
                 </button>
-                
+
                 {hasActiveFilters() && (
                   <button
                     type="button"
@@ -663,7 +674,9 @@ function Spare() {
                     </label>
                     <select
                       value={filters.status}
-                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("status", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Status</option>
@@ -679,7 +692,9 @@ function Spare() {
                     </label>
                     <select
                       value={filters.subGroup}
-                      onChange={(e) => handleFilterChange('subGroup', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("subGroup", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Sub Groups</option>
@@ -698,7 +713,9 @@ function Spare() {
                     </label>
                     <select
                       value={filters.type}
-                      onChange={(e) => handleFilterChange('type', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("type", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">All Types</option>
@@ -718,7 +735,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.rateMin}
-                      onChange={(e) => handleFilterChange('rateMin', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("rateMin", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Min Rate"
                     />
@@ -731,7 +750,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.rateMax}
-                      onChange={(e) => handleFilterChange('rateMax', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("rateMax", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Max Rate"
                     />
@@ -745,7 +766,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.dpMin}
-                      onChange={(e) => handleFilterChange('dpMin', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("dpMin", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Min DP"
                     />
@@ -758,7 +781,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.dpMax}
-                      onChange={(e) => handleFilterChange('dpMax', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("dpMax", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Max DP"
                     />
@@ -772,7 +797,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.chargesMin}
-                      onChange={(e) => handleFilterChange('chargesMin', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("chargesMin", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Min Charges"
                     />
@@ -785,7 +812,9 @@ function Spare() {
                     <input
                       type="number"
                       value={filters.chargesMax}
-                      onChange={(e) => handleFilterChange('chargesMax', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("chargesMax", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       placeholder="Max Charges"
                     />
@@ -799,7 +828,9 @@ function Spare() {
                     <input
                       type="date"
                       value={filters.createdStartDate}
-                      onChange={(e) => handleFilterChange('createdStartDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("createdStartDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -811,7 +842,9 @@ function Spare() {
                     <input
                       type="date"
                       value={filters.createdEndDate}
-                      onChange={(e) => handleFilterChange('createdEndDate', e.target.value)}
+                      onChange={(e) =>
+                        handleFilterChange("createdEndDate", e.target.value)
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     />
                   </div>
@@ -1214,6 +1247,7 @@ function Spare() {
                         className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                       />
                     </div>
+
                     <div className="relative w-full mb-5 group">
                       <label className="block mb-2 text-sm font-medium text-gray-900">
                         Status
@@ -1227,6 +1261,19 @@ function Spare() {
                         <Option value="Active">Active</Option>
                         <Option value="Inactive">Inactive</Option>
                       </Select>
+                    </div>
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Spare Image Url
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("spareiamegUrl", e.target.value)
+                        }
+                        value={currentData?.spareiamegUrl || ""}
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      />
                     </div>
                   </div>
                 </div>

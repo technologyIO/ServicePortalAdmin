@@ -1415,14 +1415,387 @@ function Customer() {
             </button>
           </div>
 
-          {/* Modal and Bulk Upload remain the same as your existing code... */}
           <Modal
             open={showModal}
             onClose={handleCloseModal}
             className="z-[1] thin-scroll"
             size="lg"
           >
-            {/* Your existing modal content */}
+            <ModalDialog size="lg" className="p-2  thin-scroll">
+              <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
+                <h3 className="text-xl font-semibold">
+                  {editModal ? "Update Customer" : "Create Customer"}
+                </h3>
+                <div
+                  onClick={() => handleCloseModal()}
+                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    fill="currentColor"
+                    className="bi bi-x-lg font-semibold "
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
+                  </svg>
+                </div>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSubmit(currentData?._id);
+                }}
+                className="thin-scroll"
+              >
+                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
+                  <div class="grid md:grid-cols-2 md:gap-6 w-full">
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Customer Code (ID)
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("customercodeid", e.target.value)
+                        }
+                        id="customercodeid"
+                        value={currentData?.customercodeid || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Customer Name{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("customername", e.target.value)
+                        }
+                        id="customername"
+                        value={currentData?.customername || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Hospital Name{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("hospitalname", e.target.value)
+                        }
+                        id="hospitalname"
+                        value={currentData?.hospitalname || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          Country
+                          <span className="text-red-500 text-lg ml-1">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleCountrySelectAll}
+                        >
+                          {selectedCountries.length === countryOptions.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        options={countryOptions}
+                        value={selectedCountries}
+                        getOptionLabel={(option) => option?.label || ""}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select country"
+                            required
+                            error={selectedCountries.length === 0}
+                            helperText={
+                              selectedCountries.length === 0
+                                ? "At least one country is required"
+                                : ""
+                            }
+                          />
+                        )}
+                        onChange={(event, value) => setSelectedCountries(value)}
+                        disableCloseOnSelect
+                      />
+                      {selectedCountries.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one country
+                        </span>
+                      )}
+                    </div>
+                    {/* REGION FIELD + BUTTON */}
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          Region
+                          <span className="text-red-500 text-lg ml-1">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleRegionSelectAll}
+                          disabled={!filteredRegions.length}
+                        >
+                          {selectedRegions.length === filteredRegions.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        options={filteredRegions}
+                        value={selectedRegions}
+                        getOptionLabel={(option) => option?.label || ""}
+                        onChange={(e, value) => setSelectedRegions(value)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select region"
+                            placeholder="Select regions"
+                            required
+                            error={selectedRegions.length === 0}
+                            helperText={
+                              selectedRegions.length === 0
+                                ? "At least one region is required"
+                                : ""
+                            }
+                          />
+                        )}
+                        disableCloseOnSelect
+                        disabled={!selectedCountries.length}
+                      />
+                      {selectedRegions.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one region
+                        </span>
+                      )}
+                    </div>
+                    {/* CITY FIELD + BUTTON */}
+                    <div className="relative w-full mb-5 group">
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="block mb-2 text-sm font-medium text-gray-900 ">
+                          City
+                          <span className="text-red-500 text-lg ml-1">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          required
+                          className="ml-2 px-3 py-1 border rounded bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs"
+                          onClick={handleCitySelectAll}
+                          disabled={!filteredCities.length}
+                        >
+                          {selectedCities.length === filteredCities.length
+                            ? "Clear All"
+                            : "Select All"}
+                        </button>
+                      </div>
+                      <Autocomplete
+                        multiple
+                        options={filteredCities}
+                        value={selectedCities}
+                        getOptionLabel={(option) => option?.label || ""}
+                        onChange={(e, value) => setSelectedCities(value)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Select city"
+                            placeholder="Select cities"
+                            required
+                            error={selectedCities.length === 0}
+                            helperText={
+                              selectedCities.length === 0
+                                ? "At least one city is required"
+                                : ""
+                            }
+                          />
+                        )}
+                        disableCloseOnSelect
+                        disabled={!selectedRegions.length}
+                      />
+                      {selectedCities.length === 0 && (
+                        <span className="text-xs text-red-500 mt-1">
+                          Please select at least one city
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Street{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("street", e.target.value)
+                        }
+                        id="street"
+                        value={currentData?.street || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Postal Code{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("postalcode", e.target.value)
+                        }
+                        id="postalcode"
+                        value={currentData?.postalcode || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        District{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("district", e.target.value)
+                        }
+                        id="district"
+                        value={currentData?.district || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Telephone{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("telephone", e.target.value)
+                        }
+                        id="telephone"
+                        value={currentData?.telephone || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Tax Number1{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("taxnumber1", e.target.value)
+                        }
+                        id="taxnumber1"
+                        value={currentData?.taxnumber1 || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Tax Number2{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("taxnumber2", e.target.value)
+                        }
+                        id="taxnumber2"
+                        value={currentData?.taxnumber2 || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Email{" "}
+                        <span className="text-red-500 text-lg ml-1">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("email", e.target.value)
+                        }
+                        id="email"
+                        value={currentData?.email || ""}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div>
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Status
+                      </label>
+
+                      <Select
+                        variant="soft"
+                        className="rounded-[4px] py-2 border"
+                        value={currentData?.status || ""}
+                        onChange={(e, value) => handleFormData("status", value)}
+                      >
+                        <Option value="">Select Status</Option>
+                        <Option value="Active">Active</Option>
+                        <Option value="Pending">Pending</Option>
+                        <Option value="Inactive">Inactive</Option>
+                      </Select>
+                    </div>
+                    <div className="relative w-full mb-5 group">
+                      <label className="block mb-2 text-sm font-medium text-gray-900">
+                        Customer Type
+                      </label>
+                      <select
+                        id="customertype"
+                        value={currentData?.customertype || ""}
+                        onChange={(e) =>
+                          handleFormData("customertype", e.target.value)
+                        }
+                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      >
+                        <option value="">Select Customer Type </option>
+                        <option value="Government">Government</option>
+                        <option value="Private">Private</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
+                  <button
+                    onClick={() => handleCloseModal()}
+                    type="button"
+                    class=" focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                  >
+                    {editModal ? "Update Customer" : "Create Customer"}
+                  </button>
+                </div>
+              </form>
+            </ModalDialog>
           </Modal>
 
           {isOpen && (

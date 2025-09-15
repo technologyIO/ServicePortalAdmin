@@ -221,6 +221,77 @@ function AerbBulk({ onClose, getData }) {
 
     setError(""); // Clear error if validation passes
   };
+  // Download function ke liye ye add karo
+  const handleDownloadErrors = (exportType = "failed") => {
+    let dataToExport = [];
+
+    // Filter data based on export type
+    switch (exportType) {
+      case "failed":
+        dataToExport = processingData.results.filter(
+          (item) => item.status === "Failed"
+        );
+        break;
+      case "all_errors":
+        dataToExport = processingData.results.filter(
+          (item) =>
+            item.status === "Failed" || (item.error && item.error.trim() !== "")
+        );
+        break;
+      case "all_results":
+        dataToExport = processingData.results;
+        break;
+      default:
+        dataToExport = processingData.results.filter(
+          (item) => item.status === "Failed"
+        );
+    }
+
+    if (dataToExport.length === 0) {
+      alert("No data available for export");
+      return;
+    }
+
+    // Prepare data for Excel
+    const excelData = dataToExport.map((item) => ({
+      "Row Number": item.row || "",
+      "Material Code": item.materialcode || "",
+      "Material Description": item.materialdescription || "",
+      Status: item.status || "",
+      Action: item.action || "",
+      Error: item.error || "",
+      Warnings: Array.isArray(item.warnings)
+        ? item.warnings.join("; ")
+        : item.warnings || "",
+      "Assigned Status": item.assignedStatus || "",
+      "Status Changed": item.statusChanged ? "Yes" : "No",
+      Changes:
+        item.changesText ||
+        (Array.isArray(item.changeDetails)
+          ? item.changeDetails.join("; ")
+          : ""),
+    }));
+
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Auto-size columns
+    const colWidths = Object.keys(excelData[0] || {}).map((key) => ({
+      wch: Math.max(key.length, 15), // Minimum width 15
+    }));
+    worksheet["!cols"] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Error Records");
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+    const filename = `aerb_errors_${exportType}_${timestamp}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(workbook, filename);
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -459,7 +530,6 @@ function AerbBulk({ onClose, getData }) {
       }));
     }
   };
- 
 
   const handleDownload = () => {
     // Create workbook and worksheet
@@ -467,7 +537,7 @@ function AerbBulk({ onClose, getData }) {
 
     // Create data with headers and empty rows
     const data = [
-      ["Material Code", "Material Description","Status"], // Headers
+      ["Material Code", "Material Description", "Status"], // Headers
       ["", ""], // Empty row 1
       ["", ""], // Empty row 2
       ["", ""], // Empty row 3
@@ -1188,31 +1258,86 @@ function AerbBulk({ onClose, getData }) {
 
               {/* Detailed Results */}
               <div className="bg-white border border-gray-200 rounded-lg">
-                <div className="p-4 border-b border-gray-200">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-800">
                     Detailed Results ({filteredResults.length} records)
                   </h3>
+                  <div>
+                    {processingData.results.some(
+                      (item) => item.status === "Failed" || item.error
+                    ) && (
+                      <div className=" ">
+                        <div className="flex justify-between items-center">
+                          <div className="flex gap-2">
+                            <div className="relative">
+                              <select
+                                id="export-type"
+                                className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:gray-red-500"
+                                onChange={(e) =>
+                                  handleDownloadErrors(e.target.value)
+                                }
+                                defaultValue=""
+                              >
+                                <option value="" disabled>
+                                  Choose Export Type
+                                </option>
+                                <option value="failed">
+                                  Failed Records Only (
+                                  {
+                                    processingData.results.filter(
+                                      (item) => item.status === "Failed"
+                                    ).length
+                                  }
+                                  )
+                                </option>
+                                <option value="all_errors">
+                                  All Records with Errors (
+                                  {
+                                    processingData.results.filter(
+                                      (item) =>
+                                        item.status === "Failed" ||
+                                        (item.error && item.error.trim() !== "")
+                                    ).length
+                                  }
+                                  )
+                                </option>
+                                <option value="all_results">
+                                  All Processing Results (
+                                  {processingData.results.length})
+                                </option>
+                              </select>
+                              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                                <Download size={16} className="text-red-600" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {/* ----------  RESULT TABS  ---------- */}
                 <div className="border-b border-gray-200 mb-4  ">
-                  <nav className="flex -mb-px">
-                    {filterTabs.map((tab) => (
-                      <button
-                        key={tab.value}
-                        onClick={() => setResultFilter(tab.value)}
-                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2
+                  <nav className="flex -mb-px ">
+                    <div className=" flex justify-between ">
+                      {filterTabs.map((tab) => (
+                        <button
+                          key={tab.value}
+                          onClick={() => setResultFilter(tab.value)}
+                          className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2
           ${
             resultFilter === tab.value
               ? "border-blue-600 text-blue-600"
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
-                      >
-                        {tab.label}
-                        <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
-                          {tab.count}
-                        </span>
-                      </button>
-                    ))}
+                        >
+                          {tab.label}
+                          <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </nav>
                 </div>
 

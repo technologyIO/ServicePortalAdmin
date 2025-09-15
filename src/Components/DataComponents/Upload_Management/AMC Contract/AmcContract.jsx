@@ -1107,7 +1107,170 @@ function AmcContract() {
               Next
             </button>
           </div>
+          <Modal
+            open={showModal}
+            onClose={handleCloseModal}
+            className="z-[1] thin-scroll"
+            size="lg"
+          >
+            <ModalDialog size="lg" className="p-2  thin-scroll">
+              <div className="flex items-start justify-between p-2 border-b px-5 border-solid border-blueGray-200 rounded-t thin-scroll">
+                <h3 className="text-xl font-semibold">
+                  {editModal ? "Update AMC Contract" : "Create AMC Contract"}
+                </h3>
+                <div
+                  onClick={() => handleCloseModal()}
+                  className=" border p-2 rounded-[4px] hover:bg-gray-200 cursor-pointer "
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    fill="currentColor"
+                    className="bi bi-x-lg font-semibold "
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
+                  </svg>
+                </div>
+              </div>
 
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCloseModal();
+                }}
+                className="thin-scroll"
+              >
+                <div className=" w-[300px] md:w-[500px] lg:w-[700px] border-b border-solid border-blueGray-200 p-3 flex-auto max-h-[380px] overflow-y-auto">
+                  <div class="grid md:grid-cols-2 md:gap-6 w-full">
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Sales Doc
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        onChange={(e) =>
+                          handleFormData("salesdoc", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.salesdoc}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Start Date{" "}
+                      </label>
+                      <input
+                        type="date"
+                        onChange={(e) =>
+                          handleFormData("startdate", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.startdate?.split("T")[0]}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        End Date{" "}
+                      </label>
+                      <input
+                        type="date"
+                        onChange={(e) =>
+                          handleFormData("enddate", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.enddate?.split("T")[0]}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Sa type{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("satypeZDRC_ZDRN", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.satypeZDRC_ZDRN}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2  text-sm font-medium text-gray-900 ">
+                        Serial Number{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("serialnumber", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.serialnumber}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div className="relative  w-full mb-5 group">
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Material Code{" "}
+                      </label>
+                      <input
+                        type="text"
+                        onChange={(e) =>
+                          handleFormData("materialcode", e.target.value)
+                        }
+                        id="name"
+                        value={currentData?.materialcode}
+                        class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-[4px] focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5      "
+                      />
+                    </div>
+                    <div>
+                      <label class="block mb-2 text-sm font-medium text-gray-900 ">
+                        Status
+                      </label>
+
+                      <Select
+                        variant="soft"
+                        className="rounded-[4px] py-2 border"
+                        defaultValue={currentData?.status || ""}
+                        onChange={(e, value) => handleFormData("status", value)}
+                      >
+                        <Option value="">Select Status</Option>
+                        <Option value="Active">Active</Option>
+                        <Option value="Pending">Pending</Option>
+                        <Option value="Inactive">Inactive</Option>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 justify-end mt-3 rounded-b">
+                  <button
+                    onClick={() => handleCloseModal()}
+                    type="button"
+                    class=" focus:outline-none border h-8  shadow text-black flex items-center hover:bg-gray-200  font-medium rounded-[4px] text-sm px-5 py-2.5    me-2 mb-2"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    onClick={() => handleSubmit(currentData?._id)}
+                    type="submit"
+                    className="text-white bg-blue-700 h-8 hover:bg-blue-800 focus:ring-4  flex items-center px-8 focus:ring-blue-300 font-medium rounded-[4px] text-sm  py-2.5 me-2 mb-2 :bg-blue-600 :hover:bg-blue-700 focus:outline-none :focus:ring-blue-800 me-2 mb-2"
+                  >
+                    {editModal
+                      ? "Update AMC Contract "
+                      : "Create AMC Contract "}
+                  </button>
+                </div>
+              </form>
+            </ModalDialog>
+          </Modal>
           {isOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               {/* Modal Content */}
