@@ -136,6 +136,8 @@ function PendingInstallationBulk({ onClose, getData }) {
               "salesdist",
               "salesdistrict",
               "salesdistrict",
+              "diso",
+
             ],
             salesoff: [
               "salesoff",

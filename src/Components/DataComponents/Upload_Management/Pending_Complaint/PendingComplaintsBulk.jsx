@@ -20,11 +20,13 @@ function PendingComplaintsBulk({ onClose, getData }) {
     processedRecords: 0,
     successfulRecords: 0,
     failedRecords: 0,
+    deletedRecords: 0, // New field for deleted records
     results: [],
     summary: {
       created: 0,
       updated: 0,
       failed: 0,
+      deleted: 0, // New field for deleted count
       duplicatesInFile: 0,
       existingRecords: 0,
       skippedTotal: 0,
@@ -32,6 +34,12 @@ function PendingComplaintsBulk({ onClose, getData }) {
     headerMapping: {},
     errors: [],
     warnings: [],
+    deleteOperation: {
+      // New field for delete operation tracking
+      status: "pending",
+      deletedCount: 0,
+      message: "",
+    },
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
   const [fileValidation, setFileValidation] = useState(null);
@@ -71,71 +79,87 @@ function PendingComplaintsBulk({ onClose, getData }) {
               .trim()
           );
 
-          // Check for required fields (matching backend FIELD_MAPPINGS) - 2 REQUIRED FIELDS
+          // Updated field mappings to match backend
           const requiredFields = {
             notification_complaintid: [
               "notificationcomplaintid",
               "notificationcomplaintid",
               "complaintid",
               "ticketid",
-              "notifictn type",
+              "notification",
+              "notificationid",
             ],
             materialdescription: [
               "materialdescription",
               "materialdescription",
               "description",
-            ],
-            notificationtype: [
-              "notificationtype",
-              "notificationtype",
-              "type",
-              "notification",
-            ],
-            notificationdate: [
-              "notificationdate",
-              "notificationdate",
-              "date",
-              "notif.date",
-            ],
-            userstatus: ["userstatus", "userstatus", "status", "user status"],
-            serialnumber: [
-              "serialnumber",
-              "serialnumber",
-              "sno",
-              "sno",
-              "serial number",
-            ],
-            devicedata: ["devicedata", "devicedata", "device data"],
-            salesoffice: ["salesoffice", "salesoffice", "sales office"],
-            materialcode: ["materialcode", "materialcode", "code", "material"],
-            reportedproblem: [
-              "reportedproblem",
-              "reportedproblem",
-              "problem",
-              "description",
-            ],
-            dealercode: ["dealercode", "dealercode", "partnerresp."],
-            customercode: ["customercode", "customercode", "customer"],
-            partnerresp: [
-              "partnerresp",
-              "partnerresp",
-              "partnerresponse",
-              "partnerresp.",
+              "materialdesc",
+              "productdescription",
             ],
           };
 
           // Optional fields (extensive list from backend)
           const optionalFields = {
-            breakdown: ["breakdown", "breakdown"],
-            sparerequest: ["sparerequest", "sparerequest"],
-            remark: ["remark", "remark"],
-            status: [
-              "status",
-              "record_status",
-              "recordstatus",
-              "state",
-              "condition",
+            notificationtype: [
+              "notificationtype",
+              "notificationtype",
+              "type",
+              "notifictntype",
             ],
+            notificationdate: [
+              "notificationdate",
+              "notificationdate",
+              "date",
+              "notifdate",
+            ],
+            userstatus: [
+              "userstatus",
+              "userstatus",
+              "status",
+              "complaintstatus",
+            ],
+            serialnumber: [
+              "serialnumber",
+              "serialnumber",
+              "sno",
+              "serialno",
+              "serialnumber",
+            ],
+            devicedata: ["devicedata", "devicedata", "deviceinfo"],
+            salesoffice: ["salesoffice", "salesoffice", "office"],
+            materialcode: [
+              "materialcode",
+              "materialcode",
+              "code",
+              "material",
+              "productcode",
+            ],
+            reportedproblem: [
+              "reportedproblem",
+              "reportedproblem",
+              "problem",
+              "description",
+              "issue",
+            ],
+            dealercode: [
+              "dealercode",
+              "dealercode",
+              "partnerresp",
+              "partnercode",
+            ],
+            customercode: [
+              "customercode",
+              "customercode",
+              "customer",
+              "custcode",
+            ],
+            partnerresp: [
+              "partnerresp",
+              "partnerresp",
+              "partnerresponse",
+              "partnerresp",
+            ],
+            breakdown: ["breakdown", "breakdown", "failure"],
           };
 
           const foundFields = {};
@@ -147,7 +171,6 @@ function PendingComplaintsBulk({ onClose, getData }) {
               normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
             );
             foundFields[field] = !!foundVariation;
-
             if (foundVariation) {
               const originalHeader = headers.find(
                 (h) =>
@@ -179,7 +202,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
             }
           }
 
-          // Both fields are required
+          // Both required fields must be present
           const isValid =
             foundFields.notification_complaintid &&
             foundFields.materialdescription;
@@ -190,6 +213,14 @@ function PendingComplaintsBulk({ onClose, getData }) {
               const fieldLabels = {
                 notification_complaintid: "Notification/Complaint ID",
                 materialdescription: "Material Description",
+              };
+              return fieldLabels[field] || field;
+            });
+
+          const optionalFound = Object.entries(optionalFields)
+            .filter(([field]) => foundFields[field])
+            .map(([field]) => {
+              const fieldLabels = {
                 notificationtype: "Notification Type",
                 notificationdate: "Notification Date",
                 userstatus: "User Status",
@@ -201,18 +232,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
                 dealercode: "Dealer Code",
                 customercode: "Customer Code",
                 partnerresp: "PartnerResp",
-              };
-              return fieldLabels[field] || field;
-            });
-
-          const optionalFound = Object.entries(optionalFields)
-            .filter(([field]) => foundFields[field])
-            .map(([field]) => {
-              const fieldLabels = {
                 breakdown: "BreakDown",
-                sparerequest: "Spare Request",
-                remark: "Remark",
-                status: "Status",
               };
               return fieldLabels[field] || field;
             });
@@ -244,7 +264,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
             mappedColumns: {},
             missingFields: [],
             optionalFound: [],
-            totalRequired: 13,
+            totalRequired: 2,
             foundRequired: 0,
           });
         }
@@ -259,7 +279,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
           mappedColumns: {},
           missingFields: [],
           optionalFound: [],
-          totalRequired: 13,
+          totalRequired: 2,
           foundRequired: 0,
         });
       };
@@ -352,7 +372,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
           validation.foundRequired
         }/${
           validation.totalRequired
-        } required columns.\n\nRequired columns: Notification/Complaint ID, Material Description, Notification Type, Notification Date, User Status, Serial Number, Device Data, Sales Office, Material Code, Reported Problem, Dealer Code, Customer Code, PartnerResp.\n\nAvailable columns:\n${validation.headers.join(
+        } required columns.\n\nRequired columns: Notification/Complaint ID, Material Description.\n\nAvailable columns:\n${validation.headers.join(
           ", "
         )}`;
         setError(errorMessage);
@@ -391,6 +411,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
       addLiveUpdate(`📊 Optional columns found: ${displayText}`, "info");
     }
   };
+
   const handleDownloadErrors = (exportType = "failed") => {
     let dataToExport = [];
 
@@ -426,7 +447,6 @@ function PendingComplaintsBulk({ onClose, getData }) {
       "Row Number": item.row || "",
       "Notification/Complaint ID": item.notification_complaintid || "",
       "Material Description": item.materialdescription || "",
-
       Status: item.status || "",
       Action: item.action || "",
       Error: item.error || "",
@@ -452,7 +472,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
     }));
     worksheet["!cols"] = colWidths;
 
-    // Add worksheet to workbook - FIXED: Sheet name shortened to 25 chars
+    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(
       workbook,
       worksheet,
@@ -504,11 +524,13 @@ function PendingComplaintsBulk({ onClose, getData }) {
       processedRecords: 0,
       successfulRecords: 0,
       failedRecords: 0,
+      deletedRecords: 0,
       results: [],
       summary: {
         created: 0,
         updated: 0,
         failed: 0,
+        deleted: 0,
         duplicatesInFile: 0,
         existingRecords: 0,
         skippedTotal: 0,
@@ -516,13 +538,21 @@ function PendingComplaintsBulk({ onClose, getData }) {
       headerMapping: {},
       errors: [],
       warnings: [],
+      deleteOperation: {
+        status: "pending",
+        deletedCount: 0,
+        message: "",
+      },
     });
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      addLiveUpdate("Starting Pending Complaints data upload...", "info");
+      addLiveUpdate(
+        "Starting Pending Complaints full delete & upload...",
+        "info"
+      );
 
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => abortController.abort(), 600000);
@@ -543,7 +573,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
       }
 
       addLiveUpdate(
-        "File uploaded successfully. Processing Pending Complaints records...",
+        "File uploaded successfully. Starting full delete & upload process...",
         "success"
       );
 
@@ -580,13 +610,39 @@ function PendingComplaintsBulk({ onClose, getData }) {
                     headerMapping: data.headerMapping || prev.headerMapping,
                     errors: data.errors || prev.errors,
                     warnings: data.warnings || prev.warnings,
+                    deleteOperation:
+                      data.deleteOperation || prev.deleteOperation,
+                    deletedRecords: data.deletedRecords || prev.deletedRecords,
                   };
+
+                  // Handle delete operation updates
+                  if (
+                    data.deleteOperation &&
+                    data.deleteOperation !== prev.deleteOperation
+                  ) {
+                    if (data.deleteOperation.status === "in-progress") {
+                      addLiveUpdate(
+                        `🗑️ ${data.deleteOperation.message}`,
+                        "info"
+                      );
+                    } else if (data.deleteOperation.status === "completed") {
+                      addLiveUpdate(
+                        `✅ ${data.deleteOperation.message}`,
+                        "success"
+                      );
+                    } else if (data.deleteOperation.status === "failed") {
+                      addLiveUpdate(
+                        `❌ Delete failed: ${data.deleteOperation.message}`,
+                        "error"
+                      );
+                    }
+                  }
 
                   if (data.processedRecords > prev.processedRecords) {
                     const newlyProcessed =
                       data.processedRecords - prev.processedRecords;
                     addLiveUpdate(
-                      `Processed ${newlyProcessed} more Pending Complaints records (${data.processedRecords}/${data.totalRecords})`,
+                      `Processed ${newlyProcessed} more records (${data.processedRecords}/${data.totalRecords})`,
                       "success"
                     );
                   }
@@ -595,16 +651,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
                     const newCreated =
                       data.summary.created - prev.summary.created;
                     addLiveUpdate(
-                      `Created ${newCreated} new Pending Complaint records (Total: ${data.summary.created})`,
-                      "info"
-                    );
-                  }
-
-                  if (data.summary?.updated > prev.summary?.updated) {
-                    const newUpdated =
-                      data.summary.updated - prev.summary.updated;
-                    addLiveUpdate(
-                      `Updated ${newUpdated} existing Pending Complaint records (Total: ${data.summary.updated})`,
+                      `Created ${newCreated} new records (Total: ${data.summary.created})`,
                       "info"
                     );
                   }
@@ -622,19 +669,6 @@ function PendingComplaintsBulk({ onClose, getData }) {
                     );
                   }
 
-                  if (
-                    data.summary?.existingRecords >
-                    prev.summary?.existingRecords
-                  ) {
-                    const newExisting =
-                      data.summary.existingRecords -
-                      prev.summary.existingRecords;
-                    addLiveUpdate(
-                      `Skipped ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
-                      "warning"
-                    );
-                  }
-
                   if (data.summary?.failed > prev.summary?.failed) {
                     const newFailed = data.summary.failed - prev.summary.failed;
                     addLiveUpdate(
@@ -644,17 +678,18 @@ function PendingComplaintsBulk({ onClose, getData }) {
                   }
 
                   if (data.status === "completed") {
+                    const deletedText =
+                      data.summary.deleted > 0
+                        ? `Deleted: ${data.summary.deleted}, `
+                        : "";
                     addLiveUpdate(
-                      `Pending Complaints bulk upload completed in ${data.duration}! Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
+                      `✅ Full delete & upload completed in ${data.duration}! ${deletedText}Created: ${data.summary.created}, Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
                     setTimeout(() => setActiveTab("results"), 100);
                   } else if (data.status === "failed") {
-                    addLiveUpdate(
-                      "Pending Complaints processing failed!",
-                      "error"
-                    );
+                    addLiveUpdate("❌ Processing failed!", "error");
                     setIsProcessing(false);
                   }
 
@@ -770,11 +805,13 @@ function PendingComplaintsBulk({ onClose, getData }) {
       processedRecords: 0,
       successfulRecords: 0,
       failedRecords: 0,
+      deletedRecords: 0,
       results: [],
       summary: {
         created: 0,
         updated: 0,
         failed: 0,
+        deleted: 0,
         duplicatesInFile: 0,
         existingRecords: 0,
         skippedTotal: 0,
@@ -782,6 +819,11 @@ function PendingComplaintsBulk({ onClose, getData }) {
       headerMapping: {},
       errors: [],
       warnings: [],
+      deleteOperation: {
+        status: "pending",
+        deletedCount: 0,
+        message: "",
+      },
     });
   };
 
@@ -827,6 +869,24 @@ function PendingComplaintsBulk({ onClose, getData }) {
       },
       {
         id: 2,
+        title: "Delete Existing Records",
+        description:
+          processingData.deleteOperation.status === "completed"
+            ? `Deleted ${processingData.deleteOperation.deletedCount} existing records`
+            : processingData.deleteOperation.status === "in-progress"
+            ? "Deleting all existing pending complaints..."
+            : "Preparing to delete existing records",
+        status:
+          processingData.deleteOperation.status === "completed"
+            ? "completed"
+            : processingData.deleteOperation.status === "in-progress"
+            ? "active"
+            : processingData.status === "processing"
+            ? "active"
+            : "pending",
+      },
+      {
+        id: 3,
         title: "Header Mapping",
         description:
           Object.keys(processingData.headerMapping).length > 0
@@ -835,27 +895,27 @@ function PendingComplaintsBulk({ onClose, getData }) {
         status:
           Object.keys(processingData.headerMapping).length > 0
             ? "completed"
-            : processingData.status === "processing"
+            : processingData.deleteOperation.status === "completed"
             ? "active"
             : "pending",
       },
       {
-        id: 3,
-        title: "Processing Pending Complaints Records",
+        id: 4,
+        title: "Creating New Records",
         description: `${processingData.processedRecords}/${processingData.totalRecords} records processed`,
         status:
           processingData.processedRecords > 0
             ? processingData.processedRecords === processingData.totalRecords
               ? "completed"
               : "active"
-            : processingData.status === "processing"
+            : Object.keys(processingData.headerMapping).length > 0
             ? "active"
             : "pending",
       },
       {
-        id: 4,
+        id: 5,
         title: "Finalizing Process",
-        description: "Completing Pending Complaints bulk upload operation",
+        description: "Completing full delete & upload operation",
         status: processingData.status === "completed" ? "completed" : "pending",
       },
     ];
@@ -867,17 +927,17 @@ function PendingComplaintsBulk({ onClose, getData }) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-200">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-50 to-blue-100 p-6 text-black">
+        <div className="relative bg-gradient-to-r from-red-50 to-red-100 p-6 text-black">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Database size={24} />
                 </div>
-                Bulk Pending Complaints Upload
+                Full Delete & Upload - Pending Complaints
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage Pending Complaints data efficiently
+                ⚠️ This will DELETE ALL existing complaints and upload new data
               </p>
             </div>
             <button
@@ -982,7 +1042,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
                   )}
 
                   <div
-                    className={`relative border-2 border-dashed h-[230px] rounded-lg transition-all duration-200 ${
+                    className={`relative border-2 border-dashed h-[180px] rounded-lg transition-all duration-200 ${
                       isDragging
                         ? "border-blue-500 bg-blue-50 scale-105"
                         : file
@@ -993,7 +1053,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                   >
-                    <div className="flex flex-col items-center justify-center py-12">
+                    <div className="flex flex-col items-center justify-center py-8">
                       {file ? (
                         <div className="flex flex-col items-center gap-4">
                           <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
@@ -1077,8 +1137,8 @@ function PendingComplaintsBulk({ onClose, getData }) {
                             CSV or Excel files only (max 50MB)
                           </p>
                           <p className="text-xs text-center text-blue-600 mt-2">
-                            Required columns: Notification/Complaint ID,
-                            Material Description
+                            Required: Notification/Complaint ID, Material
+                            Description
                           </p>
                         </>
                       )}
@@ -1114,8 +1174,8 @@ function PendingComplaintsBulk({ onClose, getData }) {
                       }
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
                         !file || (fileValidation && !fileValidation.isValid)
-                          ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600 hover:bg-blue-700"
+                          ? "bg-red-400 cursor-not-allowed"
+                          : "bg-red-600 hover:bg-red-700"
                       } text-white transition-colors`}
                     >
                       <svg
@@ -1129,13 +1189,14 @@ function PendingComplaintsBulk({ onClose, getData }) {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                        <path d="M3 6h18l-2 13H5L3 6z" />
+                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
                       </svg>
                       {fileValidation && fileValidation.isValid
-                        ? "Upload & Process Pending Complaints Data ✓"
-                        : "Upload & Process Pending Complaints Data"}
+                        ? "DELETE ALL & UPLOAD NEW DATA ⚠️"
+                        : "DELETE ALL & UPLOAD NEW DATA"}
                     </button>
                   </div>
                 </div>
@@ -1270,7 +1331,42 @@ function PendingComplaintsBulk({ onClose, getData }) {
           {activeTab === "results" && processingData.status === "completed" && (
             <div className="space-y-6 h-[400px] overflow-y-auto px-2">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Deleted Records Card */}
+                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        Records Deleted
+                      </p>
+                      <p className="text-2xl font-bold text-red-800 mt-2">
+                        {processingData.summary.deleted ||
+                          processingData.deletedRecords ||
+                          0}
+                      </p>
+                      <p className="text-xs text-red-600 mt-1">
+                        Old records removed
+                      </p>
+                    </div>
+                    <div className="bg-red-200 p-2 rounded-full">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6 text-red-700"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1279,6 +1375,9 @@ function PendingComplaintsBulk({ onClose, getData }) {
                       </p>
                       <p className="text-2xl font-bold text-green-800 mt-2">
                         {processingData.summary.created}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        New records added
                       </p>
                     </div>
                     <div className="bg-green-200 p-2 rounded-full">
@@ -1294,35 +1393,6 @@ function PendingComplaintsBulk({ onClose, getData }) {
                           strokeLinejoin="round"
                           strokeWidth={2}
                           d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-700">
-                        Records Updated
-                      </p>
-                      <p className="text-2xl font-bold text-blue-800 mt-2">
-                        {processingData.summary.updated}
-                      </p>
-                    </div>
-                    <div className="bg-blue-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-blue-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                         />
                       </svg>
                     </div>
@@ -1361,38 +1431,6 @@ function PendingComplaintsBulk({ onClose, getData }) {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-yellow-700">
-                        Existing Records
-                      </p>
-                      <p className="text-2xl font-bold text-yellow-800 mt-2">
-                        {processingData.summary.existingRecords}
-                      </p>
-                      <p className="text-xs text-yellow-600 mt-1">
-                        Already in database
-                      </p>
-                    </div>
-                    <div className="bg-yellow-200 p-2 rounded-full">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-yellow-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1401,6 +1439,9 @@ function PendingComplaintsBulk({ onClose, getData }) {
                       </p>
                       <p className="text-2xl font-bold text-red-800 mt-2">
                         {processingData.summary.failed}
+                      </p>
+                      <p className="text-xs text-red-600 mt-1">
+                        Processing failed
                       </p>
                     </div>
                     <div className="bg-red-200 p-2 rounded-full">
@@ -1443,9 +1484,9 @@ function PendingComplaintsBulk({ onClose, getData }) {
                       </span>
                     </div>
                     <div>
-                      <span className="text-gray-600">Total Skipped:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.summary.skippedTotal}
+                      <span className="text-gray-600">Operation Type:</span>
+                      <span className="ml-2 font-medium text-red-600">
+                        Full Delete & Upload
                       </span>
                     </div>
                     <div>
@@ -1460,11 +1501,11 @@ function PendingComplaintsBulk({ onClose, getData }) {
 
               {/* Detailed Results */}
               <div className="bg-white border border-gray-200 rounded-lg">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center ">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-medium text-gray-800">
                     Detailed Results ({filteredResults.length} records)
                   </h3>
-                  {/* Export Options - Failed records ke liye - Results tab me Detailed Results ke upar add karo */}
+                  {/* Export Options */}
                   {processingData.results.some(
                     (item) => item.status === "Failed" || item.error
                   ) && (
@@ -1554,8 +1595,11 @@ function PendingComplaintsBulk({ onClose, getData }) {
                                   Row {item.row}
                                 </span>
                                 <span className="text-sm font-medium text-gray-800">
-                                  {item.id}
+                                  {item.notification_complaintid || item.id}
                                 </span>
+                              </div>
+                              <div className="text-xs text-gray-600 mb-1">
+                                {item.materialdescription}
                               </div>
                               {item.action && (
                                 <div className="text-xs text-blue-600">
