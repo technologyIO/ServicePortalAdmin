@@ -85,6 +85,7 @@ function DealerStockBulk({ onClose, getData }) {
               "dealer_code",
               "code",
               "dealerid",
+              "vendor",
             ],
             dealername: [
               "dealername",
@@ -92,6 +93,7 @@ function DealerStockBulk({ onClose, getData }) {
               "name",
               "dealer",
               "dealertitle",
+              "name 1",
             ],
             dealercity: [
               "dealercity",
@@ -106,6 +108,7 @@ function DealerStockBulk({ onClose, getData }) {
               "partno",
               "part_no",
               "productcode",
+              "material",
               "itemcode",
             ],
             materialdescription: [
@@ -114,6 +117,7 @@ function DealerStockBulk({ onClose, getData }) {
               "description",
               "desc",
               "product_description",
+              "material description",
             ],
             plant: [
               "plant",
@@ -130,6 +134,7 @@ function DealerStockBulk({ onClose, getData }) {
               "qty",
               "stock",
               "available_quantity",
+              "unrestricted",
             ],
           };
 

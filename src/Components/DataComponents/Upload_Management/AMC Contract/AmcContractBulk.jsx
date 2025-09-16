@@ -77,7 +77,7 @@ function AMCContractBulk({ onClose, getData }) {
               .trim()
           );
 
-          // Check for required fields (matching backend FIELD_MAPPINGS) - 4 REQUIRED FIELDS
+          // Updated field mappings - normalize all variations to lowercase
           const requiredFields = {
             salesdoc: [
               "salesdoc",
@@ -86,7 +86,8 @@ function AMCContractBulk({ onClose, getData }) {
               "sales_document",
               "document",
               "docno",
-              "sales doc.",
+              "sales doc",
+              "salesdoc.", // Added with period
             ],
             serialnumber: [
               "serialnumber",
@@ -103,7 +104,7 @@ function AMCContractBulk({ onClose, getData }) {
               "satype_zdrc_zdrn",
               "type",
               "satypezdrczdrn",
-              "SaTy",
+              "saty", // Changed from "SaTy" to "saty"
             ],
             materialcode: [
               "materialcode",
@@ -121,7 +122,8 @@ function AMCContractBulk({ onClose, getData }) {
               "begindate",
               "fromdate",
               "from_date",
-              "start dt",
+              "start dt", // Added
+              "startdt", // Added normalized version
             ],
             enddate: [
               "enddate",
@@ -132,6 +134,7 @@ function AMCContractBulk({ onClose, getData }) {
               "to_date",
               "expiry_date",
               "end date",
+              "enddate", // Added normalized version
             ],
           };
 
