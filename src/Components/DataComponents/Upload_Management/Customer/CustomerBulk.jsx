@@ -20,8 +20,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     processedRecords: 0,
     successfulRecords: 0,
     failedRecords: 0,
-    results: [], // Full results from server, only failed records pushed by backend anyway
-    failedDetails: [],
+    results: [], // Only failed records from backend
     summary: {
       created: 0,
       updated: 0,
@@ -29,6 +28,11 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       duplicatesInFile: 0,
       existingRecords: 0,
       skippedTotal: 0,
+      noChangesSkipped: 0,
+      statusUpdates: {
+        total: 0,
+        byStatus: {}
+      }
     },
     headerMapping: {},
     errors: [],
@@ -39,6 +43,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       batchSize: 1000,
       currentBatchRecords: 0,
     },
+    latestRecords: [] // Sample successful records from backend
   });
   const [liveUpdates, setLiveUpdates] = useState([]);
   const [fileValidation, setFileValidation] = useState(null);
@@ -53,14 +58,12 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           const fileName = file.name.toLowerCase();
 
           if (fileName.endsWith(".csv")) {
-            // Parse CSV headers
             const text = e.target.result;
             const firstLine = text.split("\n")[0];
             headers = firstLine
               .split(",")
               .map((h) => h.trim().replace(/"/g, ""));
           } else if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
-            // Parse Excel headers
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: "array" });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -70,7 +73,6 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
             headers = jsonData[0] || [];
           }
 
-          // Normalize headers for comparison (matching backend FIELD_MAPPINGS)
           const normalizedHeaders = headers.map((h) =>
             h
               .toLowerCase()
@@ -78,94 +80,51 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               .trim()
           );
 
-          // Check for required fields (matching backend FIELD_MAPPINGS) - 9 REQUIRED FIELDS
+          // Updated to match backend - all 9 fields required
           const requiredFields = {
             customercodeid: [
-              "customercodeid",
-              "customercode",
-              "customer_code",
-              "customer_id",
-              "custcode",
-              "code",
-              "customer",
+              "customercodeid", "customercode", "customer_code", "customer_id", 
+              "custcode", "code", "customer"
             ],
             customername: [
-              "customername",
-              "customer_name",
-              "name1",
-              "name",
-              "customername1",
-              "name 1",
+              "customername", "customer_name", "name1", "name", 
+              "customername1", "name 1"
             ],
             hospitalname: [
-              "hospitalname",
-              "hospital_name",
-              "name2",
-              "customername2",
-              "hospital",
-              "name 2",
+              "hospitalname", "hospital_name", "name2", "customername2", 
+              "hospital", "name 2"
             ],
             city: ["city", "cityname", "city_name"],
             postalcode: [
-              "postalcode",
-              "postal_code",
-              "pincode",
-              "pin_code",
-              "zipcode",
-              "zip",
+              "postalcode", "postal_code", "pincode", "pin_code", 
+              "zipcode", "zip"
             ],
             region: ["region", "regionname", "region_name", "zone", "rg"],
             country: [
-              "country",
-              "countryname",
-              "country_name",
-              "nation",
-              "cty",
+              "country", "countryname", "country_name", "nation", "cty"
             ],
             telephone: [
-              "telephone",
-              "phone",
-              "phonenumber",
-              "phone_number",
-              "mobile",
-              "contact",
-              "telephone 1",
+              "telephone", "phone", "phonenumber", "phone_number", 
+              "mobile", "contact", "telephone 1"
             ],
             email: [
-              "email",
-              "emailaddress",
-              "email_address",
-              "emailid",
-              "e-mail address",
+              "email", "emailaddress", "email_address", "emailid", 
+              "e-mail address"
             ],
           };
 
-          // Optional fields (the remaining ones)
           const optionalFields = {
             street: [
-              "street",
-              "streetaddress",
-              "street_address",
-              "address1",
-              "address",
+              "street", "streetaddress", "street_address", "address1", "address"
             ],
             district: ["district", "dist", "districtname", "district_name"],
             taxnumber1: [
-              "taxnumber1",
-              "tax_number1",
-              "taxno1",
-              "gst",
-              "gstin",
-              "tax1",
+              "taxnumber1", "tax_number1", "taxno1", "gst", "gstin", "tax1"
             ],
             taxnumber2: ["taxnumber2", "tax_number2", "taxno2", "pan", "tax2"],
             customertype: ["customertype", "customer_type", "type", "custtype"],
             status: [
-              "status",
-              "record_status",
-              "recordstatus",
-              "state",
-              "condition",
+              "status", "record_status", "recordstatus", "state", "condition"
             ],
           };
 
@@ -191,7 +150,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
             }
           }
 
-          // Check optional fields (for better user feedback)
+          // Check optional fields
           for (const [field, variations] of Object.entries(optionalFields)) {
             const foundVariation = variations.find((variation) =>
               normalizedHeaders.includes(variation.replace(/[^a-z0-9]/g, ""))
@@ -211,16 +170,9 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           }
 
           // All 9 fields are required
-          const isValid =
-            foundFields.customercodeid &&
-            foundFields.customername &&
-            foundFields.hospitalname &&
-            foundFields.city &&
-            foundFields.postalcode &&
-            foundFields.region &&
-            foundFields.country &&
-            foundFields.telephone &&
-            foundFields.email;
+          const isValid = Object.keys(requiredFields).every(
+            (field) => foundFields[field]
+          );
 
           const missingFields = Object.entries(requiredFields)
             .filter(([field]) => !foundFields[field])
@@ -244,7 +196,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
             .map(([field]) => {
               const fieldLabels = {
                 street: "Street",
-                district: "District",
+                district: "District", 
                 taxnumber1: "Tax Number 1",
                 taxnumber2: "Tax Number 2",
                 customertype: "Customer Type",
@@ -261,14 +213,8 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
             missingFields,
             optionalFound,
             totalRequired: Object.keys(requiredFields).length,
-            foundRequired: Object.values(requiredFields).reduce(
-              (count, _, index) =>
-                count +
-                (Object.keys(requiredFields)[index] in foundFields &&
-                foundFields[Object.keys(requiredFields)[index]]
-                  ? 1
-                  : 0),
-              0
+            foundRequired: Object.keys(requiredFields).reduce(
+              (count, field) => count + (foundFields[field] ? 1 : 0), 0
             ),
           });
         } catch (error) {
@@ -300,7 +246,6 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         });
       };
 
-      // Read file based on type
       if (file.name.toLowerCase().endsWith(".csv")) {
         reader.readAsText(file);
       } else {
@@ -319,29 +264,20 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     setLiveUpdates((prev) => [update, ...prev.slice(0, 19)]);
   };
 
-  // Count statuses from results (which mainly contain failed records)
+  // Count statuses from results (failed records only)
   const statusCounts = processingData.results.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1;
     return acc;
   }, {});
 
-  // Filter tabs: let user choose All (all failed records), or just Failed
   const filterTabs = [
-    {
-      label: "All Failed",
-      value: "All Failed",
-      count: processingData.results.length,
-    },
+    { label: "All Failed", value: "All", count: processingData.results.length },
     { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
   ];
 
-  // Filter results to show in detailed list (NEEche)
-  // We will show only failed records; since backend sends only failed records,
-  // filtering is mostly for UX.
-  const filteredResults =
-    resultFilter === "All Failed"
-      ? processingData.results
-      : processingData.results.filter((r) => r.status === "Failed");
+  const filteredResults = resultFilter === "All"
+    ? processingData.results
+    : processingData.results.filter((r) => r.status === "Failed");
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -370,17 +306,13 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       return;
     }
 
-    // Set file and show validation loading
     setFile(selectedFile);
     setError("Validating file structure...");
     addLiveUpdate(
-      `File selected: ${selectedFile.name} (${(
-        selectedFile.size / 1024
-      ).toFixed(2)} KB)`,
+      `File selected: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(2)} KB)`,
       "info"
     );
 
-    // Validate file structure
     const validation = await validateFileStructure(selectedFile);
     setFileValidation(validation);
 
@@ -390,38 +322,28 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         addLiveUpdate(`File validation failed: ${validation.error}`, "error");
       } else {
         const missingFieldsText = validation.missingFields.join(", ");
-        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${
-          validation.foundRequired
-        }/${
-          validation.totalRequired
-        } required columns.\n\nAvailable columns:\n${validation.headers.join(
-          ", "
-        )}`;
+        const errorMessage = `Missing required columns: ${missingFieldsText}.\n\nFound ${validation.foundRequired}/${validation.totalRequired} required columns.\n\nRequired columns: Customer Code, Customer Name, Hospital Name, City, Postal Code, Region, Country, Telephone, Email\n\nAvailable columns:\n${validation.headers.join(", ")}`;
         setError(errorMessage);
-        addLiveUpdate(
-          `File validation failed: Missing required columns`,
-          "error"
-        );
+        addLiveUpdate("File validation failed: Missing required columns", "error");
       }
       setFile(null);
       return;
     }
 
-    setError(""); // Clear error if validation passes
+    setError("");
     addLiveUpdate(
       `✅ File validated successfully: ${selectedFile.name} - All ${validation.totalRequired} required columns found!`,
       "success"
     );
 
-    // Show mapped columns
     if (validation.mappedColumns) {
       const mappedList = Object.entries(validation.mappedColumns)
+        .slice(0, 5)
         .map(([field, header]) => `${field}: "${header}"`)
         .join(", ");
-      addLiveUpdate(`📋 Required columns mapped: ${mappedList}`, "info");
+      addLiveUpdate(`📋 Required columns mapped: ${mappedList}${Object.keys(validation.mappedColumns).length > 5 ? '...' : ''}`, "info");
     }
 
-    // Show optional columns found
     if (validation.optionalFound && validation.optionalFound.length > 0) {
       addLiveUpdate(
         `📊 Optional columns found: ${validation.optionalFound.join(", ")}`,
@@ -469,6 +391,11 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         duplicatesInFile: 0,
         existingRecords: 0,
         skippedTotal: 0,
+        noChangesSkipped: 0,
+        statusUpdates: {
+          total: 0,
+          byStatus: {}
+        }
       },
       headerMapping: {},
       errors: [],
@@ -479,6 +406,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         batchSize: 1000,
         currentBatchRecords: 0,
       },
+      latestRecords: []
     });
 
     const formData = new FormData();
@@ -536,60 +464,68 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   const newData = {
                     ...prev,
                     ...data,
-                    // Replace results with only failed records from server
                     results: data.results || prev.results,
-                    summary: data.summary
-                      ? { ...prev.summary, ...data.summary }
-                      : prev.summary,
+                    summary: data.summary ? { ...prev.summary, ...data.summary } : prev.summary,
                     headerMapping: data.headerMapping || prev.headerMapping,
                     errors: data.errors || prev.errors,
                     warnings: data.warnings || prev.warnings,
                     batchProgress: data.batchProgress || prev.batchProgress,
+                    latestRecords: data.latestRecords || prev.latestRecords,
                   };
 
-                  // Live updates for progress
-                  if (
-                    data.batchProgress?.currentBatch >
-                    prev.batchProgress?.currentBatch
-                  ) {
+                  // Handle progress updates
+                  if (data.type === "progress" && data.batchProgress?.currentBatch > prev.batchProgress?.currentBatch) {
                     addLiveUpdate(
                       `Starting batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches} (${data.batchProgress.batchSize} records)`,
                       "info"
                     );
                   }
 
+                  // Handle batch completion
+                  if (data.type === "batch_completed" && data.batchCompleted) {
+                    const summary = data.batchSummary;
+                    if (summary) {
+                      addLiveUpdate(
+                        `Batch ${data.batchProgress?.currentBatch || 'N/A'} completed: Created: ${summary.created || 0}, Updated: ${summary.updated || 0}, Failed: ${summary.failed || 0}, Skipped: ${summary.skipped || 0}`,
+                        "info"
+                      );
+                    }
+                  }
+
+                  // Handle processing progress
                   if (data.processedRecords > prev.processedRecords) {
-                    const newlyProcessed =
-                      data.processedRecords - prev.processedRecords;
-                    const batchInfo = data.batchProgress?.currentBatch
-                      ? ` [Batch ${data.batchProgress.currentBatch}/${data.batchProgress.totalBatches}]`
-                      : "";
+                    const newlyProcessed = data.processedRecords - prev.processedRecords;
                     addLiveUpdate(
-                      `Processed ${newlyProcessed} Customer record(s) (${data.processedRecords}/${data.totalRecords})${batchInfo}`,
+                      `Processed ${newlyProcessed} more records (${data.processedRecords}/${data.totalRecords})`,
                       "success"
                     );
                   }
 
-                  // Show only failed record messages
+                  // Handle latest records (successful operations)
                   if (data.latestRecords && data.latestRecords.length > 0) {
-                    // Check if latest record is failed
-                    const failedRecords = data.latestRecords.filter(
-                      (r) => r.status === "Failed"
-                    );
-                    failedRecords.forEach((record) => {
-                      addLiveUpdate(
-                        `Failed: ${record.customercodeid} (${
-                          record.customername || "N/A"
-                        }) - ${record.error}`,
-                        "error"
-                      );
+                    data.latestRecords.forEach((record) => {
+                      if (record.status === "Created") {
+                        addLiveUpdate(
+                          `✅ Created: ${record.customercodeid} (${record.customername || 'N/A'})`,
+                          "success"
+                        );
+                      } else if (record.status === "Updated") {
+                        addLiveUpdate(
+                          `🔄 Updated: ${record.customercodeid} (${record.customername || 'N/A'})`,
+                          "info"
+                        );
+                      } else if (record.status === "Failed") {
+                        addLiveUpdate(
+                          `❌ Failed: ${record.customercodeid} - ${record.error}`,
+                          "error"
+                        );
+                      }
                     });
                   }
 
-                  // Show counts for created, updated, failed etc. in live updates
+                  // Handle summary updates
                   if (data.summary?.created > prev.summary?.created) {
-                    const newCreated =
-                      data.summary.created - prev.summary.created;
+                    const newCreated = data.summary.created - prev.summary.created;
                     addLiveUpdate(
                       `Created ${newCreated} new Customer records (Total: ${data.summary.created})`,
                       "success"
@@ -597,36 +533,9 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                   }
 
                   if (data.summary?.updated > prev.summary?.updated) {
-                    const newUpdated =
-                      data.summary.updated - prev.summary.updated;
+                    const newUpdated = data.summary.updated - prev.summary.updated;
                     addLiveUpdate(
                       `Updated ${newUpdated} existing Customer records (Total: ${data.summary.updated})`,
-                      "info"
-                    );
-                  }
-
-                  if (
-                    data.summary?.duplicatesInFile >
-                    prev.summary?.duplicatesInFile
-                  ) {
-                    const newDuplicates =
-                      data.summary.duplicatesInFile -
-                      prev.summary.duplicatesInFile;
-                    addLiveUpdate(
-                      `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
-                      "warning"
-                    );
-                  }
-
-                  if (
-                    data.summary?.existingRecords >
-                    prev.summary?.existingRecords
-                  ) {
-                    const newExisting =
-                      data.summary.existingRecords -
-                      prev.summary.existingRecords;
-                    addLiveUpdate(
-                      `Processing ${newExisting} existing records (Total: ${data.summary.existingRecords})`,
                       "info"
                     );
                   }
@@ -639,32 +548,32 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     );
                   }
 
-                  if (data.batchCompleted) {
+                  if (data.summary?.duplicatesInFile > prev.summary?.duplicatesInFile) {
+                    const newDuplicates = data.summary.duplicatesInFile - prev.summary.duplicatesInFile;
                     addLiveUpdate(
-                      `Batch ${data.batchProgress.currentBatch} completed: ` +
-                        `${data.batchSummary?.created || 0} created, ${
-                          data.batchSummary?.updated || 0
-                        } updated, ${data.batchSummary?.failed || 0} failed`,
+                      `Found ${newDuplicates} file duplicates (Total: ${data.summary.duplicatesInFile})`,
+                      "warning"
+                    );
+                  }
+
+                  if (data.summary?.statusUpdates?.total > prev.summary?.statusUpdates?.total) {
+                    const newStatusUpdates = data.summary.statusUpdates.total - prev.summary.statusUpdates.total;
+                    addLiveUpdate(
+                      `${newStatusUpdates} status updates applied (Total: ${data.summary.statusUpdates.total})`,
                       "info"
                     );
                   }
 
+                  // Handle completion
                   if (data.status === "completed") {
                     addLiveUpdate(
-                      `Customer batch upload completed in ${data.duration}! ` +
-                        `Total Batches: ${
-                          data.batchProgress?.totalBatches || 0
-                        }, ` +
-                        `Created: ${data.summary.created}, ` +
-                        `Updated: ${data.summary.updated}, ` +
-                        `Skipped: ${data.summary.skippedTotal}, ` +
-                        `Failed: ${data.summary.failed}`,
+                      `🎉 Customer batch upload completed in ${data.duration}! Total Batches: ${data.batchProgress?.totalBatches || 0}, Created: ${data.summary.created}, Updated: ${data.summary.updated}, Skipped: ${data.summary.skippedTotal}, Failed: ${data.summary.failed}`,
                       "success"
                     );
                     setIsProcessing(false);
-                    setActiveTab("results");
+                    setTimeout(() => setActiveTab("results"), 500);
                   } else if (data.status === "failed") {
-                    addLiveUpdate("Customer processing failed!", "error");
+                    addLiveUpdate("❌ Customer processing failed!", "error");
                     setIsProcessing(false);
                   }
 
@@ -683,10 +592,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           if (partialLine.trim()) {
             try {
               const data = JSON.parse(partialLine);
-              setProcessingData((prev) => ({
-                ...prev,
-                ...data,
-              }));
+              setProcessingData((prev) => ({ ...prev, ...data }));
             } catch (parseError) {
               console.error("Error parsing final JSON:", parseError);
             }
@@ -704,9 +610,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
             "warning"
           );
 
-          await new Promise((resolve) =>
-            setTimeout(resolve, 2000 * retryCount)
-          );
+          await new Promise((resolve) => setTimeout(resolve, 2000 * retryCount));
         }
       }
     } catch (err) {
@@ -722,12 +626,12 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       }));
     }
   };
-  // handleDownloadErrors function ko replace karo with this enhanced version
+
+  // Enhanced export function
   const handleDownloadErrors = (exportType = "all_results") => {
     let dataToExport = [];
     let filename = "";
 
-    // Filter data based on export type
     switch (exportType) {
       case "failed":
         dataToExport = processingData.results.filter(
@@ -736,11 +640,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         filename = "failed_records";
         break;
       case "created":
-        // Create mock data for created records since backend doesn't send them
         const createdCount = processingData.summary.created || 0;
         dataToExport = Array.from({ length: createdCount }, (_, i) => ({
           row: `Created-${i + 1}`,
-          customercodeid: "N/A",
+          customercodeid: "Successfully Created",
           customername: "N/A",
           status: "Created",
           action: "Successfully created new customer record",
@@ -751,11 +654,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         filename = "created_records";
         break;
       case "updated":
-        // Create mock data for updated records
         const updatedCount = processingData.summary.updated || 0;
         dataToExport = Array.from({ length: updatedCount }, (_, i) => ({
           row: `Updated-${i + 1}`,
-          customercodeid: "N/A",
+          customercodeid: "Successfully Updated",
           customername: "N/A",
           status: "Updated",
           action: "Successfully updated existing customer record",
@@ -766,11 +668,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         filename = "updated_records";
         break;
       case "skipped":
-        // Create mock data for skipped records
         const skippedCount = processingData.summary.skippedTotal || 0;
         dataToExport = Array.from({ length: skippedCount }, (_, i) => ({
           row: `Skipped-${i + 1}`,
-          customercodeid: "N/A",
+          customercodeid: "No Changes Required",
           customername: "N/A",
           status: "Skipped",
           action: "No changes detected",
@@ -791,13 +692,12 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         break;
       case "all_results":
       default:
-        // Combine all types of records
         const failedRecords = processingData.results || [];
         const mockCreated = Array.from(
           { length: processingData.summary.created || 0 },
           (_, i) => ({
             row: `Created-${i + 1}`,
-            customercodeid: "Successfully Processed",
+            customercodeid: "Successfully Created",
             customername: "N/A",
             status: "Created",
             action: "New customer record created",
@@ -810,7 +710,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           { length: processingData.summary.updated || 0 },
           (_, i) => ({
             row: `Updated-${i + 1}`,
-            customercodeid: "Successfully Processed",
+            customercodeid: "Successfully Updated",
             customername: "N/A",
             status: "Updated",
             action: "Customer record updated",
@@ -823,7 +723,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           { length: processingData.summary.skippedTotal || 0 },
           (_, i) => ({
             row: `Skipped-${i + 1}`,
-            customercodeid: "No Changes Needed",
+            customercodeid: "No Changes Required",
             customername: "N/A",
             status: "Skipped",
             action: "No changes detected",
@@ -833,63 +733,55 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           })
         );
 
-        dataToExport = [
-          ...failedRecords,
-          ...mockCreated,
-          ...mockUpdated,
-          ...mockSkipped,
-        ];
+        dataToExport = [...failedRecords, ...mockCreated, ...mockUpdated, ...mockSkipped];
         filename = "all_processing_results";
         break;
     }
 
     if (dataToExport.length === 0) {
       alert(
-        `No ${
-          exportType === "all_results" ? "" : exportType
-        } records available for export`
+        `No ${exportType === "all_results" ? "" : exportType} records available for export`
       );
       return;
     }
 
-    // Prepare comprehensive data for Excel
+    // Enhanced Excel data
     const excelData = dataToExport.map((item, index) => ({
       "S.No": index + 1,
       "Row Number": item.row || "",
       "Customer Code ID": item.customercodeid || "",
       "Customer Name": item.customername || "",
       "Hospital Name": item.hospitalname || "",
-      Street: item.street || "",
-      City: item.city || "",
+      "Street": item.street || "",
+      "City": item.city || "",
       "Postal Code": item.postalcode || "",
-      District: item.district || "",
-      Region: item.region || "",
-      Country: item.country || "",
-      Telephone: item.telephone || "",
+      "District": item.district || "",
+      "Region": item.region || "",
+      "Country": item.country || "",
+      "Telephone": item.telephone || "",
       "Tax Number 1": item.taxnumber1 || "",
       "Tax Number 2": item.taxnumber2 || "",
-      Email: item.email || "",
+      "Email": item.email || "",
       "Customer Type": item.customertype || "",
-      Status: item.status || "",
-      Action: item.action || "",
-      Error: item.error || "",
-      Warnings: Array.isArray(item.warnings)
+      "Status": item.status || "",
+      "Action": item.action || "",
+      "Error": item.error || "",
+      "Warnings": Array.isArray(item.warnings)
         ? item.warnings.join("; ")
         : item.warnings || "",
       "Assigned Status": item.assignedStatus || "",
       "Status Changed": item.statusChanged ? "Yes" : "No",
-      Changes:
-        item.changesText ||
-        (Array.isArray(item.changeDetails)
-          ? item.changeDetails
-              .map((c) => `${c.field}: "${c.oldValue}" → "${c.newValue}"`)
-              .join("; ")
-          : ""),
+      "Changes": item.changesText ||
+                (Array.isArray(item.changeDetails)
+                  ? item.changeDetails
+                      .map((c) => `${c.field}: "${c.oldValue}" → "${c.newValue}"`)
+                      .join("; ")
+                  : ""),
       "Processing Time": processingData.duration || "",
-      Batch: processingData.batchProgress?.currentBatch || "",
+      "Batch": processingData.batchProgress?.currentBatch || "",
     }));
 
-    // Add summary sheet data
+    // Enhanced summary data
     const summaryData = [
       ["Processing Summary", ""],
       ["Operation Type", "Batch Upload & Update"],
@@ -901,18 +793,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       ["No Changes Skipped", processingData.summary.noChangesSkipped],
       ["Records Failed", processingData.summary.failed],
       ["File Duplicates", processingData.summary.duplicatesInFile],
-      [
-        "Status Updates Total",
-        processingData.summary.statusUpdates?.total || 0,
-      ],
+      ["Status Updates Total", processingData.summary.statusUpdates?.total || 0],
       ["Processing Duration", processingData.duration],
       ["Start Time", new Date(processingData.startTime).toLocaleString()],
-      [
-        "End Time",
-        processingData.endTime
-          ? new Date(processingData.endTime).toLocaleString()
-          : "",
-      ],
+      ["End Time", processingData.endTime ? new Date(processingData.endTime).toLocaleString() : ""],
       ["", ""],
       ["Batch Information", ""],
       ["Total Batches", processingData.batchProgress?.totalBatches || 0],
@@ -932,23 +816,16 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
     // Add main results sheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-    // Auto-size columns
     const colWidths = Object.keys(excelData[0] || {}).map((key) => ({
       wch: Math.max(key.length + 2, 15),
     }));
     worksheet["!cols"] = colWidths;
-
     XLSX.utils.book_append_sheet(workbook, worksheet, "Processing Results");
 
     // Add summary sheet
     const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
     summaryWorksheet["!cols"] = [{ wch: 25 }, { wch: 30 }];
-    XLSX.utils.book_append_sheet(
-      workbook,
-      summaryWorksheet,
-      "Summary & Batch Info"
-    );
+    XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Summary & Batch Info");
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
@@ -957,23 +834,19 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
     // Download file
     XLSX.writeFile(workbook, finalFilename);
 
-    // Add live update
     addLiveUpdate(
       `📥 Exported ${dataToExport.length} records: ${finalFilename}`,
       "success"
     );
   };
 
-  // CSV template content & download function unchanged
   const handleDownload = () => {
-    // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
 
-    // Create data with headers and empty rows
     const data = [
       [
         "CustomerCode",
-        "Name1",
+        "Name1", 
         "Name2",
         "Street",
         "City",
@@ -986,19 +859,14 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         "Tax Number2",
         "Email",
         "Status",
-      ], // Headers with Status field added
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 1
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 2
-      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""], // Empty row 3
+      ],
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+      ["", "", "", "", "", "", "", "", "", "", "", "", "", ""],
     ];
 
-    // Convert to worksheet
     const worksheet = XLSX.utils.aoa_to_sheet(data);
-
-    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Template");
-
-    // Write and download file
     XLSX.writeFile(workbook, "customer_template.xlsx");
   };
 
@@ -1026,6 +894,11 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         duplicatesInFile: 0,
         existingRecords: 0,
         skippedTotal: 0,
+        noChangesSkipped: 0,
+        statusUpdates: {
+          total: 0,
+          byStatus: {}
+        }
       },
       headerMapping: {},
       errors: [],
@@ -1036,6 +909,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         batchSize: 1000,
         currentBatchRecords: 0,
       },
+      latestRecords: []
     });
   };
 
@@ -1044,21 +918,13 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       Created: { bg: "bg-green-100", text: "text-green-800", label: "Created" },
       Updated: { bg: "bg-blue-100", text: "text-blue-800", label: "Updated" },
       Failed: { bg: "bg-red-100", text: "text-red-800", label: "Failed" },
-      Skipped: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Skipped",
-      },
-      Processing: {
-        bg: "bg-blue-100",
-        text: "text-blue-800",
-        label: "Processing",
-      },
+      Skipped: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Skipped" },
+      Processing: { bg: "bg-blue-100", text: "text-blue-800", label: "Processing" },
     };
 
     const config = statusMap[status] || {
       bg: "bg-gray-100",
-      text: "text-gray-800",
+      text: "text-gray-800", 
       label: "Unknown",
     };
 
@@ -1084,8 +950,8 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         title: "Header Mapping",
         description:
           Object.keys(processingData.headerMapping).length > 0
-            ? `Mapped: ${Object.keys(processingData.headerMapping).join(", ")}`
-            : "Detecting Customer Code column",
+            ? `Mapped: ${Object.keys(processingData.headerMapping).length} columns`
+            : "Mapping customer data columns",
         status:
           Object.keys(processingData.headerMapping).length > 0
             ? "completed"
@@ -1139,8 +1005,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 Bulk Customer Upload
               </h2>
               <p className="text-gray-500 mt-1">
-                Import and manage Customer data efficiently with batch
-                processing
+                Import and manage Customer data efficiently with batch processing
               </p>
             </div>
             <button
@@ -1157,9 +1022,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           <div>
             <h3 className="font-semibold text-blue-900">Need a template?</h3>
             <p className="text-sm text-blue-700">
-              Download our CSV template with all required Customer columns:
-              Customer Code (required) and optional fields like Name, Hospital
-              Name..
+              Download our CSV template with all required Customer columns: 9 required fields
             </p>
           </div>
           <button
@@ -1213,7 +1076,6 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
           {/* Upload Tab */}
           {activeTab === "upload" && (
             <div className="space-y-6 h-[400px] overflow-y-auto flex flex-col">
-              {/* File Upload Section */}
               {!isProcessing && (
                 <div className="space-y-6">
                   {error && (
@@ -1235,9 +1097,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                       </svg>
                       <div>
-                        <h3 className="text-sm font-medium text-red-800">
-                          Error
-                        </h3>
+                        <h3 className="text-sm font-medium text-red-800">Error</h3>
                         <p className="text-sm text-red-700 mt-1 whitespace-pre-line">
                           {error}
                         </p>
@@ -1250,7 +1110,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                       isDragging
                         ? "border-blue-500 bg-blue-50 scale-105"
                         : file
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-green-500 bg-green-50"
                         : "border-gray-300 hover:border-gray-400"
                     }`}
                     onDragOver={handleDragOver}
@@ -1260,7 +1120,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     <div className="flex flex-col items-center justify-center py-12">
                       {file ? (
                         <div className="flex flex-col items-center gap-4">
-                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-100">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               width="32"
@@ -1271,7 +1131,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="text-blue-600"
+                              className="text-green-600"
                             >
                               <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                               <polyline points="14 2 14 8 20 8"></polyline>
@@ -1279,36 +1139,27 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                           </div>
                           <div className="text-center">
                             <div className="flex items-center gap-2 justify-center">
-                              <span className="font-medium text-lg">
-                                {file.name}
-                              </span>
+                              <span className="font-medium text-lg">{file.name}</span>
                               <button
                                 className="h-8 w-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setFile(null);
+                                  setFileValidation(null);
                                 }}
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
+                                <X size={16} />
                               </button>
                             </div>
                             <span className="text-sm text-gray-500 mt-2 block">
                               {(file.size / 1024).toFixed(2)} KB
                             </span>
+                            {fileValidation?.isValid && (
+                              <span className="text-xs text-green-600 mt-1 block">
+                                ✅ All required fields validated
+                              </span>
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -1332,20 +1183,13 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                             </svg>
                           </div>
                           <p className="mb-2 text-lg text-center">
-                            <span className="font-semibold">
-                              Click to upload
-                            </span>{" "}
-                            or drag and drop
+                            <span className="font-semibold">Click to upload</span> or drag and drop
                           </p>
                           <p className="text-sm text-center text-gray-500">
                             CSV or Excel files only (max 50MB)
                           </p>
                           <p className="text-xs text-center text-blue-600 mt-2">
-                            Required column: Customer Code
-                          </p>
-                          <p className="text-xs text-center text-gray-600 mt-1">
-                            Optional: Name, Hospital Name, Street, City, Email,
-                            etc.
+                            Required: 9 fields including Customer Code, Name, Hospital Name, City, etc.
                           </p>
                         </>
                       )}
@@ -1376,9 +1220,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                     )}
                     <button
                       onClick={handleUpload}
-                      disabled={
-                        !file || (fileValidation && !fileValidation.isValid)
-                      }
+                      disabled={!file || (fileValidation && !fileValidation.isValid)}
                       className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
                         !file || (fileValidation && !fileValidation.isValid)
                           ? "bg-blue-400 cursor-not-allowed"
@@ -1427,8 +1269,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                               Batch Progress
                             </span>
                             <span className="text-sm text-blue-600">
-                              {processingData.batchProgress.currentBatch}/
-                              {processingData.batchProgress.totalBatches}
+                              {processingData.batchProgress.currentBatch}/{processingData.batchProgress.totalBatches}
                             </span>
                           </div>
                           <div className="w-full bg-blue-200 rounded-full h-2">
@@ -1437,15 +1278,13 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                               style={{
                                 width: `${
                                   (processingData.batchProgress.currentBatch /
-                                    processingData.batchProgress.totalBatches) *
-                                  100
+                                    processingData.batchProgress.totalBatches) * 100
                                 }%`,
                               }}
                             ></div>
                           </div>
                           <div className="text-xs text-blue-600 mt-1">
-                            Processing {processingData.batchProgress.batchSize}{" "}
-                            records per batch
+                            Processing {processingData.batchProgress.batchSize} records per batch
                           </div>
                         </div>
                       )}
@@ -1571,9 +1410,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        Total Records
-                      </p>
+                      <p className="text-sm font-medium text-gray-700">Total Records</p>
                       <p className="text-2xl font-bold text-gray-800 mt-2">
                         {processingData.totalRecords}
                       </p>
@@ -1587,9 +1424,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-green-700">
-                        Created
-                      </p>
+                      <p className="text-sm font-medium text-green-700">Created</p>
                       <p className="text-2xl font-bold text-green-800 mt-2">
                         {processingData.summary.created}
                       </p>
@@ -1603,9 +1438,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-blue-700">
-                        Updated
-                      </p>
+                      <p className="text-sm font-medium text-blue-700">Updated</p>
                       <p className="text-2xl font-bold text-blue-800 mt-2">
                         {processingData.summary.updated}
                       </p>
@@ -1619,9 +1452,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-yellow-700">
-                        Skipped
-                      </p>
+                      <p className="text-sm font-medium text-yellow-700">Skipped</p>
                       <p className="text-2xl font-bold text-yellow-800 mt-2">
                         {processingData.summary.skippedTotal}
                       </p>
@@ -1635,9 +1466,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-orange-700">
-                        File Duplicates
-                      </p>
+                      <p className="text-sm font-medium text-orange-700">File Duplicates</p>
                       <p className="text-2xl font-bold text-orange-800 mt-2">
                         {processingData.summary.duplicatesInFile}
                       </p>
@@ -1651,9 +1480,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-red-700">
-                        Failed Records
-                      </p>
+                      <p className="text-sm font-medium text-red-700">Failed Records</p>
                       <p className="text-2xl font-bold text-red-800 mt-2">
                         {processingData.summary.failed}
                       </p>
@@ -1665,16 +1492,13 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 </div>
               </div>
 
-              {/* Export Options - Results tab me cards ke baad add karo */}
+              {/* Export Options */}
               <div className="mb-4">
                 <div className="flex flex-wrap gap-3 items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <h4 className="font-medium text-gray-800 mb-1">
-                      Export Options
-                    </h4>
+                    <h4 className="font-medium text-gray-800 mb-1">Export Options</h4>
                     <p className="text-sm text-gray-600">
-                      Download processing results in Excel format with detailed
-                      analysis
+                      Download processing results in Excel format with detailed analysis
                     </p>
                   </div>
 
@@ -1729,8 +1553,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
 
                     {processingData.results.some(
                       (item) =>
-                        item.error ||
-                        (item.warnings && item.warnings.length > 0)
+                        item.error || (item.warnings && item.warnings.length > 0)
                     ) && (
                       <button
                         onClick={() => handleDownloadErrors("all_errors")}
@@ -1747,27 +1570,19 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               {/* Processing Summary */}
               {processingData.duration && (
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-medium text-sm text-gray-800 mb-2">
-                    Processing Summary
-                  </h3>
+                  <h3 className="font-medium text-sm text-gray-800 mb-2">Processing Summary</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Total Records:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.totalRecords}
-                      </span>
+                      <span className="ml-2 font-medium">{processingData.totalRecords}</span>
                     </div>
                     <div>
                       <span className="text-gray-600">Processing Time:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.duration}
-                      </span>
+                      <span className="ml-2 font-medium">{processingData.duration}</span>
                     </div>
                     <div>
                       <span className="text-gray-600">Total Batches:</span>
-                      <span className="ml-2 font-medium">
-                        {processingData.batchProgress.totalBatches}
-                      </span>
+                      <span className="ml-2 font-medium">{processingData.batchProgress.totalBatches}</span>
                     </div>
                     <div>
                       <span className="text-gray-600">Completed At:</span>
@@ -1796,8 +1611,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 <div className="bg-white border border-gray-200 rounded-lg">
                   <div className="p-4 border-b border-gray-200">
                     <h3 className="text-lg font-medium text-gray-800">
-                      Failed Records Details ({processingData.results.length}{" "}
-                      records)
+                      Failed Records Details ({processingData.results.length} records)
                     </h3>
                   </div>
 
@@ -1812,9 +1626,7 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs text-gray-500">
-                                    Row {item.row}
-                                  </span>
+                                  <span className="text-xs text-gray-500">Row {item.row}</span>
                                   <span className="text-sm font-medium text-gray-800">
                                     {item.customercodeid || "Unknown"}
                                   </span>
