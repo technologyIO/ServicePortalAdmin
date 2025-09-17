@@ -722,10 +722,10 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
       }));
     }
   };
-  // Download function add karo - Customer ke fields ke according
-  // Download function add karo - Customer ke fields ke according
-  const handleDownloadErrors = (exportType = "failed") => {
+  // handleDownloadErrors function ko replace karo with this enhanced version
+  const handleDownloadErrors = (exportType = "all_results") => {
     let dataToExport = [];
+    let filename = "";
 
     // Filter data based on export type
     switch (exportType) {
@@ -733,29 +733,128 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
         dataToExport = processingData.results.filter(
           (item) => item.status === "Failed"
         );
+        filename = "failed_records";
+        break;
+      case "created":
+        // Create mock data for created records since backend doesn't send them
+        const createdCount = processingData.summary.created || 0;
+        dataToExport = Array.from({ length: createdCount }, (_, i) => ({
+          row: `Created-${i + 1}`,
+          customercodeid: "N/A",
+          customername: "N/A",
+          status: "Created",
+          action: "Successfully created new customer record",
+          error: null,
+          warnings: [],
+          changesText: "New customer record created",
+        }));
+        filename = "created_records";
+        break;
+      case "updated":
+        // Create mock data for updated records
+        const updatedCount = processingData.summary.updated || 0;
+        dataToExport = Array.from({ length: updatedCount }, (_, i) => ({
+          row: `Updated-${i + 1}`,
+          customercodeid: "N/A",
+          customername: "N/A",
+          status: "Updated",
+          action: "Successfully updated existing customer record",
+          error: null,
+          warnings: [],
+          changesText: "Customer record updated with new information",
+        }));
+        filename = "updated_records";
+        break;
+      case "skipped":
+        // Create mock data for skipped records
+        const skippedCount = processingData.summary.skippedTotal || 0;
+        dataToExport = Array.from({ length: skippedCount }, (_, i) => ({
+          row: `Skipped-${i + 1}`,
+          customercodeid: "N/A",
+          customername: "N/A",
+          status: "Skipped",
+          action: "No changes detected",
+          error: null,
+          warnings: ["Record already exists with identical data"],
+          changesText: "No changes detected",
+        }));
+        filename = "skipped_records";
         break;
       case "all_errors":
         dataToExport = processingData.results.filter(
           (item) =>
-            item.status === "Failed" || (item.error && item.error.trim() !== "")
+            item.status === "Failed" ||
+            (item.error && item.error.trim() !== "") ||
+            (item.warnings && item.warnings.length > 0)
         );
+        filename = "all_errors";
         break;
       case "all_results":
-        dataToExport = processingData.results;
-        break;
       default:
-        dataToExport = processingData.results.filter(
-          (item) => item.status === "Failed"
+        // Combine all types of records
+        const failedRecords = processingData.results || [];
+        const mockCreated = Array.from(
+          { length: processingData.summary.created || 0 },
+          (_, i) => ({
+            row: `Created-${i + 1}`,
+            customercodeid: "Successfully Processed",
+            customername: "N/A",
+            status: "Created",
+            action: "New customer record created",
+            error: null,
+            warnings: [],
+            changesText: "New customer record created",
+          })
         );
+        const mockUpdated = Array.from(
+          { length: processingData.summary.updated || 0 },
+          (_, i) => ({
+            row: `Updated-${i + 1}`,
+            customercodeid: "Successfully Processed",
+            customername: "N/A",
+            status: "Updated",
+            action: "Customer record updated",
+            error: null,
+            warnings: [],
+            changesText: "Customer record updated",
+          })
+        );
+        const mockSkipped = Array.from(
+          { length: processingData.summary.skippedTotal || 0 },
+          (_, i) => ({
+            row: `Skipped-${i + 1}`,
+            customercodeid: "No Changes Needed",
+            customername: "N/A",
+            status: "Skipped",
+            action: "No changes detected",
+            error: null,
+            warnings: ["Record already exists with identical data"],
+            changesText: "No changes detected",
+          })
+        );
+
+        dataToExport = [
+          ...failedRecords,
+          ...mockCreated,
+          ...mockUpdated,
+          ...mockSkipped,
+        ];
+        filename = "all_processing_results";
+        break;
     }
 
     if (dataToExport.length === 0) {
-      alert("No data available for export");
+      alert(
+        `No ${
+          exportType === "all_results" ? "" : exportType
+        } records available for export`
+      );
       return;
     }
 
-    // Prepare data for Excel - Customer fields ke according
-    const excelData = dataToExport.map((item) => ({
+    // Prepare comprehensive data for Excel
+    const excelData = dataToExport.map((item, index) => ({
+      "S.No": index + 1,
       "Row Number": item.row || "",
       "Customer Code ID": item.customercodeid || "",
       "Customer Name": item.customername || "",
@@ -786,30 +885,83 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
               .map((c) => `${c.field}: "${c.oldValue}" → "${c.newValue}"`)
               .join("; ")
           : ""),
+      "Processing Time": processingData.duration || "",
+      Batch: processingData.batchProgress?.currentBatch || "",
     }));
 
-    // Create workbook and worksheet
+    // Add summary sheet data
+    const summaryData = [
+      ["Processing Summary", ""],
+      ["Operation Type", "Batch Upload & Update"],
+      ["Total Records", processingData.totalRecords],
+      ["Processed Records", processingData.processedRecords],
+      ["Records Created", processingData.summary.created],
+      ["Records Updated", processingData.summary.updated],
+      ["Records Skipped", processingData.summary.skippedTotal],
+      ["No Changes Skipped", processingData.summary.noChangesSkipped],
+      ["Records Failed", processingData.summary.failed],
+      ["File Duplicates", processingData.summary.duplicatesInFile],
+      [
+        "Status Updates Total",
+        processingData.summary.statusUpdates?.total || 0,
+      ],
+      ["Processing Duration", processingData.duration],
+      ["Start Time", new Date(processingData.startTime).toLocaleString()],
+      [
+        "End Time",
+        processingData.endTime
+          ? new Date(processingData.endTime).toLocaleString()
+          : "",
+      ],
+      ["", ""],
+      ["Batch Information", ""],
+      ["Total Batches", processingData.batchProgress?.totalBatches || 0],
+      ["Batch Size", processingData.batchProgress?.batchSize || 0],
+      ["", ""],
+      ["Header Mappings", ""],
+      ...Object.entries(processingData.headerMapping || {}).map(
+        ([original, mapped]) => [original, mapped]
+      ),
+      ["", ""],
+      ["Warnings", ""],
+      ...(processingData.warnings || []).map((warning) => ["", warning]),
+    ];
+
+    // Create workbook
     const workbook = XLSX.utils.book_new();
+
+    // Add main results sheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
     // Auto-size columns
     const colWidths = Object.keys(excelData[0] || {}).map((key) => ({
-      wch: Math.max(key.length, 15), // Minimum width 15
+      wch: Math.max(key.length + 2, 15),
     }));
     worksheet["!cols"] = colWidths;
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Error Records");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Processing Results");
+
+    // Add summary sheet
+    const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summaryWorksheet["!cols"] = [{ wch: 25 }, { wch: 30 }];
+    XLSX.utils.book_append_sheet(
+      workbook,
+      summaryWorksheet,
+      "Summary & Batch Info"
+    );
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-    const filename = `customer_errors_${exportType}_${timestamp}.xlsx`;
+    const finalFilename = `customer_${filename}_${timestamp}.xlsx`;
 
     // Download file
-    XLSX.writeFile(workbook, filename);
+    XLSX.writeFile(workbook, finalFilename);
 
     // Add live update
-    addLiveUpdate(`📥 Customer error data exported: ${filename}`, "success");
+    addLiveUpdate(
+      `📥 Exported ${dataToExport.length} records: ${finalFilename}`,
+      "success"
+    );
   };
 
   // CSV template content & download function unchanged
@@ -1513,135 +1665,198 @@ export default function CustomerBulk({ isOpen, onClose, getData }) {
                 </div>
               </div>
 
-              {/* Detailed Results: Show only failed records with error reasons */}
-              {/* Detailed Results: Show only failed records with error reasons */}
-              {/* <div className="bg-white border border-gray-200 rounded-lg flex-1 flex flex-col">
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-800">
-                    Failed Records Details ({filteredResults.length} records)
-                  </h3>
-                  <nav className="flex space-x-2">
-                    {filterTabs.map((tab) => (
+              {/* Export Options - Results tab me cards ke baad add karo */}
+              <div className="mb-4">
+                <div className="flex flex-wrap gap-3 items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-800 mb-1">
+                      Export Options
+                    </h4>
+                    <p className="text-sm text-gray-600">
+                      Download processing results in Excel format with detailed
+                      analysis
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleDownloadErrors("all_results")}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <Download size={16} />
+                      All Records ({processingData.totalRecords})
+                    </button>
+
+                    {processingData.summary.created > 0 && (
                       <button
-                        key={tab.value}
-                        onClick={() => setResultFilter(tab.value)}
-                        className={`whitespace-nowrap px-4 py-2 text-sm font-medium border-b-2 ${
-                          resultFilter === tab.value
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                        }`}
+                        onClick={() => handleDownloadErrors("created")}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                       >
-                        {tab.label}
-                        <span className="ml-2 inline-block rounded-full px-2 bg-gray-100 text-xs text-gray-600">
-                          {tab.count}
-                        </span>
+                        <Download size={16} />
+                        Created ({processingData.summary.created})
                       </button>
-                    ))}
-                  </nav>
+                    )}
+
+                    {processingData.summary.updated > 0 && (
+                      <button
+                        onClick={() => handleDownloadErrors("updated")}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        <Download size={16} />
+                        Updated ({processingData.summary.updated})
+                      </button>
+                    )}
+
+                    {processingData.summary.skippedTotal > 0 && (
+                      <button
+                        onClick={() => handleDownloadErrors("skipped")}
+                        className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+                      >
+                        <Download size={16} />
+                        Skipped ({processingData.summary.skippedTotal})
+                      </button>
+                    )}
+
+                    {processingData.summary.failed > 0 && (
+                      <button
+                        onClick={() => handleDownloadErrors("failed")}
+                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        <Download size={16} />
+                        Failed ({processingData.summary.failed})
+                      </button>
+                    )}
+
+                    {processingData.results.some(
+                      (item) =>
+                        item.error ||
+                        (item.warnings && item.warnings.length > 0)
+                    ) && (
+                      <button
+                        onClick={() => handleDownloadErrors("all_errors")}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                      >
+                        <Download size={16} />
+                        With Errors/Warnings
+                      </button>
+                    )}
+                  </div>
                 </div>
+              </div>
 
-                <div className="overflow-y-auto flex-1 max-h-[300px]">
-                  {filteredResults.length > 0 ? (
-                    <div className="divide-y divide-gray-100">
-                      {filteredResults.map((item, index) => (
-                        <div
-                          key={index}
-                          className="p-4 hover:bg-gray-50 transition-colors flex justify-between items-start"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="text-xs text-gray-500">
-                                Row {item.row}
-                              </span>
-                              <span className="text-sm font-medium text-gray-800">
-                                Customer Code: {item.customercodeid}
-                              </span>
-                              <span className="text-sm font-medium text-gray-800">
-                                Name: {item.customername || "N/A"}
-                              </span>
-                            </div>
-                            {item.action && (
-                              <div className="text-xs text-blue-600">
-                                {item.action}
-                              </div>
-                            )}
-                            {item.error && (
-                              <div className="text-xs text-red-600 mt-1">
-                                Error: {item.error}
-                              </div>
-                            )}
-                            {item.warnings && item.warnings.length > 0 && (
-                              <div className="text-xs text-yellow-600 mt-1">
-                                Warnings: {item.warnings.join(", ")}
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-4">
-                            {renderStatusBadge(item.status)}
-                          </div>
-                        </div>
-                      ))}
+              {/* Processing Summary */}
+              {processingData.duration && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-medium text-sm text-gray-800 mb-2">
+                    Processing Summary
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Records:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.totalRecords}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="p-8 text-center text-gray-500">
-                      No failed records to display
+                    <div>
+                      <span className="text-gray-600">Processing Time:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.duration}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </div> */}
-
-              {/* Action Buttons */}
-
-              <div className="flex justify-end pb-4 gap-3 mt-4">
-                {/* Export Options - Failed records ke liye */}
-
-                {/* Export Options - Failed records ke liye - Always show */}
-                <div className=" ">
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                      <div className="relative">
-                        <select
-                          id="export-type"
-                          className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                          onChange={(e) => handleDownloadErrors(e.target.value)}
-                          defaultValue=""
-                        >
-                          <option value="" disabled>
-                            Choose Export Type
-                          </option>
-                          <option value="failed">
-                            Failed Records Only (
-                            {
-                              processingData.results.filter(
-                                (item) => item.status === "Failed"
-                              ).length
-                            }
-                            )
-                          </option>
-                          <option value="all_errors">
-                            All Records with Errors (
-                            {
-                              processingData.results.filter(
-                                (item) =>
-                                  item.status === "Failed" ||
-                                  (item.error && item.error.trim() !== "")
-                              ).length
-                            }
-                            )
-                          </option>
-                          <option value="all_results">
-                            All Processing Results (
-                            {processingData.results.length})
-                          </option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                          <Download size={16} className="text-red-600" />
-                        </div>
-                      </div>
+                    <div>
+                      <span className="text-gray-600">Total Batches:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.batchProgress.totalBatches}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Completed At:</span>
+                      <span className="ml-2 font-medium">
+                        {new Date(processingData.endTime).toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status Updates:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.summary.statusUpdates?.total || 0}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">No Changes Skipped:</span>
+                      <span className="ml-2 font-medium">
+                        {processingData.summary.noChangesSkipped || 0}
+                      </span>
                     </div>
                   </div>
                 </div>
+              )}
 
+              {/* Failed Records Details */}
+              {processingData.summary.failed > 0 && (
+                <div className="bg-white border border-gray-200 rounded-lg">
+                  <div className="p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-800">
+                      Failed Records Details ({processingData.results.length}{" "}
+                      records)
+                    </h3>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {processingData.results.length > 0 ? (
+                      <div className="divide-y divide-gray-100">
+                        {processingData.results.map((item, index) => (
+                          <div
+                            key={index}
+                            className="p-4 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs text-gray-500">
+                                    Row {item.row}
+                                  </span>
+                                  <span className="text-sm font-medium text-gray-800">
+                                    {item.customercodeid || "Unknown"}
+                                  </span>
+                                  {item.customername && (
+                                    <span className="text-sm text-gray-600">
+                                      - {item.customername}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.action && (
+                                  <div className="text-xs text-blue-600 mb-1">
+                                    {item.action}
+                                  </div>
+                                )}
+                                {item.error && (
+                                  <div className="text-xs text-red-500 mt-1">
+                                    Error: {item.error}
+                                  </div>
+                                )}
+                                {item.warnings && item.warnings.length > 0 && (
+                                  <div className="text-xs text-yellow-600 mt-1">
+                                    Warnings: {item.warnings.join(", ")}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="ml-4">
+                                {renderStatusBadge(item.status)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-gray-500">
+                        No failed records to display
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pb-4 gap-3 mt-4">
                 <button
                   onClick={resetForm}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"

@@ -311,7 +311,7 @@ function PendingComplaintsBulk({ onClose, getData }) {
   const filterTabs = [
     { label: "All", value: "All", count: processingData.results.length },
     { label: "Created", value: "Created", count: statusCounts.Created || 0 },
-    { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
+    // { label: "Updated", value: "Updated", count: statusCounts.Updated || 0 },
     { label: "Skipped", value: "Skipped", count: statusCounts.Skipped || 0 },
     { label: "Failed", value: "Failed", count: statusCounts.Failed || 0 },
   ];
@@ -412,8 +412,9 @@ function PendingComplaintsBulk({ onClose, getData }) {
     }
   };
 
-  const handleDownloadErrors = (exportType = "failed") => {
+  const handleDownloadErrors = (exportType = "all_results") => {
     let dataToExport = [];
+    let filename = "";
 
     // Filter data based on export type
     switch (exportType) {
@@ -421,29 +422,54 @@ function PendingComplaintsBulk({ onClose, getData }) {
         dataToExport = processingData.results.filter(
           (item) => item.status === "Failed"
         );
+        filename = "failed_records";
+        break;
+      case "created":
+        dataToExport = processingData.results.filter(
+          (item) => item.status === "Created"
+        );
+        filename = "created_records";
+        break;
+      case "skipped":
+        dataToExport = processingData.results.filter(
+          (item) => item.status === "Skipped"
+        );
+        filename = "skipped_records";
+        break;
+      case "updated":
+        dataToExport = processingData.results.filter(
+          (item) => item.status === "Updated"
+        );
+        filename = "updated_records";
         break;
       case "all_errors":
         dataToExport = processingData.results.filter(
           (item) =>
-            item.status === "Failed" || (item.error && item.error.trim() !== "")
+            item.status === "Failed" ||
+            (item.error && item.error.trim() !== "") ||
+            (item.warnings && item.warnings.length > 0)
         );
+        filename = "all_errors";
         break;
       case "all_results":
-        dataToExport = processingData.results;
-        break;
       default:
-        dataToExport = processingData.results.filter(
-          (item) => item.status === "Failed"
-        );
+        dataToExport = processingData.results;
+        filename = "all_processing_results";
+        break;
     }
 
     if (dataToExport.length === 0) {
-      alert("No data available for export");
+      alert(
+        `No ${
+          exportType === "all_results" ? "" : exportType
+        } records available for export`
+      );
       return;
     }
 
-    // Prepare data for Excel - Pending Complaints fields ke according
-    const excelData = dataToExport.map((item) => ({
+    // Prepare comprehensive data for Excel - Pending Complaints fields
+    const excelData = dataToExport.map((item, index) => ({
+      "S.No": index + 1,
       "Row Number": item.row || "",
       "Notification/Complaint ID": item.notification_complaintid || "",
       "Material Description": item.materialdescription || "",
@@ -460,35 +486,80 @@ function PendingComplaintsBulk({ onClose, getData }) {
               .map((c) => `${c.field}: "${c.oldValue}" → "${c.newValue}"`)
               .join("; ")
           : ""),
+      "Processing Time": processingData.duration || "",
+      Batch: processingData.batchProgress?.currentBatch || "",
+      "Delete Operation": processingData.deleteOperation?.status || "",
     }));
 
-    // Create workbook and worksheet
+    // Add summary sheet data
+    const summaryData = [
+      ["Processing Summary", ""],
+      ["Operation Type", "Full Delete & Upload"],
+      ["Total Records", processingData.totalRecords],
+      ["Processed Records", processingData.processedRecords],
+      [
+        "Records Deleted",
+        processingData.summary.deleted || processingData.deletedRecords || 0,
+      ],
+      ["Records Created", processingData.summary.created],
+      ["Records Failed", processingData.summary.failed],
+      ["File Duplicates", processingData.summary.duplicatesInFile],
+      ["Processing Duration", processingData.duration],
+      ["Start Time", new Date(processingData.startTime).toLocaleString()],
+      [
+        "End Time",
+        processingData.endTime
+          ? new Date(processingData.endTime).toLocaleString()
+          : "",
+      ],
+      ["", ""],
+      ["Delete Operation Details", ""],
+      ["Delete Status", processingData.deleteOperation?.status || ""],
+      ["Delete Count", processingData.deleteOperation?.deletedCount || 0],
+      ["Delete Message", processingData.deleteOperation?.message || ""],
+      ["", ""],
+      ["Header Mappings", ""],
+      ...Object.entries(processingData.headerMapping || {}).map(
+        ([original, mapped]) => [original, mapped]
+      ),
+      ["", ""],
+      ["Warnings", ""],
+      ...(processingData.warnings || []).map((warning) => ["", warning]),
+    ];
+
+    // Create workbook
     const workbook = XLSX.utils.book_new();
+
+    // Add main results sheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
     // Auto-size columns
     const colWidths = Object.keys(excelData[0] || {}).map((key) => ({
-      wch: Math.max(key.length, 15), // Minimum width 15
+      wch: Math.max(key.length + 2, 15), // Minimum width 15, add padding
     }));
     worksheet["!cols"] = colWidths;
 
-    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Processing Results");
+
+    // Add summary sheet
+    const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summaryWorksheet["!cols"] = [{ wch: 25 }, { wch: 30 }];
     XLSX.utils.book_append_sheet(
       workbook,
-      worksheet,
-      "Pending Complaints Errors"
+      summaryWorksheet,
+      "Summary & Delete Info"
     );
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-    const filename = `pending_complaints_errors_${exportType}_${timestamp}.xlsx`;
+    const finalFilename = `pending_complaints_${filename}_${timestamp}.xlsx`;
 
     // Download file
-    XLSX.writeFile(workbook, filename);
+    XLSX.writeFile(workbook, finalFilename);
 
     // Add live update
     addLiveUpdate(
-      `📥 Pending Complaints error data exported: ${filename}`,
+      `📥 Exported ${dataToExport.length} records: ${finalFilename}`,
       "success"
     );
   };
@@ -1505,58 +1576,86 @@ function PendingComplaintsBulk({ onClose, getData }) {
                   <h3 className="text-lg font-medium text-gray-800">
                     Detailed Results ({filteredResults.length} records)
                   </h3>
-                  {/* Export Options */}
-                  {processingData.results.some(
-                    (item) => item.status === "Failed" || item.error
-                  ) && (
-                    <div className="">
-                      <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                          <div className="relative">
-                            <select
-                              id="export-type"
-                              className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                              onChange={(e) =>
-                                handleDownloadErrors(e.target.value)
-                              }
-                              defaultValue=""
-                            >
-                              <option value="" disabled>
-                                Choose Export Type
-                              </option>
-                              <option value="failed">
-                                Failed Records Only (
-                                {
-                                  processingData.results.filter(
-                                    (item) => item.status === "Failed"
-                                  ).length
-                                }
-                                )
-                              </option>
-                              <option value="all_errors">
-                                All Records with Errors (
-                                {
-                                  processingData.results.filter(
-                                    (item) =>
-                                      item.status === "Failed" ||
-                                      (item.error && item.error.trim() !== "")
-                                  ).length
-                                }
-                                )
-                              </option>
-                              <option value="all_results">
-                                All Processing Results (
-                                {processingData.results.length})
-                              </option>
-                            </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                              <Download size={16} className="text-red-600" />
-                            </div>
-                          </div>
-                        </div>
+                  {/* Export Options - Results tab me Detailed Results ke upar */}
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-3 items-center justify-between  ">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleDownloadErrors("all_results")}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          <Download size={16} />
+                          All Records ({processingData.results.length})
+                        </button>
+
+                        {processingData.summary.deleted > 0 && (
+                          <button
+                            onClick={() => handleDownloadErrors("all_results")}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            Deleted: {processingData.summary.deleted}
+                          </button>
+                        )}
+
+                        {statusCounts.Created > 0 && (
+                          <button
+                            onClick={() => handleDownloadErrors("created")}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            Created ({statusCounts.Created})
+                          </button>
+                        )}
+
+                        {/* {statusCounts.Updated > 0 && (
+                          <button
+                            onClick={() => handleDownloadErrors("updated")}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            Updated ({statusCounts.Updated})
+                          </button>
+                        )} */}
+
+                        {statusCounts.Skipped > 0 && (
+                          <button
+                            onClick={() => handleDownloadErrors("skipped")}
+                            className="flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            Skipped ({statusCounts.Skipped})
+                          </button>
+                        )}
+
+                        {statusCounts.Failed > 0 && (
+                          <button
+                            onClick={() => handleDownloadErrors("failed")}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            Failed ({statusCounts.Failed})
+                          </button>
+                        )}
+
+                        {processingData.results.some(
+                          (item) =>
+                            item.error ||
+                            (item.warnings && item.warnings.length > 0)
+                        ) && (
+                          <button
+                            onClick={() => handleDownloadErrors("all_errors")}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            With Errors/Warnings
+                          </button>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Existing Detailed Results section ke upar ye add karo */}
                 </div>
 
                 <div className="border-b border-gray-200 mb-4">
