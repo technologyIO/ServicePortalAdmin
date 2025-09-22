@@ -258,6 +258,9 @@ export default function CloseOnCall() {
                     OnCall #
                   </th>
                   <th className="p-3 font-bold text-white text-left">
+                    Created By
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">
                     Product
                   </th>
                   <th className="p-3 font-bold text-white text-left">
@@ -283,6 +286,16 @@ export default function CloseOnCall() {
                     >
                       <td className="p-3 font-semibold text-blue-700">
                         {oncall?.onCallNumber || "--"}
+                      </td>
+                      <td className="p-3">
+                        <div className="max-w-28">
+                          <div className="font-medium text-sm text-gray-800">
+                            {oncall?.createdBy || "--"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {`${oncall?.createdByUser?.firstname} ${oncall?.createdByUser?.lastname}` || "Unknown User"}
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3">
                         <div className="max-w-32">

@@ -4,6 +4,8 @@ import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
+import Select from "@mui/joy/Select";
+import Option from "@mui/joy/Option";
 import SearchIcon from "@mui/icons-material/Search";
 import { Download, Eye, Filter, RefreshCw, View } from "lucide-react";
 import LoadingSpinner from "../../../../LoadingSpinner";
@@ -33,8 +35,133 @@ export default function CMCNCMCList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [bulkSelection, setBulkSelection] = useState([]);
+  const [showBulkReassign, setShowBulkReassign] = useState(false);
+  const [technicians, setTechnicians] = useState([]);
   const limit = 50;
   const navigate = useNavigate();
+
+  const getCurrentUser = () => {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  };
+
+  const isProposalSelectable = (proposal) => {
+    const currentUser = getCurrentUser();
+    return (
+      currentUser && proposal?.createdBy === currentUser?.details.employeeid
+    );
+  };
+
+  const fetchTechnicians = async () => {
+    try {
+      const res = await api.get("/collections/user/technicians");
+      setTechnicians(res.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching technicians:", error);
+      setTechnicians([]);
+    }
+  };
+
+  const handleBulkSelect = (proposalId) => {
+    setBulkSelection((prev) =>
+      prev.includes(proposalId)
+        ? prev.filter((id) => id !== proposalId)
+        : [...prev, proposalId]
+    );
+  };
+
+  const handleBulkReassign = async (technicianEmployeeId) => {
+    try {
+      await api.post("/phone/proposal/bulk-assign", {
+        proposalIds: bulkSelection,
+        assignedTo: technicianEmployeeId,
+      });
+
+      fetchProposals(page, searchQuery);
+      setBulkSelection([]);
+      setShowBulkReassign(false);
+
+      console.log(`${bulkSelection.length} proposals reassigned successfully`);
+    } catch (error) {
+      console.error("Error bulk reassigning proposals:", error);
+    }
+  };
+
+  function BulkReassignModal({
+    selectedCount,
+    technicians,
+    onClose,
+    onReassign,
+  }) {
+    const [selectedTechnician, setSelectedTechnician] = useState("");
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (selectedTechnician) {
+        onReassign(selectedTechnician);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Bulk Reassign {selectedCount} Proposals
+            </h3>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reassign to User
+                </label>
+                <FormControl fullWidth size="sm">
+                  <Select
+                    placeholder="Select user..."
+                    value={selectedTechnician}
+                    onChange={(event, newValue) =>
+                      setSelectedTechnician(newValue)
+                    }
+                    required
+                  >
+                    {technicians.map((tech) => (
+                      <Option key={tech.employeeid} value={tech.employeeid}>
+                        {tech.name} ({tech.role})
+                      </Option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm text-yellow-800">
+                  This will reassign all {selectedCount} selected proposals to
+                  the chosen user. The createdBy field will be updated.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Reassign All
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const fetchProposals = async (pg = page, query = searchQuery) => {
     setLoading(true);
@@ -78,6 +205,7 @@ export default function CMCNCMCList() {
   };
 
   useEffect(() => {
+    fetchTechnicians();
     fetchProposals(page, searchQuery);
   }, [page]);
 
@@ -185,8 +313,24 @@ export default function CMCNCMCList() {
           </div>
         </div>
         <div className="flex flex-wrap justify-between items-center gap-3">
-          <div className="text-sm text-gray-600">
-            Showing {totalProposalRows} proposals
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Showing {totalProposalRows} proposals
+            </div>
+
+            {bulkSelection.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-blue-600">
+                  {bulkSelection.length} selected
+                </span>
+                <button
+                  onClick={() => setShowBulkReassign(true)}
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+                >
+                  Reassign
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -226,8 +370,12 @@ export default function CMCNCMCList() {
           <table className="w-full border-collapse text-sm min-w-max">
             <thead className="sticky top-0 z-10 bg-blue-700">
               <tr className="border-b">
+                <th className="p-3 font-bold text-white text-left"></th>
                 <th className="p-3 font-bold text-white text-left">
                   Proposal #
+                </th>
+                <th className="p-3 font-bold text-white text-left">
+                  Created By
                 </th>
                 <th className="p-3 font-bold text-white text-left">
                   Serial Number
@@ -253,8 +401,38 @@ export default function CMCNCMCList() {
                     idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                   }`}
                 >
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      checked={bulkSelection.includes(proposal._id)}
+                      onChange={() => handleBulkSelect(proposal._id)}
+                      disabled={!isProposalSelectable(proposal)}
+                      className={`rounded border-gray-300 ${
+                        !isProposalSelectable(proposal)
+                          ? "opacity-30 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                      title={
+                        !isProposalSelectable(proposal)
+                          ? "You can only select proposals created by you"
+                          : "Select this proposal"
+                      }
+                    />
+                  </td>
                   <td className="p-3 font-semibold text-blue-700">
                     {proposal.proposalNumber || "--"}
+                  </td>
+                  <td className="p-3">
+                    <div className="max-w-28">
+                      <div className="font-medium text-sm text-gray-800">
+                        {proposal?.createdBy || "--"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {`${proposal?.createdByUser?.firstname || ""} ${
+                          proposal?.createdByUser?.lastname || ""
+                        }`.trim() || "Unknown User"}
+                      </div>
+                    </div>
                   </td>
                   <td className="p-3 font-semibold text-blue-700">
                     {proposal?.serialNumber || "--"}
@@ -369,6 +547,14 @@ export default function CMCNCMCList() {
             </button>
           </div>
         </div>
+      )}
+      {showBulkReassign && (
+        <BulkReassignModal
+          selectedCount={bulkSelection.length}
+          technicians={technicians}
+          onClose={() => setShowBulkReassign(false)}
+          onReassign={handleBulkReassign}
+        />
       )}
     </div>
   );

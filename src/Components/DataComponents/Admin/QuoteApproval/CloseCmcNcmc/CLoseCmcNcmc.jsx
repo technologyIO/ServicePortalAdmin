@@ -53,9 +53,9 @@ export default function CLoseCmcNcmc() {
       // ✅ Filter: only "Open" + discountPercentage > 5
       const filtered = rawData.filter(
         (item) =>
-          item.Cmcncmcsostatus !== "Open" &&
-          typeof item.discountPercentage === "number" &&
-          item.discountPercentage > 5
+          item.Cmcncmcsostatus !== "Open" 
+          // && typeof item.discountPercentage === "number" &&
+          // item.discountPercentage > 5
       );
 
       setProposals(filtered);
@@ -214,6 +214,9 @@ export default function CLoseCmcNcmc() {
                   Proposal #
                 </th>
                 <th className="p-3 font-bold text-white text-left">
+                  Created By
+                </th>
+                <th className="p-3 font-bold text-white text-left">
                   Serial Number
                 </th>
                 <th className="p-3 font-bold text-white text-left">Customer</th>
@@ -239,6 +242,18 @@ export default function CLoseCmcNcmc() {
                 >
                   <td className="p-3 font-semibold text-blue-700">
                     {proposal.proposalNumber || "--"}
+                  </td>
+                  <td className="p-3">
+                    <div className="max-w-28">
+                      <div className="font-medium text-sm text-gray-800">
+                        {proposal?.createdBy || "--"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {`${proposal?.createdByUser?.firstname || ""} ${
+                          proposal?.createdByUser?.lastname || ""
+                        }`.trim() || "Unknown User"}
+                      </div>
+                    </div>
                   </td>
                   <td className="p-3 font-semibold text-blue-700">
                     {proposal?.serialNumber || "--"}
