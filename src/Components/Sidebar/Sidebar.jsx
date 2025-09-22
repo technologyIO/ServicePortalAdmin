@@ -365,6 +365,14 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
         { component: "CMC/NCMC Cnote Delete", path: "/cnote-delete" },
       ],
     },
+    {
+      title: "Activity Logs",
+      icon: <Trash2 size={20} />,
+      storageKey: "cnoteDeleteTogglerState",
+      items: [
+        { component: "Activity Logs", path: "/activity-logs" },
+      ],
+    },
   ];
 
   const baseUrl =

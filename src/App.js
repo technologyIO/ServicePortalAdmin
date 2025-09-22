@@ -95,6 +95,7 @@ import ProblemName from './Components/DataComponents/Admin/ProblemName';
 import OnCallAssign from './Components/DataComponents/InactiveOpportunity/OnCallAssign';
 import CMCNCMCAssign from './Components/DataComponents/InactiveOpportunity/CMCNCMCAssign';
 import PreventiveMaintenanceAssign from './Components/DataComponents/InactiveOpportunity/PreventiveMaintenanceAssign';
+import ActivityLogs from './Components/DataComponents/Logs/ActivityLogs';
 
 
 const PrivateRoute = ({ children }) => {
@@ -289,6 +290,11 @@ const AppContent = () => {
             <Route path="/completed-installation" element={<ProtectedRoute
               component={CompletedInstallation}
               componentName="Completed Installation"
+              requiredPermission="read"
+            />} />
+            <Route path="/activity-logs" element={<ProtectedRoute
+              component={ActivityLogs}
+              componentName="Activity Logs"
               requiredPermission="read"
             />} />
             <Route path="/admin-country" element={<ProtectedRoute
