@@ -4,6 +4,8 @@ import moment from "moment";
 import { useNavigate } from "react-router-dom";
 import FormControl from "@mui/joy/FormControl";
 import Input from "@mui/joy/Input";
+import Select from "@mui/joy/Select";
+import Option from "@mui/joy/Option";
 import SearchIcon from "@mui/icons-material/Search";
 import { Download, Eye, Filter, RefreshCw } from "lucide-react";
 import LoadingSpinner from "../../../LoadingSpinner";
@@ -37,6 +39,131 @@ export default function CloseOnCall() {
   const limit = 50; // Higher limit for customer grouping
   const navigate = useNavigate();
   const [onCalls, setOnCalls] = useState([]);
+  const [bulkSelection, setBulkSelection] = useState([]);
+  const [showBulkReassign, setShowBulkReassign] = useState(false);
+  const [technicians, setTechnicians] = useState([]);
+
+  const getCurrentUser = () => {
+    const user = localStorage.getItem("user");
+    return user ? JSON.parse(user) : null;
+  };
+
+  // Check if OnCall is selectable by current user
+  const isOnCallSelectable = (oncall) => {
+    const currentUser = getCurrentUser();
+    return currentUser && oncall?.createdBy === currentUser?.details.employeeid;
+  };
+
+  const fetchTechnicians = async () => {
+    try {
+      const res = await api.get("/collections/user/technicians");
+      setTechnicians(res.data?.data || []);
+    } catch (error) {
+      console.error("Error fetching technicians:", error);
+      setTechnicians([]);
+    }
+  };
+
+  const handleBulkSelect = (onCallId) => {
+    setBulkSelection((prev) =>
+      prev.includes(onCallId)
+        ? prev.filter((id) => id !== onCallId)
+        : [...prev, onCallId]
+    );
+  };
+
+  const handleBulkReassign = async (technicianEmployeeId) => {
+    try {
+      await api.post("/phone/oncall/bulk-assign", {
+        onCallIds: bulkSelection,
+        assignedTo: technicianEmployeeId,
+      });
+
+      // Refresh data and clear selection
+      fetchCustomersWithOnCalls(page, searchQuery);
+      setBulkSelection([]);
+      setShowBulkReassign(false);
+
+      console.log(`${bulkSelection.length} OnCalls reassigned successfully`);
+    } catch (error) {
+      console.error("Error bulk reassigning OnCalls:", error);
+    }
+  };
+
+  function BulkReassignModal({
+    selectedCount,
+    technicians,
+    onClose,
+    onReassign,
+  }) {
+    const [selectedTechnician, setSelectedTechnician] = useState("");
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (selectedTechnician) {
+        onReassign(selectedTechnician);
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Bulk Reassign {selectedCount} OnCalls
+            </h3>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reassign to User
+                </label>
+                <FormControl fullWidth size="sm">
+                  <Select
+                    placeholder="Select user..."
+                    value={selectedTechnician}
+                    onChange={(event, newValue) =>
+                      setSelectedTechnician(newValue)
+                    }
+                    required
+                  >
+                    {technicians.map((tech) => (
+                      <Option key={tech.employeeid} value={tech.employeeid}>
+                        {tech.name} ({tech.role})
+                      </Option>
+                    ))}
+                  </Select>
+                </FormControl>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm text-yellow-800">
+                  This will reassign all {selectedCount} selected OnCalls to the
+                  chosen user. The createdBy field will be updated.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                >
+                  Reassign All
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Fetch data with server-side search
   const fetchCustomersWithOnCalls = async (pg = page, query = searchQuery) => {
@@ -103,6 +230,7 @@ export default function CloseOnCall() {
   };
 
   useEffect(() => {
+    fetchTechnicians();
     fetchCustomersWithOnCalls(page, searchQuery);
     // eslint-disable-next-line
   }, [page]);
@@ -234,8 +362,24 @@ export default function CloseOnCall() {
 
         {/* Bottom Row: Filter, Download */}
         <div className="flex flex-wrap justify-between items-center gap-3">
-          <div className="text-sm text-gray-600">
-            Showing {totalOnCalls} OnCalls from {customers.length} customers
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Showing {totalOnCalls} OnCalls from {customers.length} customers
+            </div>
+
+            {bulkSelection.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-blue-600">
+                  {bulkSelection.length} selected
+                </span>
+                <button
+                  onClick={() => setShowBulkReassign(true)}
+                  className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+                >
+                  Reassign
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -278,8 +422,12 @@ export default function CloseOnCall() {
             <table className="w-full border-collapse text-sm min-w-max">
               <thead className="sticky top-0 z-10 bg-blue-700">
                 <tr className="border-b">
+                  <th className="p-3 font-bold text-white text-left"></th>
                   <th className="p-3 font-bold text-white text-left">
                     OnCall #
+                  </th>
+                  <th className="p-3 font-bold text-white text-left">
+                    Created By
                   </th>
                   <th className="p-3 font-bold text-white text-left">
                     Product
@@ -305,8 +453,38 @@ export default function CloseOnCall() {
                         oncallIndex % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                       }`}
                     >
+                      {/* NEW CHECKBOX COLUMN */}
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.includes(oncall._id)}
+                          onChange={() => handleBulkSelect(oncall._id)}
+                          disabled={!isOnCallSelectable(oncall)}
+                          className={`rounded border-gray-300 ${
+                            !isOnCallSelectable(oncall)
+                              ? "opacity-30 cursor-not-allowed"
+                              : "cursor-pointer"
+                          }`}
+                          title={
+                            !isOnCallSelectable(oncall)
+                              ? "You can only select OnCalls created by you"
+                              : "Select this OnCall"
+                          }
+                        />
+                      </td>
                       <td className="p-3 font-semibold text-blue-700">
                         {oncall?.onCallNumber || "--"}
+                      </td>
+                      <td className="p-3">
+                        <div className="max-w-28">
+                          <div className="font-medium text-sm text-gray-800">
+                            {oncall?.createdBy || "--"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {`${oncall?.createdByUser?.firstname} ${oncall?.createdByUser?.lastname}` ||
+                              "Unknown User"}
+                          </div>
+                        </div>
                       </td>
                       <td className="p-3">
                         <div className="max-w-32">
@@ -442,6 +620,15 @@ export default function CloseOnCall() {
             </button>
           </div>
         </div>
+      )}
+      {/* Bulk Reassign Modal */}
+      {showBulkReassign && (
+        <BulkReassignModal
+          selectedCount={bulkSelection.length}
+          technicians={technicians}
+          onClose={() => setShowBulkReassign(false)}
+          onReassign={handleBulkReassign}
+        />
       )}
     </div>
   );
