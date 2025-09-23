@@ -102,6 +102,9 @@ export default function UserManagement() {
   const [selectedSingleState, setSelectedSingleState] = useState(null);
   const [selectedSingleCity, setSelectedSingleCity] = useState(null);
   const [selectedCities, setSelectedCities] = useState([]);
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUserRole = user?.details?.role?.roleName;
+  const employeeid = user?.details?.employeeid;
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -198,6 +201,7 @@ export default function UserManagement() {
             profileimage: user.profileimage || "",
             deviceid: user.deviceid || "",
             department: user.department || "",
+            adminEmployeeId: employeeid || "",
           });
 
           // Set role
@@ -648,6 +652,7 @@ export default function UserManagement() {
           formDataPayload.append("country", selectedSingleCountry?.name || "");
           formDataPayload.append("zipCode", formData.zipCode);
           formDataPayload.append("loginexpirydate", formData.loginexpirydate);
+          formDataPayload.append("adminEmployeeId", formData.loginexpirydate);
           formDataPayload.append("employeeid", formData.employeeid);
           formDataPayload.append("department", formData.department || "");
           formDataPayload.append("deviceid", formData.deviceid);

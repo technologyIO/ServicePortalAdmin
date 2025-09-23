@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePermissions } from "../../PermissionContext";
 import {
+  Activity,
   Delete,
   LucideDelete,
   PanelTopInactive,
@@ -367,8 +368,8 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
     },
     {
       title: "Activity Logs",
-      icon: <Trash2 size={20} />,
-      storageKey: "cnoteDeleteTogglerState",
+      icon: <Activity size={17} />,
+      storageKey: "activitylogTogglerState",
       items: [
         { component: "Activity Logs", path: "/activity-logs" },
       ],

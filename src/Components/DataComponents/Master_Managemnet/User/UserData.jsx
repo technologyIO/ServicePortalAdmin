@@ -59,7 +59,9 @@ const UserData = () => {
 
   const user = JSON.parse(localStorage.getItem("user"));
   const currentUserRole = user?.details?.role?.roleName;
+  const employeeid = user?.details?.employeeid;
 
+  console.log(employeeid, "employeeid");
   // Add state for permissions
   const [permissions, setPermissions] = useState({
     features: [],
@@ -295,7 +297,10 @@ const UserData = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            adminEmployeeId: employeeid,
+          }),
         }
       );
       if (!response.ok) {
@@ -419,6 +424,7 @@ const UserData = () => {
         `${process.env.REACT_APP_BASE_URL}/collections/remove-device`,
         {
           userId,
+          adminEmployeeId: employeeid,
         }
       );
       if (res.data?.message) {
