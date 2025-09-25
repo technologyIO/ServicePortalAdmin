@@ -624,9 +624,10 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
           className="p-3 border-t border-gray-200 bg-white"
           style={{ flexShrink: 0 }}
         >
-          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-3 border border-gray-200 mb-3">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-3 pb-0 border border-gray-200 mb-3">
             <div className="flex items-center gap-3 mb-3">
               <div className="relative">
+                
                 <img
                   src={avatarImage || "/placeholder.svg"}
                   alt="Profile"

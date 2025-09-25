@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import {
   User,
@@ -27,7 +27,327 @@ import {
   RefreshCw,
   AlertCircle,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from "lucide-react";
+
+// Utility Functions - Define at the top before component
+const formatActionName = (action) => {
+  return action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+};
+
+const formatTimestamp = (timestamp) => {
+  const date = new Date(timestamp);
+  return {
+    date: date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    time: date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
+  };
+};
+
+const getActionIcon = (action) => {
+  const iconClass = "w-4 h-4";
+  switch (action) {
+    case "login":
+    case "login_web":
+    case "login_mobile":
+      return <LogIn className={iconClass} />;
+    case "logout":
+      return <LogOut className={iconClass} />;
+    case "create":
+      return <FileText className={iconClass} />;
+    case "update":
+      return <Pencil className={iconClass} />;
+    case "delete":
+      return <Trash2 className={iconClass} />;
+    case "view":
+      return <Eye className={iconClass} />;
+    case "download":
+      return <Download className={iconClass} />;
+    case "bulk_upload":
+      return <Upload className={iconClass} />;
+    case "configuration":
+      return <Settings className={iconClass} />;
+    case "security_alert":
+      return <ShieldCheck className={iconClass} />;
+    case "forgot_password":
+    case "password_reset":
+    case "password_change":
+    case "otp_verify":
+      return <ShieldCheck className={iconClass} />;
+    case "error":
+    case "login_failed":
+      return <XCircle className={iconClass} />;
+    default:
+      return <Clock className={iconClass} />;
+  }
+};
+
+const getStatusBadge = (status) => {
+  switch (status) {
+    case "success":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+          <CheckCircle className="w-3 h-3" />
+          Success
+        </span>
+      );
+    case "warning":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-full border border-amber-200">
+          <TriangleAlert className="w-3 h-3" />
+          Warning
+        </span>
+      );
+    case "error":
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-full border border-red-200">
+          <XCircle className="w-3 h-3" />
+          Error
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+          <Clock className="w-3 h-3" />
+          Info
+        </span>
+      );
+  }
+};
+
+// Searchable Select Component
+const SearchableSelect = ({
+  value,
+  onChange,
+  options = [],
+  placeholder = "Select option...",
+  icon: Icon,
+  className = "",
+  allOption = true,
+  defaultAllText = "All", // Add this prop to customize "All" text
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Filter options based on search term
+  const filteredOptions = useMemo(() => {
+    const baseOptions = allOption
+      ? [{ value: "all", label: defaultAllText }]
+      : [];
+    const mainOptions = options.map((option) =>
+      typeof option === "string" ? { value: option, label: option } : option
+    );
+
+    const allOptions = [...baseOptions, ...mainOptions];
+
+    if (!searchTerm) return allOptions;
+
+    return allOptions.filter((option) =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [options, searchTerm, allOption, defaultAllText]);
+
+  // Get display label for selected value
+  const getDisplayLabel = () => {
+    if (value === "all") {
+      return allOption ? defaultAllText : placeholder;
+    }
+
+    // First check in main options
+    const foundOption = options.find((opt) =>
+      typeof opt === "string" ? opt === value : opt.value === value
+    );
+
+    if (foundOption) {
+      return typeof foundOption === "string" ? foundOption : foundOption.label;
+    }
+
+    // If not found, return the value itself or placeholder
+    return value || placeholder;
+  };
+
+  // Handle option select
+  const handleSelect = (selectedValue) => {
+    onChange(selectedValue);
+    setIsOpen(false);
+    setSearchTerm("");
+    setHighlightedIndex(-1);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!isOpen) {
+      if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < filteredOptions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredOptions.length - 1
+        );
+        break;
+      case "Enter":
+        e.preventDefault();
+        if (highlightedIndex >= 0) {
+          handleSelect(filteredOptions[highlightedIndex].value);
+        }
+        break;
+      case "Escape":
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+        break;
+    }
+  };
+
+  // Scroll highlighted option into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      const highlightedElement = listRef.current.children[highlightedIndex];
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({
+          block: "nearest",
+        });
+      }
+    }
+  }, [highlightedIndex]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+        setSearchTerm("");
+        setHighlightedIndex(-1);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className={`relative ${className}`}>
+      {/* Main Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        className="relative w-full pl-9 pr-8 py-3 text-left bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors"
+      >
+        {/* Icon */}
+        {Icon && (
+          <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        )}
+
+        {/* Selected Value */}
+        <span className="block truncate text-sm text-gray-900">
+          {getDisplayLabel()}
+        </span>
+
+        {isOpen ? (
+          <ChevronUp className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        )}
+      </button>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search Input */}
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search options..."
+                className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setHighlightedIndex(-1);
+                }}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div ref={listRef} className="max-h-48 overflow-y-auto">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option, index) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelect(option.value)}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-blue-50 transition-colors ${
+                    highlightedIndex === index
+                      ? "bg-blue-50 text-blue-900"
+                      : value === option.value
+                      ? "bg-blue-100 text-blue-900 font-medium"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {option.label}
+                  {value === option.value && (
+                    <CheckCircle className="inline ml-2 w-4 h-4 text-blue-600" />
+                  )}
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                No options found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ActivityLogs = () => {
   // State Management
@@ -71,7 +391,7 @@ const ActivityLogs = () => {
 
   // API Configuration
   const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"; // Adjust as needed
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -81,6 +401,44 @@ const ActivityLogs = () => {
       "Content-Type": "application/json",
     },
   });
+
+  // Prepare options for searchable selects using useMemo to avoid recreating on every render
+  const activityOptions = useMemo(
+    () =>
+      filterOptions.uniqueActions.map((action) => ({
+        value: action,
+        label: formatActionName(action),
+      })),
+    [filterOptions.uniqueActions]
+  );
+
+  const userOptions = useMemo(
+    () => filterOptions.uniqueUsers,
+    [filterOptions.uniqueUsers]
+  );
+  const moduleOptions = useMemo(
+    () => filterOptions.uniqueModules,
+    [filterOptions.uniqueModules]
+  );
+
+  const statusOptions = useMemo(
+    () => [
+      { value: "success", label: "Success" },
+      { value: "warning", label: "Warning" },
+      { value: "error", label: "Error" },
+      { value: "info", label: "Info" },
+    ],
+    []
+  );
+
+  const dateOptions = useMemo(
+    () => [
+      { value: "today", label: "Today" },
+      { value: "week", label: "This Week" },
+      { value: "month", label: "This Month" },
+    ],
+    []
+  );
 
   // Fetch Activity Logs Function
   const fetchActivityLogs = async (
@@ -159,7 +517,7 @@ const ActivityLogs = () => {
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchActivityLogs(1, true);
-    }, 500); // 500ms debounce
+    }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [
@@ -191,101 +549,6 @@ const ActivityLogs = () => {
     setSelectedStatus("all");
     setDateRange("all");
     setCurrentPage(1);
-  };
-
-  // Get action icon
-  const getActionIcon = (action) => {
-    const iconClass = "w-4 h-4";
-    switch (action) {
-      case "login":
-      case "login_web":
-      case "login_mobile":
-        return <LogIn className={iconClass} />;
-      case "logout":
-        return <LogOut className={iconClass} />;
-      case "create":
-        return <FileText className={iconClass} />;
-      case "update":
-        return <Pencil className={iconClass} />;
-      case "delete":
-        return <Trash2 className={iconClass} />;
-      case "view":
-        return <Eye className={iconClass} />;
-      case "download":
-        return <Download className={iconClass} />;
-      case "bulk_upload":
-        return <Upload className={iconClass} />;
-      case "configuration":
-        return <Settings className={iconClass} />;
-      case "security_alert":
-        return <ShieldCheck className={iconClass} />;
-      case "forgot_password":
-      case "password_reset":
-      case "password_change":
-      case "otp_verify":
-        return <ShieldCheck className={iconClass} />;
-      case "error":
-      case "login_failed":
-        return <XCircle className={iconClass} />;
-      default:
-        return <Clock className={iconClass} />;
-    }
-  };
-
-  // Get status badge
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "success":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
-            <CheckCircle className="w-3 h-3" />
-            Success
-          </span>
-        );
-      case "warning":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 rounded-full border border-amber-200">
-            <TriangleAlert className="w-3 h-3" />
-            Warning
-          </span>
-        );
-      case "error":
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-full border border-red-200">
-            <XCircle className="w-3 h-3" />
-            Error
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-            <Clock className="w-3 h-3" />
-            Info
-          </span>
-        );
-    }
-  };
-
-  // Format timestamp
-  const formatTimestamp = (timestamp) => {
-    const date = new Date(timestamp);
-    return {
-      date: date.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-      time: date.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-    };
-  };
-
-  // Format action name
-  const formatActionName = (action) => {
-    return action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   // Error Component
@@ -347,7 +610,7 @@ const ActivityLogs = () => {
   }
 
   return (
-    <div className="min-h-screen overflow-y-auto   bg-gray-50 p-2 ">
+    <div className="min-h-screen overflow-y-auto bg-gray-50 p-2">
       <div className="max-w-8xl mx-auto">
         {/* Ultra Compact Single Line Header */}
         <div className="flex items-center justify-between py-3 px-4 bg-white border-b border-gray-200 mb-4">
@@ -472,98 +735,67 @@ const ActivityLogs = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Search */}
+
             <div className="relative flex-1 min-w-[300px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search activities, users, or modules..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                className=" w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
-            {/* Activity Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[150px]"
-                value={selectedActivity}
-                onChange={(e) => setSelectedActivity(e.target.value)}
-              >
-                <option value="all">All Activities</option>
-                {filterOptions.uniqueActions.map((activity) => (
-                  <option key={activity} value={activity}>
-                    {formatActionName(activity)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              value={selectedActivity}
+              onChange={setSelectedActivity}
+              options={activityOptions}
+              placeholder="All Activities"
+              defaultAllText="All Activities"
+              icon={Filter}
+              className="min-w-[200px]"
+            />
 
-            {/* User Filter */}
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[150px]"
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-              >
-                <option value="all">All Users</option>
-                {filterOptions.uniqueUsers.map((user) => (
-                  <option key={user} value={user}>
-                    {user}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              value={selectedUser}
+              onChange={setSelectedUser}
+              options={userOptions}
+              placeholder="All Users"
+              defaultAllText="All Users"
+              icon={User}
+              className="min-w-[200px]"
+            />
 
-            {/* Module Filter */}
-            <div className="relative">
-              <Settings className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[150px]"
-                value={selectedModule}
-                onChange={(e) => setSelectedModule(e.target.value)}
-              >
-                <option value="all">All Modules</option>
-                {filterOptions.uniqueModules.map((module) => (
-                  <option key={module} value={module}>
-                    {module}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              value={selectedModule}
+              onChange={setSelectedModule}
+              options={moduleOptions}
+              placeholder="All Modules"
+              defaultAllText="All Modules"
+              icon={Settings}
+              className="min-w-[200px]"
+            />
 
-            {/* Status Filter */}
-            <div className="relative">
-              <CheckCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[120px]"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-              >
-                <option value="all">All Status</option>
-                <option value="success">Success</option>
-                <option value="warning">Warning</option>
-                <option value="error">Error</option>
-                <option value="info">Info</option>
-              </select>
-            </div>
+            <SearchableSelect
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              options={statusOptions}
+              placeholder="All Status"
+              defaultAllText="All Status"
+              icon={CheckCircle}
+              className="min-w-[150px]"
+            />
 
-            {/* Date Range */}
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <select
-                className="pl-9 pr-8 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[130px]"
-                value={dateRange}
-                onChange={(e) => setDateRange(e.target.value)}
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-              </select>
-            </div>
+            <SearchableSelect
+              value={dateRange}
+              onChange={setDateRange}
+              options={dateOptions}
+              placeholder="All Time"
+              defaultAllText="All Time"
+              icon={Calendar}
+              className="min-w-[150px]"
+            />
 
             {/* Clear Filters Button */}
             {(searchTerm ||
@@ -600,7 +832,7 @@ const ActivityLogs = () => {
             </div>
           )}
           <div className="overflow-y-auto min-h-screen">
-            <div className="overflow-x-auto   ">
+            <div className="overflow-x-auto">
               {activityData.length === 0 && !loading ? (
                 <EmptyState />
               ) : (
