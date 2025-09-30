@@ -390,8 +390,7 @@ const ActivityLogs = () => {
   const [initialLoading, setInitialLoading] = useState(true);
 
   // API Configuration
-  const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  const API_BASE_URL = process.env.REACT_APP_BASE_URL;
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -613,7 +612,7 @@ const ActivityLogs = () => {
     <div className="min-h-screen overflow-y-auto bg-gray-50 p-2">
       <div className="max-w-8xl mx-auto">
         {/* Ultra Compact Single Line Header */}
-        <div className="flex items-center justify-between py-3 px-4 bg-white border-b border-gray-200 mb-4">
+        <div className="flex items-center justify-between py-3 px-4 bg-white border-b border-gray-200 mb-2">
           {/* Left: Title with Icon */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
@@ -706,7 +705,7 @@ const ActivityLogs = () => {
         </div>
 
         {/* Mobile Stats Row - Only on small screens */}
-        <div className="lg:hidden grid grid-cols-4 gap-2 px-4 mb-4">
+        <div className="lg:hidden grid grid-cols-4 gap-2 px-4 mb-2">
           <div className="text-center p-2 bg-blue-50 rounded-lg">
             <p className="text-sm font-bold text-gray-900">{stats.total}</p>
             <p className="text-xs text-blue-600">Total</p>
@@ -732,7 +731,7 @@ const ActivityLogs = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-2">
           <div className="flex flex-wrap gap-4 items-center">
             {/* Search */}
 
