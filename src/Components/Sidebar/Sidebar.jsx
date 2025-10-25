@@ -584,6 +584,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
         }`}
         style={{ display: "flex", flexDirection: "column" }}
       >
+
         {/* Header - Fixed at Top */}
         <div
           className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50"
@@ -659,6 +660,7 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
             <span>Logout</span>
           </button>
         </div>
+        
       </div>
 
       {/* Enhanced Custom CSS for Perfect Scrollbar */}
@@ -696,177 +698,4 @@ export default function EnhancedSidebar({ onSidebarItemClick }) {
   );
 }
 
-{
-  /* <List
-          size="sm"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": (theme) => theme.vars.radius.sm,
-          }}
-        >
-          <ListItem nested className="mx-1">
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SettingsRoundedIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Settings</Typography>
-                  </ListItemContent>
-
-                  <KeyboardArrowDownIcon
-                    sx={{ transform: open ? "rotate(180deg)" : "none" }}
-                  />
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/profile");
-                    handleItemClick("/profile");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton selected={selectedItem === "/profile"}>
-                    My profile
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/change-password");
-                    handleItemClick("/change-password");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/change-password"}
-                  >
-                    Change password
-                  </ListItemButton>
-                </ListItem>
-         
-              </List>
-            </Toggler>
-          </ListItem>
-        </List> */
-}
-
-{
-  /* <List
-          size="sm"
-          className="mx-1"
-          sx={{
-            gap: 1,
-            "--List-nestedInsetStart": "30px",
-            "--ListItem-radius": "3px",
-          }}
-        >
-          <ListItem nested>
-            <Toggler
-              renderToggle={({ open, setOpen }) => (
-                <ListItemButton onClick={() => setOpen(!open)}>
-                  <SummarizeIcon />
-                  <ListItemContent>
-                    <Typography level="title-sm">Reports</Typography>
-                  </ListItemContent>
-
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    className="bi bi-chevron-down"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708"
-                    />
-                  </svg>
-                </ListItemButton>
-              )}
-            >
-              <List sx={{ gap: 0.5 }}>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/user-login");
-                    handleItemClick("/user-login");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/user-login"}>
-                    User Login
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/new-customer");
-                    handleItemClick("/new-customer");
-                  }}
-                >
-                  <ListItemButton selected={selectedItem === "/new-customer"}>
-                    New Customer
-                  </ListItemButton>
-                </ListItem>
-
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/complaint-create");
-                    handleItemClick("/complaint-create");
-                  }}
-                  sx={{ mt: 0.5 }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/complaint-create"}
-                  >
-                    Complaint Create
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/complaint-update");
-                    handleItemClick("/complaint-update");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/complaint-update"}
-                  >
-                    Complaint Update
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/completed-installation");
-                    handleItemClick("/completed-installation");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/completed-installation"}
-                  >
-                    Completed Installation
-                  </ListItemButton>
-                </ListItem>
-                <ListItem
-                  nested
-                  onClick={() => {
-                    navigate("/complaint-create-close");
-                    handleItemClick("/complaint-create-close");
-                  }}
-                >
-                  <ListItemButton
-                    selected={selectedItem === "/complaint-create-close"}
-                  >
-                    Complaint-Create-Close
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Toggler>
-          </ListItem>
-        </List> */
-}
+ 

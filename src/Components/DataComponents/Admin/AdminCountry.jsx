@@ -581,7 +581,7 @@ ${regionsList}
                   <>
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">Download Excel</span>
-                    <span className="sm:inline hidden">Download</span>
+                    
                   </>
                 )}
               </button>

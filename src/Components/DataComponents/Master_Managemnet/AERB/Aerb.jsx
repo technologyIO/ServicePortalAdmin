@@ -445,19 +445,15 @@ function Aerb() {
                     <Input
                       size="sm"
                       placeholder="Search records, users, or data..."
+                      startDecorator={<SearchIcon />}
                       value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (!e.target.value) {
-                          getData();
-                        }
-                      }}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           handleSearch(1);
                         }
                       }}
-                      className="block h-10 w-full pl-12 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                      className="bg-gray-50 h-10 border border-gray-200 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all duration-200"
                     />
                   </FormControl>
                 </div>
@@ -585,7 +581,6 @@ function Aerb() {
                     <>
                       <Download size={18} />
                       <span className="hidden sm:inline">Download Excel</span>
-                      <span className="sm:inline hidden">Download</span>
                     </>
                   )}
                 </button>
